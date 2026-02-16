@@ -85,7 +85,8 @@ class ROICIndicator(BaseIndicator):
             value=float(roic.mean()) if len(roic) > 0 else 0.0,
             unit="%",
             description="Return on Invested Capital",
-            years=[int(y) for y in data.index.tolist()] if hasattr(data.index, 'tolist') else []
+            years=data['year'].tolist() if 'year' in data.columns else [],
+            values=roic.tolist() if len(roic) > 0 else []
         )
 
     def get_required_fields(self) -> List[str]:
@@ -117,22 +118,27 @@ class CAGRIndicator(BaseIndicator):
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         metric = kwargs.get("metric", "revenue")
 
+        # Define column mappings for each metric
+        metric_columns = {
+            "revenue": ['operating_income', 'OPERATING_INCOME', '营业收入', 'total_revenue', 'TOTAL_REVENUE'],
+            "net_profit": ['net_profit', 'NET_PROFIT', '净利润', 'parent_net_profit', 'PARENT_NET_PROFIT'],
+            "total_assets": ['total_assets', 'TOTAL_ASSETS', '资产总计', 'ASSET_BALANCE'],
+            "total_equity": ['total_equity', 'TOTAL_EQUITY', '股东权益', 'EQUITY_BALANCE']
+        }
+
+        # Get candidates for the specific metric
+        candidates = metric_columns.get(metric, [metric])
+
         # Find the metric column
-        metric_col = self._find_column(data, [
-            metric.lower(),
-            metric.upper(),
-            'revenue', 'REVENUE', '营业收入',
-            'net_profit', 'NET_PROFIT', '净利润',
-            'total_assets', 'TOTAL_ASSETS', '资产总计',
-            'total_equity', 'TOTAL_EQUITY', '股东权益'
-        ])
+        metric_col = self._find_column(data, candidates)
 
         if not metric_col:
             return IndicatorResult(
                 value=0.0,
                 unit="%",
                 description=f"CAGR for {metric}",
-                years=[]
+                years=[],
+                values=[]
             )
 
         values = data[metric_col]
@@ -143,23 +149,30 @@ class CAGRIndicator(BaseIndicator):
                 value=0.0,
                 unit="%",
                 description=f"CAGR for {metric}",
-                years=[]
+                years=[],
+                values=[]
             )
 
         start_value = values.iloc[0]
         end_value = values.iloc[-1]
-        years = len(values)
+        years = len(values) - 1  # Period is (n-1) years for n data points
 
         if start_value <= 0 or end_value <= 0:
             cagr = 0.0
         else:
             cagr = ((end_value / start_value) ** (1 / years) - 1) * 100
 
+        # Build years list - use actual years from data if available
+        years_list = data['year'].tolist() if 'year' in data.columns else []
+        if not years_list:
+            years_list = list(range(len(values)))
+
         return IndicatorResult(
             value=cagr,
             unit="%",
             description=f"Compound Annual Growth Rate for {metric}",
-            years=list(range(years))
+            years=years_list,
+            values=[]  # CAGR is a period metric, show only value not per-year
         )
 
     def get_required_fields(self) -> List[str]:
@@ -180,8 +193,13 @@ class DCFIndicator(BaseIndicator):
     """
     Discounted Cash Flow valuation
 
-    Terminal Value = Final FCF * (1 + g) / (WACC - g)
-    Enterprise Value = Sum of discounted FCFs + Terminal Value
+    Can calculate:
+    1. DCF intrinsic value (when no market_cap provided)
+    2. Implied growth rate (when market_cap provided)
+
+    Formula:
+    - Terminal Value = Final FCF * (1 + g) / (WACC - g)
+    - Enterprise Value = Sum of discounted FCFs + Terminal Value
     """
 
     name = "DCF"
@@ -192,31 +210,50 @@ class DCFIndicator(BaseIndicator):
         growth_rate = kwargs.get("growth_rate", 0.03)  # Terminal growth
         wacc = kwargs.get("wacc", 0.10)  # Weighted Average Cost of Capital
         discount_rate = kwargs.get("discount_rate", wacc)
+        market_cap = kwargs.get("market_cap", None)  # Market cap for implied growth
 
-        # Get free cash flow - try multiple column names
-        fcf_col = self._find_column(data, [
-            'free_cash_flow', 'FREE_CASH_FLOW', '自由现金流',
+        # Calculate FCF = Operating Cash Flow - Capital Expenditure
+        op_cash_flow_col = self._find_column(data, [
             'operating_cash_flow', 'OPERATING_CASH_FLOW', '经营活动现金流'
         ])
+        capex_col = self._find_column(data, [
+            'capital_expenditure', 'CAPITAL_EXPENDITURE', '资本支出'
+        ])
 
-        if not fcf_col:
+        if not op_cash_flow_col:
             return IndicatorResult(
                 value=0.0,
                 unit="CNY",
-                description="DCF Valuation (no FCF data)",
-                years=[]
+                description="DCF Valuation (no cash flow data)",
+                years=[],
+                values=[]
             )
 
-        fcf = data[fcf_col]
+        operating_cf = data[op_cash_flow_col]
+        capex = data[capex_col].fillna(0) if capex_col else 0
+        fcf = operating_cf - capex
 
         if len(fcf) == 0 or fcf.iloc[-1] <= 0:
             return IndicatorResult(
                 value=0.0,
                 unit="CNY",
-                description=f"DCF Valuation (WACC={wacc}, g={growth_rate})",
-                years=[]
+                description=f"DCF (WACC={wacc}, g={growth_rate})",
+                years=[],
+                values=[]
             )
 
+        # If market_cap provided, calculate implied growth rate
+        if market_cap and market_cap > 0:
+            implied_growth = self._calculate_implied_growth(fcf, market_cap, wacc, growth_rate)
+            return IndicatorResult(
+                value=implied_growth * 100,  # Convert to percentage
+                unit="%",
+                description=f"市场隐含增长率 (市值={market_cap/1e9:.0f}亿, WACC={wacc})",
+                years=data['year'].tolist() if 'year' in data.columns else [],
+                values=[]
+            )
+
+        # Otherwise, calculate DCF intrinsic value
         # Calculate terminal value
         final_fcf = fcf.iloc[-1]
 
@@ -225,8 +262,9 @@ class DCFIndicator(BaseIndicator):
             return IndicatorResult(
                 value=0.0,
                 unit="CNY",
-                description=f"DCF Valuation (invalid WACC <= growth rate)",
-                years=[]
+                description=f"DCF (invalid WACC <= growth rate)",
+                years=[],
+                values=[]
             )
 
         terminal_value = (final_fcf * (1 + growth_rate)) / (wacc - growth_rate)
@@ -242,9 +280,65 @@ class DCFIndicator(BaseIndicator):
         return IndicatorResult(
             value=total_value,
             unit="CNY",
-            description=f"DCF Valuation (WACC={wacc}, g={growth_rate})",
-            years=[int(y) for y in data.index.tolist()] if hasattr(data.index, 'tolist') else []
+            description=f"DCF内在价值 (WACC={wacc}, g={growth_rate})",
+            years=data['year'].tolist() if 'year' in data.columns else [],
+            values=[]
         )
+
+    def _calculate_implied_growth(self, fcf: pd.Series, market_cap: float, wacc: float, terminal_growth: float) -> float:
+        """
+        Calculate the implied annual growth rate given market cap.
+
+        Uses a simplified approach with 10-year projection period:
+        - Projects FCF for 10 years at implied growth rate g
+        - Calculates terminal value at terminal_growth
+        - Discounts all cash flows to present
+        - Solves for g where PV equals market_cap
+        """
+        import numpy as np
+
+        current_fcf = fcf.iloc[-1]
+        n_years = 10  # 10-year projection period for stability
+
+        def dcf_value(g: float) -> float:
+            """Calculate DCF value for a given growth rate"""
+            if g >= wacc:
+                return float('inf')
+            if g <= -0.1:  # Cap minimum growth
+                return 0
+
+            # Project FCF for n years
+            projected_fcf = [current_fcf * ((1 + g) ** i) for i in range(1, n_years + 1)]
+
+            # Terminal value
+            tv = (projected_fcf[-1] * (1 + terminal_growth)) / (wacc - terminal_growth)
+
+            # Discount all cash flows
+            pv = sum(fc / ((1 + wacc) ** i) for i, fc in enumerate(projected_fcf, 1))
+            pv += tv / ((1 + wacc) ** n_years)
+
+            return pv
+
+        # Solve for g numerically using binary search
+        # Search range: -5% to 30%
+        low, high = -0.05, 0.30
+        tolerance = 0.0001  # 0.01% precision
+
+        for _ in range(100):  # Max iterations
+            mid = (low + high) / 2
+            pv = dcf_value(mid)
+
+            if abs(pv - market_cap) / market_cap < tolerance:
+                return mid
+
+            if pv > market_cap:
+                # Need lower growth to reduce value
+                high = mid
+            else:
+                # Need higher growth to increase value
+                low = mid
+
+        return (low + high) / 2
 
     def get_required_fields(self) -> List[str]:
         return ['free_cash_flow', 'operating_cash_flow']

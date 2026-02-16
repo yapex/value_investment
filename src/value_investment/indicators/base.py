@@ -41,6 +41,11 @@ class IndicatorResult:
     unit: str
     description: str
     years: List[int]
+    values: List[float] = None  # Per-year values
+
+    def __post_init__(self):
+        if self.values is None:
+            self.values = []
 
 
 class BaseIndicator(ABC):

@@ -26,7 +26,8 @@ class ROEIndicator(BaseIndicator):
             value=float(roe.mean()) if len(roe) > 0 else 0.0,
             unit="%",
             description="Return on Equity",
-            years=[int(y) for y in data.index.tolist()] if hasattr(data.index, 'tolist') else []
+            years=data['year'].tolist() if 'year' in data.columns else [],
+            values=roe.tolist() if len(roe) > 0 else []
         )
 
     def get_required_fields(self) -> List[str]:
@@ -64,7 +65,8 @@ class ROAIndicator(BaseIndicator):
             value=float(roa.mean()) if len(roa) > 0 else 0.0,
             unit="%",
             description="Return on Assets",
-            years=[int(y) for y in data.index.tolist()] if hasattr(data.index, 'tolist') else []
+            years=data['year'].tolist() if 'year' in data.columns else [],
+            values=roa.tolist() if len(roa) > 0 else []
         )
 
     def get_required_fields(self) -> List[str]:
@@ -101,7 +103,8 @@ class GrossMarginIndicator(BaseIndicator):
             value=float(gross_margin.mean()) if len(gross_margin) > 0 else 0.0,
             unit="%",
             description="Gross Margin",
-            years=[int(y) for y in data.index.tolist()] if hasattr(data.index, 'tolist') else []
+            years=data['year'].tolist() if 'year' in data.columns else [],
+            values=gross_margin.tolist() if len(gross_margin) > 0 else []
         )
 
     def get_required_fields(self) -> List[str]:
@@ -137,7 +140,8 @@ class NetProfitMarginIndicator(BaseIndicator):
             value=float(npm.mean()) if len(npm) > 0 else 0.0,
             unit="%",
             description="Net Profit Margin",
-            years=[int(y) for y in data.index.tolist()] if hasattr(data.index, 'tolist') else []
+            years=data['year'].tolist() if 'year' in data.columns else [],
+            values=npm.tolist() if len(npm) > 0 else []
         )
 
     def get_required_fields(self) -> List[str]:
@@ -173,7 +177,8 @@ class CurrentRatioIndicator(BaseIndicator):
             value=float(cr.mean()) if len(cr) > 0 else 0.0,
             unit="ratio",
             description="Current Ratio",
-            years=[int(y) for y in data.index.tolist()] if hasattr(data.index, 'tolist') else []
+            years=data['year'].tolist() if 'year' in data.columns else [],
+            values=cr.tolist() if len(cr) > 0 else []
         )
 
     def get_required_fields(self) -> List[str]:

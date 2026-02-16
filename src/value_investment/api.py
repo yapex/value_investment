@@ -69,21 +69,21 @@ class ValueInvestment:
     def get_financial_data(
         self,
         symbol: str,
-        end_year: int,
-        start_year: int | None = None,
+        start_year: int,
+        end_year: int | None = None,
     ):
         """
         Get unified financial data
 
         Args:
             symbol: Stock code
-            end_year: End year (inclusive)
-            start_year: Start year (optional, defaults to earliest available)
+            start_year: Start year (inclusive)
+            end_year: End year (optional, defaults to start_year)
 
         Returns:
             DataFrame with merged financial data
         """
-        return self._provider.get_financial_data(symbol, end_year, start_year)
+        return self._provider.get_financial_data(symbol, start_year, end_year)
 
     def get_financial_indicator(self, symbol: str):
         """
@@ -133,6 +133,8 @@ class ValueInvestment:
         self,
         stock_code: str,
         years: int = 10,
+        cagr_metrics: list = None,
+        market_cap: float = None,
         **kwargs,
     ) -> dict:
         """
@@ -141,6 +143,8 @@ class ValueInvestment:
         Args:
             stock_code: Stock code
             years: Number of years for analysis
+            cagr_metrics: List of metrics for CAGR calculation, e.g. ["revenue", "net_profit"]
+            market_cap: Market capitalization (if not provided, will try to fetch from stock info)
             **kwargs: Additional parameters for indicators
 
         Returns:
@@ -155,6 +159,22 @@ class ValueInvestment:
             stock_code, current_year - years, current_year
         )
 
+        # Fetch market cap if not provided
+        if market_cap is None:
+            try:
+                info = self._provider.get_stock_info(stock_code)
+                if 'item' in info.columns:
+                    for _, row in info.iterrows():
+                        if '市值' in str(row['item']):
+                            market_cap = float(row['value'])
+                            break
+            except Exception:
+                pass
+
+        # Pass market_cap to indicators
+        if market_cap:
+            kwargs['market_cap'] = market_cap
+
         # Calculate all indicators
         results = {}
         for name in self._factory.list_indicators():
@@ -164,6 +184,19 @@ class ValueInvestment:
                 results[name] = result
             except Exception as e:
                 results[name] = {"error": str(e)}
+
+        # Calculate additional CAGR metrics if specified
+        if cagr_metrics:
+            for metric in cagr_metrics:
+                cagr_name = f"CAGR_{metric}"
+                if cagr_name not in results:
+                    try:
+                        cagr_indicator = self._factory.get("CAGR")
+                        result = cagr_indicator.calculate(financial_data, metric=metric, **kwargs)
+                        results[cagr_name] = result
+                    except Exception as e:
+                        results[cagr_name] = {"error": str(e)}
+
         return results
 
     def get_indicator(self, name: str) -> Optional[IndicatorMeta]:

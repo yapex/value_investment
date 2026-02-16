@@ -36,13 +36,13 @@ def hist(
 @app.command()
 def financial(
     symbol: str = typer.Argument(..., help="Stock code"),
-    end_year: int = typer.Option(2024, "--end", "-e", help="End year (required)"),
     start_year: int = typer.Option(None, "--start", "-s", help="Start year (optional, defaults to earliest)"),
+    end_year: int = typer.Option(2024, "--end", "-e", help="End year"),
     market: str = typer.Option("A", "--market", "-m", help="Market: A, HK, US"),
 ):
     """Get financial data (merged statements)"""
     vi = ValueInvestment(market=market)
-    df = vi.get_financial_data(symbol, end_year, start_year)
+    df = vi.get_financial_data(symbol, start_year, end_year)
     print(df.to_string())
 
 
@@ -67,17 +67,117 @@ def indicator(
 @app.command()
 def analyze(
     stock_code: str = typer.Argument(..., help="Stock code"),
-    years: int = typer.Option(10, "--years", "-y", help="Number of years"),
+    years: int = typer.Option(5, "--years", "-y", help="Number of years"),
     market: str = typer.Option("A", "--market", "-m", help="Market: A, HK, US"),
 ):
     """Perform complete analysis"""
+    import pandas as pd
+
     vi = ValueInvestment(market=market)
-    results = vi.analyze(stock_code, years)
-    for name, result in results.items():
-        if hasattr(result, "value"):
-            print(f"{name}: {result.value}")
-        else:
-            print(f"{name}: {result}")
+
+    # Get stock info first
+    try:
+        info = vi.get_stock_info(stock_code)
+        # Try to find stock name from info - prioritize 简称/名称 over 股票代码
+        name = stock_code
+        if 'item' in info.columns:
+            # First try to find 股票简称 or 名称
+            for _, row in info.iterrows():
+                item = str(row['item'])
+                if '简称' in item or '名称' in item:
+                    name = f"{row['value']} ({stock_code})"
+                    break
+    except Exception as e:
+        name = stock_code
+
+    # Call analyze with additional CAGR metrics
+    results = vi.analyze(stock_code, years, cagr_metrics=["revenue", "net_profit"])
+
+    # Collect all years from results (filter out invalid years like 0, 1, 2)
+    all_years = set()
+    for name_result in results.values():
+        if hasattr(name_result, 'years') and name_result.years:
+            for y in name_result.years:
+                if y > 100:  # Filter out invalid year numbers
+                    all_years.add(y)
+
+    if not all_years:
+        print(f"=== {stock_code} 财务分析 ===")
+        print("无财务数据")
+        return
+
+    sorted_years = sorted(all_years, reverse=True)
+    year_range = f"{min(sorted_years)}-{max(sorted_years)}"
+
+    # Chinese labels for indicators
+    label_map = {
+        "ROE": "ROE",
+        "ROA": "ROA",
+        "gross_margin": "毛利率",
+        "net_profit_margin": "净利率",
+        "current_ratio": "流动比率",
+        "ROIC": "ROIC",
+        "CAGR": "营收CAGR",
+        "CAGR_revenue": "营收CAGR",
+        "CAGR_net_profit": "净利润CAGR",
+        "DCF": "市场隐含增长率",
+    }
+
+    # Build DataFrame: rows = years, columns = indicators
+    data = []
+    for year in sorted_years:
+        row = {"年份": year}
+        for ind_name, result in results.items():
+            label = label_map.get(ind_name, ind_name)
+            if hasattr(result, 'values') and result.values and hasattr(result, 'years') and result.years:
+                if year in result.years:
+                    idx = result.years.index(year)
+                    if idx < len(result.values):
+                        value = result.values[idx]
+                        if result.unit == "%":
+                            row[label] = f"{value:.1f}%"
+                        elif result.unit == "ratio":
+                            row[label] = f"{value:.2f}"
+                        elif result.unit == "CNY":
+                            if abs(value) > 1e9:
+                                row[label] = f"{value/1e9:.2f}十亿"
+                            else:
+                                row[label] = f"{value:.2f}"
+                            continue
+                        else:
+                            row[label] = value
+        data.append(row)
+
+    df = pd.DataFrame(data)
+
+    # Output
+    print(f"\n### {name} 财务分析 ({year_range})")
+    print()
+    if not df.empty:
+        print(df.to_markdown(index=False))
+
+    # Show summary metrics (CAGR, DCF) that don't have per-year values
+    summary_metrics = []
+    for ind_name, result in results.items():
+        if hasattr(result, 'values') and not result.values and hasattr(result, 'value') and result.value:
+            # Skip default CAGR (no suffix), only show specific ones like CAGR_revenue, CAGR_net_profit
+            if ind_name == "CAGR":
+                continue
+            label = label_map.get(ind_name, ind_name)
+            if result.unit == "%":
+                summary_metrics.append((label, f"{result.value:.1f}%"))
+            elif result.unit == "CNY":
+                if abs(result.value) > 1e9:
+                    summary_metrics.append((label, f"{result.value/1e9:.2f}十亿"))
+                else:
+                    summary_metrics.append((label, f"{result.value:.2f}"))
+            else:
+                summary_metrics.append((label, f"{result.value}"))
+
+    if summary_metrics:
+        print()
+        for label, value in summary_metrics:
+            print(f"- {label}: {value}")
 
 
 @app.command("list")

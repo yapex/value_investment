@@ -141,6 +141,9 @@ def analyze(
                     idx = result.years.index(year)
                     if idx < len(result.values):
                         value = result.values[idx]
+                        import math
+                        if math.isnan(value):
+                            value = 0
                         if result.unit == "%":
                             row[label] = f"{value:.1f}%"
                         elif result.unit == "ratio":

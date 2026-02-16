@@ -67,7 +67,17 @@ vi.analyze("600519", years=5)
 
 ### 常用指标
 
-`ROE` `ROA` `ROIC` `gross_margin` `net_profit_margin` `current_ratio` `CAGR` `ImpliedGrowth`
+| 指标 | 说明 |
+|------|------|
+| `ROE` | 净资产收益率 |
+| `ROA` | 总资产收益率 |
+| `ROIC` | 投资资本回报率 |
+| `gross_margin` | 毛利率 |
+| `net_profit_margin` | 净利率 |
+| `current_ratio` | 流动比率 |
+| `CAGR` | 复合增长率 (支持revenue/net_profit) |
+| `cfo_to_netprofit_sum` | 累计净现比 (盈利质量) |
+| `ImpliedGrowth` | 市场隐含增长率 |
 
 ---
 

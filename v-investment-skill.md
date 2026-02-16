@@ -1,16 +1,16 @@
-# Value Investment Skill
+# v-invest
 
-A股/港股/美股基本面分析，基于akshare数据。
+A股/港股/美股基本面分析工具，基于akshare数据。
 
 ## 快速使用
 
 ```bash
 # CLI
-uv run python -m value_investment.cli info 600519
-uv run python -m value_investment.cli hist 600519 --end 20241231
-uv run python -m value_investment.cli financial 600519 --end 2024
-uv run python -m value_investment.cli analyze 600519
-uv run python -m value_investment.cli indicator ImpliedGrowth -s 600519
+v-invest info 600519
+v-invest hist 600519 --end 20241231
+v-invest financial 600519 --end 2024
+v-invest analyze 600519
+v-invest indicator ImpliedGrowth -s 600519
 ```
 
 ```python
@@ -20,7 +20,7 @@ from value_investment import ValueInvestment
 vi = ValueInvestment(market="A")
 vi.get_stock_info("600519")
 vi.get_historical_data("600519", "20200101", "20241231")
-vi.get_financial_data("600519", 2024)  # 获取到2024年的所有数据
+vi.get_financial_data("600519", 2024)
 vi.analyze("600519", years=5)
 ```
 
@@ -30,12 +30,12 @@ vi.analyze("600519", years=5)
 
 | 命令 | 说明 | 示例 |
 |------|------|------|
-| `info <code>` | 个股信息 | `info 600519` |
-| `hist <code>` | 历史行情 | `hist 600519 --end 20241231` |
-| `financial <code>` | 财务数据 | `financial 600519 --end 2024` |
-| `indicator <name> -s <code>` | 计算指标 | `indicator ImpliedGrowth -s 600519` |
-| `analyze <code>` | 完整分析 | `analyze 600519` |
-| `list` | 指标列表 | `list` |
+| `info <code>` | 个股信息 | `v-invest info 600519` |
+| `hist <code>` | 历史行情 | `v-invest hist 600519 --end 20241231` |
+| `financial <code>` | 财务数据 | `v-invest financial 600519 --end 2024` |
+| `indicator <name> -s <code>` | 计算指标 | `v-invest indicator ImpliedGrowth -s 600519` |
+| `analyze <code>` | 完整分析 | `v-invest analyze 600519` |
+| `list` | 指标列表 | `v-invest list` |
 
 ### 市场代码格式
 

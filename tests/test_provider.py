@@ -135,6 +135,7 @@ class TestAkshareProviderHistorical:
         cache = SmartCache(cache_dir=temp_cache_dir)
         provider = AkshareProvider(cache=cache, market="A")
 
+        # 使用YYYY-MM-DD格式(akshare返回的格式)
         mock_data = pd.DataFrame({
             "日期": ["2024-01-02", "2024-01-03"],
             "股票代码": ["600519", "600519"],
@@ -145,12 +146,102 @@ class TestAkshareProviderHistorical:
         with patch("akshare.stock_zh_a_hist", return_value=mock_data):
             result = provider.get_historical_data(
                 "600519",
-                start_date="20240101",
-                end_date="20240131"
+                end_date="2024-01-31",
+                start_date="2024-01-01"
             )
 
         assert isinstance(result, pd.DataFrame)
         assert len(result) == 2
+
+    def test_get_historical_data_without_start_date_returns_all(self, temp_cache_dir):
+        """不传start_date时应获取全量数据"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="A")
+
+        # Mock返回全量数据(2023-2024)
+        mock_data = pd.DataFrame({
+            "日期": ["2023-01-02", "2023-12-29", "2024-01-02", "2024-12-31"],
+            "股票代码": ["600519"] * 4,
+            "开盘": [1500.0, 1600.0, 1700.0, 1800.0],
+            "收盘": [1550.0, 1650.0, 1750.0, 1850.0]
+        })
+
+        with patch("akshare.stock_zh_a_hist", return_value=mock_data) as mock_ak:
+            result = provider.get_historical_data(
+                "600519",
+                end_date="20241231"
+            )
+
+        # 验证返回了全量数据
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 4
+        # 验证调用akshare时使用19700101作为start_date
+        mock_ak.assert_called_once()
+        call_kwargs = mock_ak.call_args.kwargs
+        assert call_kwargs["start_date"] == "19700101"
+        assert call_kwargs["end_date"] == "20241231"
+
+    def test_historical_data_cache_key_includes_end_date(self, temp_cache_dir):
+        """不同end_date应生成不同的缓存key"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="A")
+
+        mock_data = pd.DataFrame({
+            "日期": ["2024-12-31"],
+            "股票代码": ["600519"],
+            "开盘": [1800.0],
+            "收盘": [1850.0]
+        })
+
+        with patch("akshare.stock_zh_a_hist", return_value=mock_data):
+            # 查询 end_date=20241231
+            provider.get_historical_data("600519", end_date="20241231")
+            # 查询 end_date=20241230
+            provider.get_historical_data("600519", end_date="20241230")
+
+        # 验证生成了两个不同的缓存key
+        cache_keys = list(cache._memory_cache.keys())
+        assert "hist_600519_20241231_hfq" in cache_keys
+        assert "hist_600519_20241230_hfq" in cache_keys
+
+    def test_historical_data_cache_filters_by_start_date(self, temp_cache_dir):
+        """缓存命中后应按start_date过滤"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="A")
+
+        # 全量数据(2023-2024)
+        mock_full_data = pd.DataFrame({
+            "日期": ["2023-01-02", "2023-12-29", "2024-01-02", "2024-12-31"],
+            "股票代码": ["600519"] * 4,
+            "开盘": [1500.0, 1600.0, 1700.0, 1800.0],
+            "收盘": [1550.0, 1650.0, 1750.0, 1850.0]
+        })
+
+        with patch("akshare.stock_zh_a_hist", return_value=mock_full_data):
+            # 首次调用 get_historical_data("600519", end_date="20241231") 获取全量
+            result1 = provider.get_historical_data("600519", end_date="20241231")
+            # 再次调用带 start_date 过滤
+            result2 = provider.get_historical_data(
+                "600519",
+                end_date="20241231",
+                start_date="20240101"
+            )
+
+        # 首次调用返回全量(4条)
+        assert len(result1) == 4
+        # 第二次调用返回过滤后数据(2条，2024年的)
+        assert len(result2) == 2
+        # 验证数据被正确过滤
+        assert all(result2["日期"] >= "2024")
 
 
 class TestAkshareProviderFinancial:
@@ -219,3 +310,162 @@ class TestAkshareProviderFinancial:
             result = provider._get_cashflow_sheet("600519")
 
         assert isinstance(result, pd.DataFrame)
+
+
+class TestFinancialDataCache:
+    """Test financial data merged cache functionality"""
+
+    @pytest.fixture
+    def temp_cache_dir(self):
+        """Create a temporary cache directory"""
+        tmp = tempfile.mkdtemp()
+        yield tmp
+        shutil.rmtree(tmp)
+
+    def test_get_financial_data_without_start_year_returns_all(
+        self, temp_cache_dir
+    ):
+        """不传start_year时应获取全量数据"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import (
+            AkshareProvider,
+            _get_ttl_until_june_next_year,
+        )
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="A")
+
+        # Mock data with multiple years
+        balance_data = pd.DataFrame({
+            "SECUCODE": ["600519.SH"] * 3,
+            "SECURITY_CODE": ["600519"] * 3,
+            "REPORT_DATE": ["2024-12-31", "2023-12-31", "2022-12-31"],
+            "TOTAL_ASSETS": [1000, 900, 800],
+        })
+        income_data = pd.DataFrame({
+            "SECUCODE": ["600519.SH"] * 3,
+            "SECURITY_CODE": ["600519"] * 3,
+            "REPORT_DATE": ["2024-12-31", "2023-12-31", "2022-12-31"],
+            "TOTAL_OPERATE_INCOME": [100, 90, 80],
+        })
+        cashflow_data = pd.DataFrame({
+            "SECUCODE": ["600519.SH"] * 3,
+            "SECURITY_CODE": ["600519"] * 3,
+            "REPORT_DATE": ["2024-12-31", "2023-12-31", "2022-12-31"],
+            "SALES_SERVICES": [100, 90, 80],
+        })
+
+        with patch(
+            "akshare.stock_balance_sheet_by_yearly_em",
+            return_value=balance_data,
+        ), patch(
+            "akshare.stock_profit_sheet_by_yearly_em",
+            return_value=income_data,
+        ), patch(
+            "akshare.stock_cash_flow_sheet_by_yearly_em",
+            return_value=cashflow_data,
+        ):
+            # Call without start_year - should return all data
+            result = provider.get_financial_data("600519", end_year=2024)
+
+        # Should have 3 years of data
+        assert len(result) == 3
+
+    def test_financial_data_cache_key_includes_end_year(self, temp_cache_dir):
+        """不同end_year应生成不同的缓存key"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="A")
+
+        # Mock data with multiple years
+        balance_data = pd.DataFrame({
+            "SECUCODE": ["600519.SH"] * 3,
+            "SECURITY_CODE": ["600519"] * 3,
+            "REPORT_DATE": ["2024-12-31", "2023-12-31", "2022-12-31"],
+            "TOTAL_ASSETS": [1000, 900, 800],
+        })
+        income_data = pd.DataFrame({
+            "SECUCODE": ["600519.SH"] * 3,
+            "SECURITY_CODE": ["600519"] * 3,
+            "REPORT_DATE": ["2024-12-31", "2023-12-31", "2022-12-31"],
+            "TOTAL_OPERATE_INCOME": [100, 90, 80],
+        })
+        cashflow_data = pd.DataFrame({
+            "SECUCODE": ["600519.SH"] * 3,
+            "SECURITY_CODE": ["600519"] * 3,
+            "REPORT_DATE": ["2024-12-31", "2023-12-31", "2022-12-31"],
+            "SALES_SERVICES": [100, 90, 80],
+        })
+
+        with patch(
+            "akshare.stock_balance_sheet_by_yearly_em",
+            return_value=balance_data,
+        ), patch(
+            "akshare.stock_profit_sheet_by_yearly_em",
+            return_value=income_data,
+        ), patch(
+            "akshare.stock_cash_flow_sheet_by_yearly_em",
+            return_value=cashflow_data,
+        ):
+            # Query with end_year=2024
+            provider.get_financial_data("600519", end_year=2024)
+            # Query with end_year=2023
+            provider.get_financial_data("600519", end_year=2023)
+
+        # Check that both cache keys exist
+        assert cache._memory_cache.get("financial_600519_2024") is not None
+        assert cache._memory_cache.get("financial_600519_2023") is not None
+
+    def test_financial_data_cache_ttl_until_june(self, temp_cache_dir):
+        """缓存TTL应到次年6月底"""
+        from datetime import datetime
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import (
+            AkshareProvider,
+            _get_ttl_until_june_next_year,
+        )
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="A")
+
+        # Mock data
+        balance_data = pd.DataFrame({
+            "SECUCODE": ["600519.SH"],
+            "SECURITY_CODE": ["600519"],
+            "REPORT_DATE": ["2024-12-31"],
+            "TOTAL_ASSETS": [1000],
+        })
+        income_data = pd.DataFrame({
+            "SECUCODE": ["600519.SH"],
+            "SECURITY_CODE": ["600519"],
+            "REPORT_DATE": ["2024-12-31"],
+            "TOTAL_OPERATE_INCOME": [100],
+        })
+        cashflow_data = pd.DataFrame({
+            "SECUCODE": ["600519.SH"],
+            "SECURITY_CODE": ["600519"],
+            "REPORT_DATE": ["2024-12-31"],
+            "SALES_SERVICES": [100],
+        })
+
+        with patch(
+            "akshare.stock_balance_sheet_by_yearly_em",
+            return_value=balance_data,
+        ), patch(
+            "akshare.stock_profit_sheet_by_yearly_em",
+            return_value=income_data,
+        ), patch(
+            "akshare.stock_cash_flow_sheet_by_yearly_em",
+            return_value=cashflow_data,
+        ):
+            provider.get_financial_data("600519", end_year=2024)
+
+        # Check TTL is approximately correct
+        expected_ttl = _get_ttl_until_june_next_year(2024)
+        june_next_year = datetime(datetime.now().year + 1, 6, 30, 23, 59, 59)
+        expected_seconds = int((june_next_year - datetime.now()).total_seconds())
+
+        # Allow some tolerance (within 60 seconds)
+        assert abs(expected_ttl - expected_seconds) < 60

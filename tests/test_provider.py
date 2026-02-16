@@ -365,8 +365,8 @@ class TestFinancialDataCache:
             "akshare.stock_cash_flow_sheet_by_yearly_em",
             return_value=cashflow_data,
         ):
-            # Call without start_year - should return all data
-            result = provider.get_financial_data("600519", end_year=2024)
+            # Call without end_year - should return all data
+            result = provider.get_financial_data("600519", start_year=0)
 
         # Should have 3 years of data
         assert len(result) == 3
@@ -409,10 +409,10 @@ class TestFinancialDataCache:
             "akshare.stock_cash_flow_sheet_by_yearly_em",
             return_value=cashflow_data,
         ):
-            # Query with end_year=2024
-            provider.get_financial_data("600519", end_year=2024)
-            # Query with end_year=2023
-            provider.get_financial_data("600519", end_year=2023)
+            # Query with start_year=2020, end_year=2024
+            provider.get_financial_data("600519", start_year=2020, end_year=2024)
+            # Query with start_year=2020, end_year=2023
+            provider.get_financial_data("600519", start_year=2020, end_year=2023)
 
         # Check that both cache keys exist
         assert cache._memory_cache.get("financial_600519_2024") is not None
@@ -460,7 +460,7 @@ class TestFinancialDataCache:
             "akshare.stock_cash_flow_sheet_by_yearly_em",
             return_value=cashflow_data,
         ):
-            provider.get_financial_data("600519", end_year=2024)
+            provider.get_financial_data("600519", start_year=2020, end_year=2024)
 
         # Check TTL is approximately correct
         expected_ttl = _get_ttl_until_june_next_year(2024)

@@ -242,30 +242,35 @@ class AkshareProvider:
     def get_financial_data(
         self,
         symbol: str,
-        end_year: int,
-        start_year: int | None = None,
+        start_year: int,
+        end_year: int | None = None,
     ) -> pd.DataFrame:
         """
         Get unified financial data (merged from three statements)
 
         Args:
             symbol: Stock code
-            end_year: End year (inclusive)
-            start_year: Start year (optional, defaults to earliest available)
+            start_year: Start year (inclusive)
+            end_year: End year (optional, defaults to start_year)
 
         Returns:
             DataFrame with merged financial data
         """
+        # Handle end_year being optional
+        if end_year is None:
+            end_year = start_year
+            start_year = 0  # Means from earliest
+
         if self._market == "A":
-            return self._get_a_financial_data(symbol, end_year, start_year)
+            return self._get_a_financial_data(symbol, start_year, end_year)
         else:
             raise NotImplementedError(f"Financial data for {self._market} not implemented yet")
 
     def _get_a_financial_data(
         self,
         symbol: str,
-        end_year: int,
-        start_year: int | None = None,
+        start_year: int,
+        end_year: int | None = None,
     ) -> pd.DataFrame:
         """Get A股 financial data with merged cache
 

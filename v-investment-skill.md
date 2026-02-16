@@ -1,117 +1,79 @@
 # Value Investment Skill
 
-## Overview
+A股/港股/美股基本面分析，基于akshare数据。
 
-This skill provides stock fundamental analysis capabilities for A股/港股/美股 markets using akshare data.
-
-## Capabilities
-
-- **Stock Info**: Query basic information for A股/港股/美股 stocks
-- **Historical Data**: Get historical price data with forward/backward adjustment
-- **Financial Data**: Retrieve merged balance sheet, income statement, cash flow
-- **Indicators**: Calculate ROE, ROA, ROIC, Gross Margin, Net Profit Margin, Current Ratio, CAGR, DCF
-- **Indicator Registry**: Unified metadata management for RAW/SIMPLE/COMPLEX indicators across markets
-- **Analysis**: Complete fundamental analysis with recommendations
-
-## Usage
-
-### CLI
+## 快速使用
 
 ```bash
-# Stock info
-python -m value_investment info 600519
-
-# Historical data
-python -m value_investment hist 600519 --start 20200101 --end 20241231
-
-# Financial data
-python -m value_investment financial 600519 --start 2015 --end 2024
-
-# Indicators
-python -m value_investment indicator 600519 ROE
-
-# Complete analysis
-python -m value_investment analyze 600519
-
-# List indicators
-python -m value_investment list
-
-# Cache management
-python -m value_investment cache-clear 600519
-python -m value_investment cache-stats
+# CLI
+uv run python -m value_investment.cli info 600519
+uv run python -m value_investment.cli hist 600519 --end 20241231
+uv run python -m value_investment.cli financial 600519 --start 2015 --end 2024
+uv run python -m value_investment.cli analyze 600519
 ```
 
-### Python API
-
 ```python
+# Python
 from value_investment import ValueInvestment
 
 vi = ValueInvestment(market="A")
-
-# Get stock info
-info = vi.get_stock_info("600519")
-
-# Historical data (default: hfq - backward adjusted)
-hist = vi.get_historical_data("600519", "20200101", "20241231")
-
-# Financial data (merged three statements)
-financial = vi.get_financial_data("600519", 2015, 2024)
-
-# Calculate indicator
-result = vi.calculate_indicator("ROE", "600519", [2020, 2021, 2022, 2023, 2024])
-
-# Get indicator metadata
-indicator = vi.get_indicator("revenue")
-print(indicator.display_name)  # 营业收入
-
-# List indicators (supports market/type filtering)
-all_indics = vi.list_indicators()
-abc_indics = vi.list_indicators(market="A股")
-raw_indics = vi.list_indicators(indicator_type="RAW")
-
-# Complete analysis
-analysis = vi.analyze("600519", years=5)
-
-# Clear cache
-vi.clear_cache("600519")
+vi.get_stock_info("600519")
+vi.get_historical_data("600519", "20200101", "20241231")
+vi.get_financial_data("600519", 2015, 2024)
+vi.analyze("600519", years=5)
 ```
 
-## Indicator Registry
+---
 
-The project uses an Indicator Registry to manage financial indicator metadata:
+## CLI 命令
 
-- **RAW**: Raw financial data from API (revenue, net_profit, etc.)
-- **SIMPLE**: Simple calculated indicators (ROE, ROA, gross_margin, etc.)
-- **COMPLEX**: Complex calculated indicators (DCF, CAGR, etc.)
+| 命令 | 说明 | 示例 |
+|------|------|------|
+| `info <code>` | 个股信息 | `info 600519` |
+| `hist <code>` | 历史行情 | `hist 600519 --end 20241231` |
+| `financial <code>` | 财务数据 | `financial 600519 --start 2015` |
+| `indicator <code> <name>` | 计算指标 | `indicator 600519 ROE` |
+| `analyze <code>` | 完整分析 | `analyze 600519` |
+| `list` | 指标列表 | `list --market A股 --type SIMPLE` |
 
-### Market Support
+### 市场代码格式
 
-| Market | Code Format | Example |
-|--------|-------------|---------|
-| A股 | 6-digit | 600519 |
-| 港股 | 5-digit | 00700 |
-| 美股 | Letter | AAPL |
+- A股: 6位数字 (600519)
+- 港股: 5位数字 (00700)
+- 美股: 字母 (AAPL)
 
-## Indicators
+---
 
-| Indicator | Description | Type |
-|-----------|-------------|------|
-| ROE | Return on Equity | SIMPLE |
-| ROA | Return on Assets | SIMPLE |
-| ROIC | Return on Invested Capital | SIMPLE |
-| gross_margin | Gross Margin | SIMPLE |
-| net_profit_margin | Net Profit Margin | SIMPLE |
-| current_ratio | Current Ratio | SIMPLE |
-| CAGR | Compound Annual Growth Rate | COMPLEX |
-| DCF | Discounted Cash Flow Valuation | COMPLEX |
-| revenue | 营业收入 | RAW |
-| net_profit | 净利润 | RAW |
-| total_assets | 总资产 | RAW |
+## Python API
 
-## Cache
+### 核心方法
 
-- Stock info: expires at next midnight (1 day TTL)
-- Historical data: 1 year TTL (default hfq)
-- Financial data: expires June 30 next year
+| 方法 | 说明 |
+|------|------|
+| `get_stock_info(code)` | 个股基本信息 |
+| `get_historical_data(code, start, end)` | 历史行情(默认后复权) |
+| `get_financial_data(code, start_year, end_year)` | 三大表合并 |
+| `calculate_indicator(name, code, years)` | 计算指标 |
+| `get_indicator(name)` | 获取指标元数据 |
+| `list_indicators(market, indicator_type)` | 列出指标 |
+| `analyze(code, years)` | 完整分析 |
 
-Cache supports range reuse: cached [2015-2024] can serve queries for [2020-2024].
+### 指标类型
+
+- **RAW**: 原始财务数据 (revenue, net_profit, total_assets)
+- **SIMPLE**: 简单计算 (ROE, ROA, ROIC, gross_margin, net_profit_margin, current_ratio)
+- **COMPLEX**: 复杂计算 (CAGR, DCF)
+
+### 常用指标
+
+`ROE` `ROA` `ROIC` `gross_margin` `net_profit_margin` `current_ratio` `CAGR` `DCF`
+
+---
+
+## 缓存策略
+
+- 个股信息: 次日凌晨失效
+- 历史数据: 1年
+- 财务数据: 次年6月底
+
+缓存支持范围复用: 缓存[2015-2024]可服务于[2020-2024]查询。

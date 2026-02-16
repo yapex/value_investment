@@ -5,23 +5,11 @@ A股/港股/美股基本面分析工具，基于akshare数据。
 ## 快速使用
 
 ```bash
-# CLI
 v-invest info 600519
 v-invest hist 600519 --end 20241231
 v-invest financial 600519 --end 2024
 v-invest analyze 600519
 v-invest indicator ImpliedGrowth -s 600519
-```
-
-```python
-# Python
-from value_investment import ValueInvestment
-
-vi = ValueInvestment(market="A")
-vi.get_stock_info("600519")
-vi.get_historical_data("600519", "20200101", "20241231")
-vi.get_financial_data("600519", 2024)
-vi.analyze("600519", years=5)
 ```
 
 ---
@@ -45,21 +33,7 @@ vi.analyze("600519", years=5)
 
 ---
 
-## Python API
-
-### 核心方法
-
-| 方法 | 说明 |
-|------|------|
-| `get_stock_info(code)` | 个股基本信息 |
-| `get_historical_data(code, start, end)` | 历史行情(默认后复权) |
-| `get_financial_data(code, end_year)` | 三大表合并(获取到end_year的所有历史数据) |
-| `calculate_indicator(name, code, years)` | 计算指标 |
-| `get_indicator(name)` | 获取指标元数据 |
-| `list_indicators()` | 列出所有指标 |
-| `analyze(code, years)` | 完整分析 |
-
-### 指标类型
+## 指标类型
 
 - **RAW**: 原始财务数据 (revenue, net_profit, total_assets)
 - **SIMPLE**: 简单计算 (ROE, ROA, gross_margin, net_profit_margin, current_ratio, etc.)

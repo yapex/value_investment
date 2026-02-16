@@ -17,6 +17,23 @@ def _get_ttl_until_next_midnight() -> int:
     return int((tomorrow - now).total_seconds())
 
 
+def _get_ttl_until_june_next_year(end_year: int) -> int:
+    """Get TTL in seconds until June 30th of the next year
+
+    This gives sufficient time for financial reports to be published.
+
+    Args:
+        end_year: The end year of the financial data
+
+    Returns:
+        TTL in seconds until next year June 30th
+    """
+    now = datetime.now()
+    # June 30th of next year
+    june_next_year = datetime(now.year + 1, 6, 30, 23, 59, 59)
+    return int((june_next_year - now).total_seconds())
+
+
 class AkshareProvider:
     """Akshare data provider for A股/港股/美股"""
 
@@ -30,6 +47,35 @@ class AkshareProvider:
         """
         self._cache = cache
         self._market = market
+
+    def _detect_market(self, code: str) -> Optional[str]:
+        """Detect market from stock code
+
+        Args:
+            code: Stock code
+
+        Returns:
+            Market name string ("A股", "港股", "美股") or None
+        """
+        if not code:
+            return None
+
+        code = code.strip()
+
+        # A股: 6-digit codes starting with 0, 3, 6
+        if code.isdigit() and len(code) == 6:
+            if code[0] in ("0", "3", "6"):
+                return "A股"
+
+        # 港股: 5-digit codes
+        if code.isdigit() and len(code) == 5:
+            return "港股"
+
+        # 美股: alphabetic ticker symbols
+        if code.isalpha():
+            return "美股"
+
+        return None
 
     def get_stock_info(self, symbol: str) -> pd.DataFrame:
         """
@@ -79,65 +125,105 @@ class AkshareProvider:
     def get_historical_data(
         self,
         symbol: str,
-        start_date: str,
         end_date: str,
-        adjust: str = "",
+        start_date: str | None = None,
+        adjust: str = "hfq",
     ) -> pd.DataFrame:
         """
         Get historical price data
 
         Args:
             symbol: Stock code
-            start_date: Start date (YYYYMMDD)
-            end_date: End date (YYYYMMDD)
+            end_date: End date (YYYYMMDD, required)
+            start_date: Start date (YYYYMMDD, optional, defaults to earliest available)
             adjust: Adjustment type - "" (none), "qfq" (forward), "hfq" (backward)
 
         Returns:
             DataFrame with historical prices
         """
         if self._market == "A":
-            return self._get_a_historical_data(symbol, start_date, end_date, adjust)
+            return self._get_a_historical_data(symbol, end_date, start_date, adjust)
         elif self._market == "HK":
-            return self._get_hk_historical_data(symbol, start_date, end_date, adjust)
+            return self._get_hk_historical_data(symbol, end_date, start_date, adjust)
         elif self._market == "US":
-            return self._get_us_historical_data(symbol, start_date, end_date)
+            return self._get_us_historical_data(symbol, end_date, start_date)
         else:
             raise ValueError(f"Unsupported market: {self._market}")
 
     def _get_a_historical_data(
         self,
         symbol: str,
-        start_date: str,
         end_date: str,
-        adjust: str,
+        start_date: str | None = None,
+        adjust: str = "hfq",
     ) -> pd.DataFrame:
-        """Get A股 historical data"""
-        cache_key = f"hist_{symbol}_{start_date}_{end_date}_{adjust}"
+        """Get A股 historical data with end_date-based cache
+
+        Args:
+            symbol: Stock code
+            end_date: End date (YYYYMMDD or YYYY-MM-DD, required)
+            start_date: Start date (YYYYMMDD or YYYY-MM-DD, optional, for filtering)
+            adjust: Adjustment type
+
+        Returns:
+            DataFrame with historical prices
+        """
+        # Normalize date format to YYYY-MM-DD for comparison
+        end_date_normalized = self._normalize_date(end_date)
+        start_date_normalized = self._normalize_date(start_date) if start_date else None
+
+        # Use end_date-based cache key
+        cache_key = f"hist_{symbol}_{end_date}_{adjust}"
 
         # Try cache first
         cached = self._cache.get(cache_key)
         if cached is not None:
+            # Filter by start_date if provided
+            if start_date_normalized is not None:
+                cached = cached[cached["日期"] >= start_date_normalized]
             return cached
 
-        # Fetch from akshare
+        # Fetch full data from akshare (from earliest to end_date)
         data = ak.stock_zh_a_hist(
             symbol=symbol,
             period="daily",
-            start_date=start_date,
+            start_date="19700101",  # Fetch from earliest available
             end_date=end_date,
             adjust=adjust,
         )
 
         # Cache for 1 year
         self._cache.set(cache_key, data, ttl=86400 * 365)
+
+        # Filter by start_date if provided
+        if start_date_normalized is not None:
+            data = data[data["日期"] >= start_date_normalized]
+
         return data
+
+    def _normalize_date(self, date_str: str) -> str:
+        """Normalize date string to YYYY-MM-DD format for comparison
+
+        Args:
+            date_str: Date string in YYYYMMDD or YYYY-MM-DD format
+
+        Returns:
+            Normalized date string in YYYY-MM-DD format
+        """
+        if not date_str:
+            return date_str
+        # If already in YYYY-MM-DD format, return as-is
+        if "-" in date_str:
+            return date_str
+        # Convert YYYYMMDD to YYYY-MM-DD
+        return f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
 
     def _get_hk_historical_data(
         self,
         symbol: str,
-        start_date: str,
         end_date: str,
-        adjust: str,
+        start_date: str | None = None,
+        adjust: str = "hfq",
     ) -> pd.DataFrame:
         """Get 港股 historical data"""
         # TODO: Implement HK historical data
@@ -146,8 +232,8 @@ class AkshareProvider:
     def _get_us_historical_data(
         self,
         symbol: str,
-        start_date: str,
         end_date: str,
+        start_date: str | None = None,
     ) -> pd.DataFrame:
         """Get 美股 historical data"""
         # TODO: Implement US historical data
@@ -156,79 +242,84 @@ class AkshareProvider:
     def get_financial_data(
         self,
         symbol: str,
-        start_year: int,
         end_year: int,
+        start_year: int | None = None,
     ) -> pd.DataFrame:
         """
         Get unified financial data (merged from three statements)
 
         Args:
             symbol: Stock code
-            start_year: Start year
-            end_year: End year
+            end_year: End year (inclusive)
+            start_year: Start year (optional, defaults to earliest available)
 
         Returns:
             DataFrame with merged financial data
         """
         if self._market == "A":
-            return self._get_a_financial_data(symbol, start_year, end_year)
+            return self._get_a_financial_data(symbol, end_year, start_year)
         else:
             raise NotImplementedError(f"Financial data for {self._market} not implemented yet")
 
     def _get_a_financial_data(
         self,
         symbol: str,
-        start_year: int,
         end_year: int,
+        start_year: int | None = None,
     ) -> pd.DataFrame:
-        """Get A股 financial data by merging three statements"""
-        # Get the three statements
+        """Get A股 financial data with merged cache
+
+        Args:
+            symbol: Stock code
+            end_year: End year (inclusive)
+            start_year: Start year (optional, for filtering)
+
+        Returns:
+            DataFrame with merged financial data
+        """
+        # Use merged cache key based on end_year
+        cache_key = f"financial_{symbol}_{end_year}"
+        ttl = _get_ttl_until_june_next_year(end_year)
+
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            # Filter by start_year if provided
+            if start_year is not None:
+                cached = cached[cached["year"] >= start_year]
+            return cached
+
+        # Get the three statements (still cached individually for other uses)
         balance = self._get_balance_sheet(symbol)
         income = self._get_profit_sheet(symbol)
         cashflow = self._get_cashflow_sheet(symbol)
 
         # Merge into unified format
-        return self._merge_financial_data(balance, income, cashflow)
+        merged = self._merge_financial_data(balance, income, cashflow)
+
+        # Cache the merged data
+        self._cache.set(cache_key, merged, ttl=ttl)
+
+        # Filter by start_year if provided
+        if start_year is not None:
+            merged = merged[merged["year"] >= start_year]
+
+        return merged
 
     def _get_balance_sheet(self, symbol: str) -> pd.DataFrame:
-        """Get balance sheet"""
+        """Get balance sheet (no separate cache, use merged cache in get_financial_data)"""
         # Add SH prefix for A股
         full_symbol = f"SH{symbol}" if not symbol.startswith(("SH", "SZ")) else symbol
-        cache_key = f"balance_{symbol}"
-
-        cached = self._cache.get(cache_key)
-        if cached is not None:
-            return cached
-
-        data = ak.stock_balance_sheet_by_yearly_em(symbol=full_symbol)
-        self._cache.set(cache_key, data, ttl=86400 * 365)
-        return data
+        return ak.stock_balance_sheet_by_yearly_em(symbol=full_symbol)
 
     def _get_profit_sheet(self, symbol: str) -> pd.DataFrame:
-        """Get profit sheet (income statement)"""
+        """Get profit sheet (income statement) (no separate cache, use merged cache in get_financial_data)"""
         full_symbol = f"SH{symbol}" if not symbol.startswith(("SH", "SZ")) else symbol
-        cache_key = f"income_{symbol}"
-
-        cached = self._cache.get(cache_key)
-        if cached is not None:
-            return cached
-
-        data = ak.stock_profit_sheet_by_yearly_em(symbol=full_symbol)
-        self._cache.set(cache_key, data, ttl=86400 * 365)
-        return data
+        return ak.stock_profit_sheet_by_yearly_em(symbol=full_symbol)
 
     def _get_cashflow_sheet(self, symbol: str) -> pd.DataFrame:
-        """Get cash flow sheet"""
+        """Get cash flow sheet (no separate cache, use merged cache in get_financial_data)"""
         full_symbol = f"SH{symbol}" if not symbol.startswith(("SH", "SZ")) else symbol
-        cache_key = f"cashflow_{symbol}"
-
-        cached = self._cache.get(cache_key)
-        if cached is not None:
-            return cached
-
-        data = ak.stock_cash_flow_sheet_by_yearly_em(symbol=full_symbol)
-        self._cache.set(cache_key, data, ttl=86400 * 365)
-        return data
+        return ak.stock_cash_flow_sheet_by_yearly_em(symbol=full_symbol)
 
     def _merge_financial_data(
         self,

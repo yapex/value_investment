@@ -2,6 +2,18 @@
 from typing import TYPE_CHECKING, Dict
 
 from value_investment.indicators.base import BaseIndicator
+from value_investment.indicators.simple import (
+    ROEIndicator,
+    ROAIndicator,
+    GrossMarginIndicator,
+    NetProfitMarginIndicator,
+    CurrentRatioIndicator,
+)
+from value_investment.indicators.complex import (
+    ROICIndicator,
+    CAGRIndicator,
+    DCFIndicator,
+)
 
 if TYPE_CHECKING:
     from value_investment.data.providers.akshare_provider import AkshareProvider
@@ -10,9 +22,25 @@ if TYPE_CHECKING:
 class IndicatorFactory:
     """Factory for creating and managing indicators"""
 
-    def __init__(self, provider: "AkshareProvider"):
+    def __init__(self, provider: "AkshareProvider" = None):
         self._provider = provider
         self._indicators: Dict[str, BaseIndicator] = {}
+        self._register_default_indicators()
+
+    def _register_default_indicators(self) -> None:
+        """Register all default indicators"""
+        indicators = [
+            ROEIndicator(),
+            ROAIndicator(),
+            GrossMarginIndicator(),
+            NetProfitMarginIndicator(),
+            CurrentRatioIndicator(),
+            ROICIndicator(),
+            CAGRIndicator(),
+            DCFIndicator(),
+        ]
+        for indicator in indicators:
+            self.register(indicator)
 
     def register(self, indicator: BaseIndicator) -> None:
         """Register an indicator"""

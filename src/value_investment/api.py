@@ -5,6 +5,8 @@ from value_investment.data.cache import SmartCache
 from value_investment.data.providers.akshare_provider import AkshareProvider
 from value_investment.indicators.factory import IndicatorFactory
 from value_investment.indicators.base import IndicatorResult
+from value_investment.indicators.registry import IndicatorRegistry, register_defaults
+from value_investment.indicators.base import IndicatorMeta
 
 
 class ValueInvestment:
@@ -28,6 +30,8 @@ class ValueInvestment:
         self._cache = SmartCache(cache_dir=cache_dir or "./.cache")
         self._provider = AkshareProvider(cache=self._cache, market=market)
         self._factory = IndicatorFactory(provider=self._provider)
+        # Initialize indicator registry with defaults
+        register_defaults()
 
     def get_stock_info(self, symbol: str):
         """
@@ -44,8 +48,8 @@ class ValueInvestment:
     def get_historical_data(
         self,
         symbol: str,
-        start_date: str,
         end_date: str,
+        start_date: str | None = None,
         adjust: str = "hfq",
     ):
         """
@@ -53,33 +57,33 @@ class ValueInvestment:
 
         Args:
             symbol: Stock code
-            start_date: Start date (YYYYMMDD)
-            end_date: End date (YYYYMMDD)
+            end_date: End date (YYYYMMDD, required)
+            start_date: Start date (YYYYMMDD, optional, defaults to earliest available)
             adjust: Adjustment type - "" (none), "qfq" (forward), "hfq" (backward, default for backtesting)
 
         Returns:
             DataFrame with historical prices
         """
-        return self._provider.get_historical_data(symbol, start_date, end_date, adjust)
+        return self._provider.get_historical_data(symbol, end_date, start_date, adjust)
 
     def get_financial_data(
         self,
         symbol: str,
-        start_year: int,
         end_year: int,
+        start_year: int | None = None,
     ):
         """
         Get unified financial data
 
         Args:
             symbol: Stock code
-            start_year: Start year
-            end_year: End year
+            end_year: End year (inclusive)
+            start_year: Start year (optional, defaults to earliest available)
 
         Returns:
             DataFrame with merged financial data
         """
-        return self._provider.get_financial_data(symbol, start_year, end_year)
+        return self._provider.get_financial_data(symbol, end_year, start_year)
 
     def get_financial_indicator(self, symbol: str):
         """
@@ -112,8 +116,18 @@ class ValueInvestment:
         Returns:
             IndicatorResult with calculated value
         """
+        from datetime import datetime
+
         indicator = self._factory.get(indicator_name)
-        return indicator.calculate(stock_code, years, self._provider, **kwargs)
+
+        # Fetch financial data for the indicator
+        current_year = datetime.now().year
+        financial_data = self._provider.get_financial_data(
+            stock_code, current_year - years, current_year
+        )
+
+        # Pass data to indicator (data-passing pattern)
+        return indicator.calculate(financial_data, **kwargs)
 
     def analyze(
         self,
@@ -132,25 +146,87 @@ class ValueInvestment:
         Returns:
             Dictionary with all indicator results
         """
+        from datetime import datetime
+
+        current_year = datetime.now().year
+
+        # Fetch financial data once
+        financial_data = self._provider.get_financial_data(
+            stock_code, current_year - years, current_year
+        )
+
+        # Calculate all indicators
         results = {}
         for name in self._factory.list_indicators():
             try:
-                result = self._factory.get(name).calculate(
-                    stock_code, years, self._provider, **kwargs
-                )
+                indicator = self._factory.get(name)
+                result = indicator.calculate(financial_data, **kwargs)
                 results[name] = result
             except Exception as e:
                 results[name] = {"error": str(e)}
         return results
 
-    def list_indicators(self) -> list:
+    def get_indicator(self, name: str) -> Optional[IndicatorMeta]:
         """
-        List all available indicators
+        Get indicator metadata by name
+
+        Args:
+            name: Indicator name
+
+        Returns:
+            Indicator metadata or None if not found
+        """
+        registry = IndicatorRegistry.get_instance()
+        return registry.get(name)
+
+    def list_indicators(
+        self,
+        market: Optional[str] = None,
+        indicator_type: Optional[str] = None,
+    ) -> list:
+        """
+        List available indicators with optional filters
+
+        Args:
+            market: Filter by market ("A股", "港股", "美股")
+            indicator_type: Filter by type ("RAW", "SIMPLE", "COMPLEX")
 
         Returns:
             List of indicator names
         """
-        return self._factory.list_indicators()
+        registry = IndicatorRegistry.get_instance()
+
+        results = registry.list_all()
+
+        # Also get indicators from factory (for backward compatibility)
+        factory_indicators = self._factory.list_indicators()
+
+        # Combine both sources - get names from registry
+        registry_names = {ind.name for ind in results}
+
+        # Add factory indicators that are not in registry
+        for name in factory_indicators:
+            if name not in registry_names:
+                # Create a minimal meta for factory indicators
+                from value_investment.indicators.base import IndicatorMeta, IndicatorType
+                meta = IndicatorMeta(
+                    name=name,
+                    display_name=name,
+                    type=IndicatorType.SIMPLE,
+                    description="",
+                )
+                results.append(meta)
+
+        # Filter by market
+        if market:
+            results = [ind for ind in results if market in ind.market_fields or not ind.market_fields]
+
+        # Filter by type
+        if indicator_type:
+            results = [ind for ind in results if ind.type.value == indicator_type]
+
+        # Return indicator names (backward compatible)
+        return [ind.name for ind in results]
 
     def clear_cache(self, symbol: Optional[str] = None):
         """
@@ -161,10 +237,14 @@ class ValueInvestment:
         """
         if symbol:
             self._cache.invalidate(f"info_{symbol}")
-            self._cache.invalidate(f"balance_{symbol}")
-            self._cache.invalidate(f"income_{symbol}")
-            self._cache.invalidate(f"cashflow_{symbol}")
-            self._cache.invalidate(f"hist_{symbol}")
+            # Clear financial data cache (all end_years)
+            for key in list(self._cache._memory_cache.keys()):
+                if key.startswith(f"financial_{symbol}_"):
+                    self._cache.invalidate(key)
+            # Clear historical data cache (all end_dates)
+            for key in list(self._cache._memory_cache.keys()):
+                if key.startswith(f"hist_{symbol}_"):
+                    self._cache.invalidate(key)
             self._cache.invalidate(f"indicator_{symbol}")
         else:
             # Clear all cache

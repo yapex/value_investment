@@ -22,27 +22,27 @@ def info(
 @app.command()
 def hist(
     symbol: str = typer.Argument(..., help="Stock code"),
-    start: str = typer.Option("20200101", "--start", "-s", help="Start date (YYYYMMDD)"),
+    start: str = typer.Option("19700101", "--start", "-s", help="Start date (YYYYMMDD, optional, defaults to earliest)"),
     end: str = typer.Option("20241231", "--end", "-e", help="End date (YYYYMMDD)"),
     adjust: str = typer.Option("hfq", "--adjust", "-a", help="Adjustment: '', 'qfq', 'hfq' (default: hfq for backtesting)"),
     market: str = typer.Option("A", "--market", "-m", help="Market: A, HK, US"),
 ):
     """Get historical price data"""
     vi = ValueInvestment(market=market)
-    df = vi.get_historical_data(symbol, start, end, adjust)
+    df = vi.get_historical_data(symbol, end, start, adjust)
     print(df.to_string())
 
 
 @app.command()
 def financial(
     symbol: str = typer.Argument(..., help="Stock code"),
-    start_year: int = typer.Option(2015, "--start", "-s", help="Start year"),
-    end_year: int = typer.Option(2024, "--end", "-e", help="End year"),
+    end_year: int = typer.Option(2024, "--end", "-e", help="End year (required)"),
+    start_year: int = typer.Option(None, "--start", "-s", help="Start year (optional, defaults to earliest)"),
     market: str = typer.Option("A", "--market", "-m", help="Market: A, HK, US"),
 ):
     """Get financial data (merged statements)"""
     vi = ValueInvestment(market=market)
-    df = vi.get_financial_data(symbol, start_year, end_year)
+    df = vi.get_financial_data(symbol, end_year, start_year)
     print(df.to_string())
 
 
@@ -80,8 +80,9 @@ def analyze(
             print(f"{name}: {result}")
 
 
-@app.command()
-def list():
+@app.command("list")
+@app.command("list-indicators")
+def list_indicators():
     """List all available indicators"""
     vi = ValueInvestment()
     indicators = vi.list_indicators()
@@ -101,6 +102,45 @@ def cache_clear(
         print(f"Cleared cache for {symbol}")
     else:
         print("Cleared all cache")
+
+
+@app.command()
+def cache_stats():
+    """Show cache statistics."""
+    vi = ValueInvestment()
+    cache = vi._cache
+
+    stats = {
+        "memory_size": len(cache._memory_cache) if hasattr(cache, '_memory_cache') else 0,
+    }
+
+    # Check disk cache
+    if hasattr(cache, '_disk_cache'):
+        stats["disk_cache_size"] = len(cache._disk_cache)
+    else:
+        stats["disk_cache_size"] = 0
+
+    print(f"Memory cache entries: {stats['memory_size']}")
+    print(f"Disk cache entries: {stats['disk_cache_size']}")
+
+
+@app.command()
+def cache_list(symbol: Optional[str] = typer.Argument(None, help="Filter by stock code")):
+    """List cached items."""
+    vi = ValueInvestment()
+    cache = vi._cache
+
+    keys = []
+    if hasattr(cache, '_disk_cache'):
+        keys = list(cache._disk_cache.keys())
+    elif hasattr(cache, '_memory_cache'):
+        keys = list(cache._memory_cache.keys())
+
+    if symbol:
+        keys = [k for k in keys if symbol in k]
+
+    for key in keys[:20]:
+        print(key)
 
 
 @app.command()

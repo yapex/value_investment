@@ -12,6 +12,9 @@ dependencies = [
     "pandas>=2.0.0",
 ]
 
+[project.scripts]
+v-invest = "value_investment.cli:app"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

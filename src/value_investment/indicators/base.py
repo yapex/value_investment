@@ -1,10 +1,36 @@
 """Indicator base module"""
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import List, TYPE_CHECKING
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import List, TYPE_CHECKING, Any, Dict, Optional
 
 if TYPE_CHECKING:
-    from value_investment.data.providers.akshare_provider import AkshareProvider
+    import pandas as pd
+
+
+class IndicatorType(str, Enum):
+    """Types of indicators"""
+
+    RAW = "RAW"  # Raw financial data from API
+    SIMPLE = "SIMPLE"  # Simple calculated indicators (ROE, ROA, etc.)
+    COMPLEX = "COMPLEX"  # Complex calculated indicators (DCF, CAGR, etc.)
+
+
+@dataclass
+class IndicatorMeta:
+    """Metadata for an indicator"""
+
+    name: str
+    display_name: str
+    type: IndicatorType
+    field_names: List[str] = field(default_factory=list)
+    market_fields: Dict[str, str] = field(default_factory=dict)
+    description: str = ""
+    unit: str = ""
+
+    def get_field_for_market(self, market: str) -> Optional[str]:
+        """Get field name for specific market"""
+        return self.market_fields.get(market)
 
 
 @dataclass
@@ -18,7 +44,11 @@ class IndicatorResult:
 
 
 class BaseIndicator(ABC):
-    """Base class for all indicators"""
+    """Base class for all indicators
+
+    Uses data-passing pattern: indicators receive pre-fetched data
+    and focus only on calculation logic.
+    """
 
     name: str = ""
     description: str = ""
@@ -26,10 +56,20 @@ class BaseIndicator(ABC):
     @abstractmethod
     def calculate(
         self,
-        stock_code: str,
-        years: int,
-        provider: "AkshareProvider",
-        **kwargs,
+        data: "pd.DataFrame",
+        **kwargs: Any,
     ) -> IndicatorResult:
-        """Calculate the indicator"""
+        """Calculate the indicator
+
+        Args:
+            data: DataFrame with financial data columns
+            **kwargs: Additional parameters (e.g., tax_rate, growth_rate)
+
+        Returns:
+            IndicatorResult with calculated value
+        """
         pass
+
+    def get_required_fields(self) -> list:
+        """Return list of required data fields for this indicator"""
+        return []

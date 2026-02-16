@@ -12,14 +12,35 @@ cd value_investment
 uv tool install -e .
 ```
 
-## 快速使用
+## 场景化使用指南
+
+根据用户需求选择**唯一**需要的命令：
+
+| 用户需求 | 执行命令 | 说明 |
+|----------|----------|------|
+| 查询股票基本信息 | `v-invest info 600519` | 股票名称、市值、行业等 |
+| 查询历史股价 | `v-invest hist 600519 --end 20241231` | 历史行情数据 |
+| 查询财务报表 | `v-invest financial 600519 --end 2024` | 资产负债、利润、现金流 |
+| 查询单个指标 | `v-invest indicator ROE -s 600519` | **自包含**，无需其他命令 |
+| 完整财务分析 | `v-invest analyze 600519` | 一次性计算所有指标 |
+
+### 重要提示
+
+- **`indicator` 命令是自包含的**：会自动获取财务数据和市值，无需先调用 `info`/`financial`
+- **避免冗余调用**：用户只需查询单个指标时，只执行 `indicator` 即可，不要执行 `analyze`
+- **`analyze` 适用场景**：用户明确要求"完整分析"、"全面分析"时才使用
+
+### 示例
 
 ```bash
-v-invest info 600519
-v-invest hist 600519 --end 20241231
-v-invest financial 600519 --end 2024
-v-invest analyze 600519
+# 用户问"贵州茅台的ROE是多少" → 只需一个命令
+v-invest indicator ROE -s 600519
+
+# 用户问"贵州茅台的隐含增长率" → 只需一个命令
 v-invest indicator ImpliedGrowth -s 600519
+
+# 用户问"分析贵州茅台的财务状况" → 使用 analyze
+v-invest analyze 600519
 ```
 
 ---

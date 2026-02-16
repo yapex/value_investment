@@ -44,6 +44,9 @@ Thumbs.db
 # Cache
 .cache/
 
+# Git worktrees
+.worktrees/
+
 # Python version
 .python-version
 

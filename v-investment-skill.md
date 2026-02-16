@@ -2,6 +2,16 @@
 
 A股/港股/美股基本面分析工具，基于akshare数据。
 
+## 安装
+
+首次使用请先安装工具，详见 [README.md](https://github.com/yapex/value_investment#安装)。
+
+```bash
+git clone https://github.com/yapex/value_investment.git
+cd value_investment
+uv tool install -e .
+```
+
 ## 快速使用
 
 ```bash

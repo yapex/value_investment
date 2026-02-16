@@ -71,6 +71,51 @@ class TestAkshareProviderStockInfo:
         mock_ak.assert_not_called()
         assert result is not None
 
+    def test_stock_info_cache_expires_at_next_midnight(self, temp_cache_dir):
+        """Stock info cache should expire at next midnight, not fixed TTL"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+        from datetime import datetime, timedelta
+        from pathlib import Path
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="A")
+
+        # Mock akshare to return data
+        mock_data = pd.DataFrame({
+            "item": ["股票代码", "股票简称"],
+            "value": ["600519", "贵州茅台"]
+        })
+
+        with patch("akshare.stock_individual_info_em", return_value=mock_data):
+            result = provider.get_stock_info("600519")
+
+        assert result is not None
+
+        # Check the cache entry's TTL - should be until next midnight
+        cache_key = "info_600519"
+        cache_file = Path(temp_cache_dir) / f"{cache_key}.pkl"
+
+        import pickle
+        with open(cache_file, "rb") as f:
+            entry = pickle.load(f)
+
+        # TTL should be less than a full day (86400) and should expire at next midnight
+        # At any time of day, TTL should be between 1 second and 86399 seconds
+        assert entry.ttl > 0, "TTL should be positive"
+        assert entry.ttl < 86400, "TTL should be less than 24 hours (next midnight)"
+
+        # TTL should be approximately time until midnight (±1 second tolerance)
+        now = datetime.now()
+        tomorrow_midnight = (now + timedelta(days=1)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        expected_ttl = int((tomorrow_midnight - now).total_seconds())
+
+        assert abs(entry.ttl - expected_ttl) <= 1, (
+            f"TTL {entry.ttl} should be within 1 second of time until midnight {expected_ttl}"
+        )
+
 
 class TestAkshareProviderHistorical:
     """Test historical data fetching"""

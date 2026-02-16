@@ -1,12 +1,20 @@
 """Akshare data provider"""
 import akshare as ak
 import pandas as pd
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Optional
 
 from value_investment.data.mapper import DataMapper
 
 if TYPE_CHECKING:
     from value_investment.data.cache import SmartCache
+
+
+def _get_ttl_until_next_midnight() -> int:
+    """Get TTL in seconds until next midnight (for daily refresh data like stock info)"""
+    now = datetime.now()
+    tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    return int((tomorrow - now).total_seconds())
 
 
 class AkshareProvider:
@@ -54,8 +62,8 @@ class AkshareProvider:
         # Fetch from akshare
         data = ak.stock_individual_info_em(symbol=symbol)
 
-        # Cache for 1 day
-        self._cache.set(cache_key, data, ttl=86400)
+        # Cache until next midnight
+        self._cache.set(cache_key, data, ttl=_get_ttl_until_next_midnight())
         return data
 
     def _get_hk_stock_info(self, symbol: str) -> pd.DataFrame:

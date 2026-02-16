@@ -14,7 +14,7 @@ def test_indicator_factory_has_cagr():
     assert indicator is not None
 
 
-def test_indicator_factory_has_dcf():
+def test_indicator_factory_has_implied_growth():
     factory = IndicatorFactory()
-    indicator = factory.get("DCF")
+    indicator = factory.get("ImpliedGrowth")
     assert indicator is not None

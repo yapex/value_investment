@@ -2,7 +2,7 @@
 from typing import List
 import pandas as pd
 
-from value_investment.indicators.base import BaseIndicator, IndicatorResult
+from value_investment.indicators.base import BaseIndicator, IndicatorResult, IndicatorType
 
 
 class ROICIndicator(BaseIndicator):
@@ -12,6 +12,10 @@ class ROICIndicator(BaseIndicator):
     NOPAT = Net Operating Profit After Tax
     = Operating Income * (1 - Tax Rate)
     """
+
+    name = "ROIC"
+    description = "Return on Invested Capital"
+    type = IndicatorType.COMPLEX
 
     name = "ROIC"
     description = "Return on Invested Capital (NOPAT / Invested Capital)"
@@ -114,6 +118,7 @@ class CAGRIndicator(BaseIndicator):
 
     name = "CAGR"
     description = "Compound Annual Growth Rate"
+    type = IndicatorType.COMPLEX
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         metric = kwargs.get("metric", "revenue")
@@ -189,28 +194,29 @@ class CAGRIndicator(BaseIndicator):
         return None
 
 
-class DCFIndicator(BaseIndicator):
+class ImpliedGrowthIndicator(BaseIndicator):
     """
-    Discounted Cash Flow valuation
+    Implied Growth Rate based on DCF model and market cap.
 
-    Can calculate:
-    1. DCF intrinsic value (when no market_cap provided)
-    2. Implied growth rate (when market_cap provided)
+    Calculates the annual growth rate that justifies the current market cap,
+    assuming a constant WACC and terminal growth rate.
 
     Formula:
-    - Terminal Value = Final FCF * (1 + g) / (WACC - g)
-    - Enterprise Value = Sum of discounted FCFs + Terminal Value
+    - Projects FCF for 10 years at growth rate g
+    - Calculates terminal value at terminal_growth
+    - Discounts all cash flows to present
+    - Solves for g where PV equals market_cap
     """
 
-    name = "DCF"
-    description = "DCF Valuation"
+    name = "ImpliedGrowth"
+    description = "市场隐含增长率 (基于DCF模型)"
+    type = IndicatorType.COMPLEX
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         # Get parameters
         growth_rate = kwargs.get("growth_rate", 0.03)  # Terminal growth
         wacc = kwargs.get("wacc", 0.10)  # Weighted Average Cost of Capital
-        discount_rate = kwargs.get("discount_rate", wacc)
-        market_cap = kwargs.get("market_cap", None)  # Market cap for implied growth
+        market_cap = kwargs.get("market_cap", None)  # Required for implied growth
 
         # Calculate FCF = Operating Cash Flow - Capital Expenditure
         op_cash_flow_col = self._find_column(data, [
@@ -223,8 +229,8 @@ class DCFIndicator(BaseIndicator):
         if not op_cash_flow_col:
             return IndicatorResult(
                 value=0.0,
-                unit="CNY",
-                description="DCF Valuation (no cash flow data)",
+                unit="%",
+                description="Implied Growth (no cash flow data)",
                 years=[],
                 values=[]
             )
@@ -236,56 +242,33 @@ class DCFIndicator(BaseIndicator):
         if len(fcf) == 0 or fcf.iloc[-1] <= 0:
             return IndicatorResult(
                 value=0.0,
-                unit="CNY",
-                description=f"DCF (WACC={wacc}, g={growth_rate})",
+                unit="%",
+                description=f"Implied Growth (invalid FCF)",
                 years=[],
                 values=[]
             )
 
-        # If market_cap provided, calculate implied growth rate
-        if market_cap and market_cap > 0:
-            implied_growth = self._calculate_implied_growth(fcf, market_cap, wacc, growth_rate)
-            return IndicatorResult(
-                value=implied_growth * 100,  # Convert to percentage
-                unit="%",
-                description=f"市场隐含增长率 (市值={market_cap/1e9:.0f}亿, WACC={wacc})",
-                years=data['year'].tolist() if 'year' in data.columns else [],
-                values=[]
-            )
-
-        # Otherwise, calculate DCF intrinsic value
-        # Calculate terminal value
-        final_fcf = fcf.iloc[-1]
-
-        # Avoid division by zero or negative denominator
-        if wacc <= growth_rate:
+        if not market_cap or market_cap <= 0:
             return IndicatorResult(
                 value=0.0,
-                unit="CNY",
-                description=f"DCF (invalid WACC <= growth rate)",
+                unit="%",
+                description="Implied Growth (requires market_cap)",
                 years=[],
                 values=[]
             )
 
-        terminal_value = (final_fcf * (1 + growth_rate)) / (wacc - growth_rate)
-
-        # Discount FCFs and terminal value
-        total_value = 0.0
-        for i, fc in enumerate(fcf):
-            total_value += fc / ((1 + discount_rate) ** (i + 1))
-
-        # Add terminal value
-        total_value += terminal_value / ((1 + discount_rate) ** len(fcf))
-
+        # Calculate implied growth rate
+        latest_fcf = fcf.iloc[-1]
+        implied_growth = self._calculate_implied_growth(latest_fcf, market_cap, wacc, growth_rate)
         return IndicatorResult(
-            value=total_value,
-            unit="CNY",
-            description=f"DCF内在价值 (WACC={wacc}, g={growth_rate})",
-            years=data['year'].tolist() if 'year' in data.columns else [],
+            value=implied_growth * 100,  # Convert to percentage
+            unit="%",
+            description=f"市场隐含增长率 (市值={market_cap/1e9:.0f}亿, WACC={wacc})",
+            years=[int(data['year'].iloc[0])] if 'year' in data.columns else [],
             values=[]
         )
 
-    def _calculate_implied_growth(self, fcf: pd.Series, market_cap: float, wacc: float, terminal_growth: float) -> float:
+    def _calculate_implied_growth(self, current_fcf: float, market_cap: float, wacc: float, terminal_growth: float) -> float:
         """
         Calculate the implied annual growth rate given market cap.
 
@@ -297,7 +280,6 @@ class DCFIndicator(BaseIndicator):
         """
         import numpy as np
 
-        current_fcf = fcf.iloc[-1]
         n_years = 10  # 10-year projection period for stability
 
         def dcf_value(g: float) -> float:

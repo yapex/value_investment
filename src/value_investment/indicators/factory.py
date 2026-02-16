@@ -19,7 +19,7 @@ from value_investment.indicators.simple import (
 from value_investment.indicators.complex import (
     ROICIndicator,
     CAGRIndicator,
-    DCFIndicator,
+    ImpliedGrowthIndicator,
 )
 
 if TYPE_CHECKING:
@@ -36,6 +36,16 @@ class IndicatorFactory:
 
     def _register_default_indicators(self) -> None:
         """Register all default indicators"""
+        from value_investment.indicators.simple import (
+            ROEIndicator, ROAIndicator, GrossMarginIndicator, NetProfitMarginIndicator,
+            CurrentRatioIndicator, AssetTurnoverIndicator, InventoryTurnoverIndicator,
+            QuickRatioIndicator, DebtRatioIndicator, ReceivableTurnoverIndicator,
+            PayableTurnoverIndicator, CfoToNetprofitSumIndicator,
+        )
+        from value_investment.indicators.complex import (
+            ROICIndicator, CAGRIndicator, ImpliedGrowthIndicator,
+        )
+
         indicators = [
             ROEIndicator(),
             ROAIndicator(),
@@ -51,7 +61,7 @@ class IndicatorFactory:
             CfoToNetprofitSumIndicator(),
             ROICIndicator(),
             CAGRIndicator(),
-            DCFIndicator(),
+            ImpliedGrowthIndicator(),
         ]
         for indicator in indicators:
             self.register(indicator)

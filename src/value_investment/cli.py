@@ -120,7 +120,7 @@ def analyze(
         "CAGR": "营收CAGR",
         "CAGR_revenue": "营收CAGR",
         "CAGR_net_profit": "净利润CAGR",
-        "DCF": "市场隐含增长率",
+        "ImpliedGrowth": "市场隐含增长率",
         "asset_turnover": "资产周转率",
         "inventory_turnover": "存货周转率",
         "quick_ratio": "速动比率",

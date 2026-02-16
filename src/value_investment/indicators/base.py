@@ -57,6 +57,7 @@ class BaseIndicator(ABC):
 
     name: str = ""
     description: str = ""
+    type: IndicatorType = IndicatorType.SIMPLE  # Default to SIMPLE
 
     @abstractmethod
     def calculate(

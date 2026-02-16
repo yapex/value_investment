@@ -2,7 +2,7 @@
 from typing import List
 import pandas as pd
 
-from value_investment.indicators.base import BaseIndicator, IndicatorResult
+from value_investment.indicators.base import BaseIndicator, IndicatorResult, IndicatorType
 
 
 class ROEIndicator(BaseIndicator):
@@ -10,6 +10,7 @@ class ROEIndicator(BaseIndicator):
 
     name = "ROE"
     description = "Return on Equity (Net Profit / Shareholder's Equity)"
+    type = IndicatorType.SIMPLE
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         # Map column names - akshare uses uppercase with underscores
@@ -51,6 +52,7 @@ class ROAIndicator(BaseIndicator):
 
     name = "ROA"
     description = "Return on Assets (Net Profit / Total Assets)"
+    type = IndicatorType.SIMPLE
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         net_profit_col = self._find_column(data, ['net_profit', 'NET_PROFIT', '净利润'])
@@ -88,6 +90,7 @@ class GrossMarginIndicator(BaseIndicator):
 
     name = "gross_margin"
     description = "Gross Margin ((Revenue - COGS) / Revenue)"
+    type = IndicatorType.SIMPLE
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         revenue_col = self._find_column(data, ['revenue', 'REVENUE', '营业收入', 'OPERATING_REVENUE'])
@@ -126,6 +129,7 @@ class NetProfitMarginIndicator(BaseIndicator):
 
     name = "net_profit_margin"
     description = "Net Profit Margin (Net Profit / Revenue)"
+    type = IndicatorType.SIMPLE
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         net_profit_col = self._find_column(data, ['net_profit', 'NET_PROFIT', '净利润'])
@@ -163,6 +167,7 @@ class CurrentRatioIndicator(BaseIndicator):
 
     name = "current_ratio"
     description = "Current Ratio (Current Assets / Current Liabilities)"
+    type = IndicatorType.SIMPLE
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         current_assets_col = self._find_column(data, ['current_assets', 'CURRENT_ASSETS', '流动资产', 'CURRENT_ASSET_BALANCE'])
@@ -200,6 +205,7 @@ class AssetTurnoverIndicator(BaseIndicator):
 
     name = "asset_turnover"
     description = "Asset Turnover (Operating Income / Total Assets)"
+    type = IndicatorType.SIMPLE
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         income_col = self._find_column(data, ['operating_income', 'OPERATING_INCOME', '营业收入'])
@@ -237,6 +243,7 @@ class InventoryTurnoverIndicator(BaseIndicator):
 
     name = "inventory_turnover"
     description = "Inventory Turnover (Operating Cost / Inventory)"
+    type = IndicatorType.SIMPLE
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         cost_col = self._find_column(data, ['operating_cost', 'OPERATING_COST', '营业成本'])
@@ -274,6 +281,7 @@ class QuickRatioIndicator(BaseIndicator):
 
     name = "quick_ratio"
     description = "Quick Ratio ((Current Assets - Inventory) / Current Liabilities)"
+    type = IndicatorType.SIMPLE
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         current_assets_col = self._find_column(data, ['current_assets', 'CURRENT_ASSET_BALANCE', '流动资产'])
@@ -314,6 +322,7 @@ class DebtRatioIndicator(BaseIndicator):
 
     name = "debt_ratio"
     description = "Debt Ratio (Total Liabilities / Total Assets)"
+    type = IndicatorType.SIMPLE
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         liab_col = self._find_column(data, ['total_liabilities', 'TOTAL_LIABILITIES', '负债合计', 'LIAB_BALANCE'])
@@ -351,6 +360,7 @@ class ReceivableTurnoverIndicator(BaseIndicator):
 
     name = "receivable_turnover"
     description = "Receivable Turnover (Operating Income / Accounts Receivable)"
+    type = IndicatorType.SIMPLE
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         income_col = self._find_column(data, ['operating_income', 'OPERATING_INCOME', '营业收入'])
@@ -388,6 +398,7 @@ class PayableTurnoverIndicator(BaseIndicator):
 
     name = "payable_turnover"
     description = "Payable Turnover (Operating Cost / Accounts Payable)"
+    type = IndicatorType.SIMPLE
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         cost_col = self._find_column(data, ['operating_cost', 'OPERATING_COST', '营业成本'])
@@ -425,6 +436,7 @@ class CfoToNetprofitIndicator(BaseIndicator):
 
     name = "cfo_to_netprofit"
     description = "Operating Cash Flow to Net Profit"
+    type = IndicatorType.SIMPLE
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         cfo_col = self._find_column(data, ['operating_cash_flow', 'OPERATE_NETCASH_BALANCE', '经营活动产生的现金流量净额'])
@@ -462,6 +474,7 @@ class FcfToRevenueIndicator(BaseIndicator):
 
     name = "fcf_to_revenue"
     description = "Free Cash Flow to Operating Income"
+    type = IndicatorType.SIMPLE
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         fcf_col = self._find_column(data, ['free_cash_flow', 'FREE_CASH_FLOW', '自由现金流'])
@@ -499,6 +512,7 @@ class CfoToNetprofitSumIndicator(BaseIndicator):
 
     name = "cfo_to_netprofit_sum"
     description = "Operating Cash Flow Sum / Net Profit Sum (10 years) - 盈利质量验证"
+    type = IndicatorType.SIMPLE
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         cfo_col = self._find_column(data, ['operating_cash_flow', 'OPERATE_NETCASH_BALANCE', '经营活动产生的现金流量净额'])

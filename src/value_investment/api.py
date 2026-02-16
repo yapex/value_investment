@@ -114,18 +114,54 @@ class ValueInvestment:
         Returns:
             IndicatorResult with calculated value
         """
-        from datetime import datetime
-
         indicator = self._factory.get(indicator_name)
 
-        # Fetch financial data for the indicator
-        current_year = datetime.now().year
-        financial_data = self._provider.get_financial_data(
-            stock_code, current_year - years, current_year
-        )
+        # Use shared method to prepare data
+        years = kwargs.pop('years', 10)
+        market_cap = kwargs.get('market_cap')
+        financial_data, market_cap = self._prepare_data(stock_code, years, market_cap)
+
+        if market_cap:
+            kwargs['market_cap'] = market_cap
 
         # Pass data to indicator (data-passing pattern)
         return indicator.calculate(financial_data, **kwargs)
+
+    def _prepare_data(
+        self,
+        stock_code: str,
+        years: int = 10,
+        market_cap: float = None,
+    ) -> tuple:
+        """
+        Prepare financial data and market cap for indicators.
+        Shared by calculate_indicator and analyze methods.
+        """
+        from datetime import datetime
+
+        current_year = datetime.now().year
+        all_data = self._provider.get_financial_data(stock_code, current_year)
+
+        # Take latest years
+        if 'year' in all_data.columns:
+            all_data = all_data.sort_values('year', ascending=False)
+            financial_data = all_data.head(years)
+        else:
+            financial_data = all_data
+
+        # Auto-fetch market_cap if not provided
+        if market_cap is None:
+            try:
+                info = self._provider.get_stock_info(stock_code)
+                if 'item' in info.columns:
+                    for _, row in info.iterrows():
+                        if '市值' in str(row['item']):
+                            market_cap = float(row['value'])
+                            break
+            except Exception:
+                pass
+
+        return financial_data, market_cap
 
     def analyze(
         self,
@@ -148,31 +184,8 @@ class ValueInvestment:
         Returns:
             Dictionary with all indicator results
         """
-        from datetime import datetime
-
-        current_year = datetime.now().year
-
-        # Fetch all financial data (cached), then take latest years
-        all_data = self._provider.get_financial_data(stock_code, current_year)
-
-        # Sort by year and take latest years
-        if 'year' in all_data.columns:
-            all_data = all_data.sort_values('year', ascending=False)
-            financial_data = all_data.head(years)
-        else:
-            financial_data = all_data
-
-        # Fetch market cap if not provided
-        if market_cap is None:
-            try:
-                info = self._provider.get_stock_info(stock_code)
-                if 'item' in info.columns:
-                    for _, row in info.iterrows():
-                        if '市值' in str(row['item']):
-                            market_cap = float(row['value'])
-                            break
-            except Exception:
-                pass
+        # Use shared method to prepare data
+        financial_data, market_cap = self._prepare_data(stock_code, years, market_cap)
 
         # Pass market_cap to indicators
         if market_cap:

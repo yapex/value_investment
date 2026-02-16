@@ -69,7 +69,6 @@ class ValueInvestment:
     def get_financial_data(
         self,
         symbol: str,
-        start_year: int,
         end_year: int | None = None,
     ):
         """
@@ -77,13 +76,12 @@ class ValueInvestment:
 
         Args:
             symbol: Stock code
-            start_year: Start year (inclusive)
-            end_year: End year (optional, defaults to start_year)
+            end_year: End year (optional, defaults to current year)
 
         Returns:
-            DataFrame with merged financial data
+            DataFrame with merged financial data (all historical data up to end_year)
         """
-        return self._provider.get_financial_data(symbol, start_year, end_year)
+        return self._provider.get_financial_data(symbol, end_year)
 
     def get_financial_indicator(self, symbol: str):
         """
@@ -154,10 +152,15 @@ class ValueInvestment:
 
         current_year = datetime.now().year
 
-        # Fetch financial data once
-        financial_data = self._provider.get_financial_data(
-            stock_code, current_year - years, current_year
-        )
+        # Fetch all financial data (cached), then take latest years
+        all_data = self._provider.get_financial_data(stock_code, current_year)
+
+        # Sort by year and take latest years
+        if 'year' in all_data.columns:
+            all_data = all_data.sort_values('year', ascending=False)
+            financial_data = all_data.head(years)
+        else:
+            financial_data = all_data
 
         # Fetch market cap if not provided
         if market_cap is None:

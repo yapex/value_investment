@@ -4,7 +4,8 @@ from value_investment.api import ValueInvestment
 
 def test_financial_data_merge():
     vi = ValueInvestment(market="A")
-    data = vi.get_financial_data("600519", 2020, 2024)
+    # Only pass end_year, returns all data up to that year
+    data = vi.get_financial_data("600519", 2024)
 
     # Verify merge contains key fields from all three statements
     assert "total_assets" in data.columns  # Balance sheet

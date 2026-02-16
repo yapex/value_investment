@@ -242,7 +242,6 @@ class AkshareProvider:
     def get_financial_data(
         self,
         symbol: str,
-        start_year: int,
         end_year: int | None = None,
     ) -> pd.DataFrame:
         """
@@ -250,37 +249,33 @@ class AkshareProvider:
 
         Args:
             symbol: Stock code
-            start_year: Start year (inclusive)
-            end_year: End year (optional, defaults to start_year)
+            end_year: End year (optional, defaults to current year)
 
         Returns:
-            DataFrame with merged financial data
+            DataFrame with merged financial data (all historical data up to end_year)
         """
-        # Handle end_year being optional
+        from datetime import datetime
         if end_year is None:
-            end_year = start_year
-            start_year = 0  # Means from earliest
+            end_year = datetime.now().year
 
         if self._market == "A":
-            return self._get_a_financial_data(symbol, start_year, end_year)
+            return self._get_a_financial_data(symbol, end_year)
         else:
             raise NotImplementedError(f"Financial data for {self._market} not implemented yet")
 
     def _get_a_financial_data(
         self,
         symbol: str,
-        start_year: int,
-        end_year: int | None = None,
+        end_year: int,
     ) -> pd.DataFrame:
         """Get A股 financial data with merged cache
 
         Args:
             symbol: Stock code
             end_year: End year (inclusive)
-            start_year: Start year (optional, for filtering)
 
         Returns:
-            DataFrame with merged financial data
+            DataFrame with merged financial data (all historical data)
         """
         # Use merged cache key based on end_year
         cache_key = f"financial_{symbol}_{end_year}"
@@ -288,9 +283,6 @@ class AkshareProvider:
 
         cached = self._cache.get(cache_key)
         if cached is not None:
-            # Filter by start_year if provided
-            if start_year is not None:
-                cached = cached[cached["year"] >= start_year]
             return cached
 
         # Get the three statements (still cached individually for other uses)
@@ -303,10 +295,6 @@ class AkshareProvider:
 
         # Cache the merged data
         self._cache.set(cache_key, merged, ttl=ttl)
-
-        # Filter by start_year if provided
-        if start_year is not None:
-            merged = merged[merged["year"] >= start_year]
 
         return merged
 

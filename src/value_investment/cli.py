@@ -67,7 +67,7 @@ def indicator(
 @app.command()
 def analyze(
     stock_code: str = typer.Argument(..., help="Stock code"),
-    years: int = typer.Option(5, "--years", "-y", help="Number of years"),
+    years: int = typer.Option(10, "--years", "-y", help="Number of years"),
     market: str = typer.Option("A", "--market", "-m", help="Market: A, HK, US"),
 ):
     """Perform complete analysis"""
@@ -121,6 +121,13 @@ def analyze(
         "CAGR_revenue": "营收CAGR",
         "CAGR_net_profit": "净利润CAGR",
         "DCF": "市场隐含增长率",
+        "asset_turnover": "资产周转率",
+        "inventory_turnover": "存货周转率",
+        "quick_ratio": "速动比率",
+        "debt_ratio": "资产负债率",
+        "receivable_turnover": "应收账款周转率",
+        "payable_turnover": "应付账款周转率",
+        "cfo_to_netprofit_sum": "盈利质量(CFO/净利)",
     }
 
     # Build DataFrame: rows = years, columns = indicators
@@ -149,6 +156,17 @@ def analyze(
         data.append(row)
 
     df = pd.DataFrame(data)
+
+    # Reorder columns: ROIC first, then by category
+    column_order = [
+        "年份",
+        "ROIC", "ROE", "ROA", "毛利率", "净利率",
+        "流动比率", "速动比率", "资产负债率",
+        "资产周转率", "存货周转率", "应收账款周转率", "应付账款周转率",
+    ]
+    # Only include columns that exist
+    existing_cols = [c for c in column_order if c in df.columns]
+    df = df[existing_cols]
 
     # Output
     print(f"\n### {name} 财务分析 ({year_range})")

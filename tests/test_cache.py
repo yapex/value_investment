@@ -1,13 +1,13 @@
-"""Tests for SmartCache - Phase 3"""
+"""Tests for SmartCache - simplified with diskcache"""
 import pytest
 import pandas as pd
-from pathlib import Path
 import tempfile
 import shutil
+import time
 
 
 class TestSmartCache:
-    """Test smart cache with range-based reuse"""
+    """Test smart cache basic operations"""
 
     @pytest.fixture
     def temp_cache_dir(self):
@@ -51,84 +51,71 @@ class TestSmartCache:
         result = cache.get("test_key")
         assert result is None
 
-
-class TestSmartCacheRangeReuse:
-    """Test range-based cache reuse"""
-
-    @pytest.fixture
-    def temp_cache_dir(self):
-        """Create a temporary cache directory"""
-        tmp = tempfile.mkdtemp()
-        yield tmp
-        shutil.rmtree(tmp)
-
-    @pytest.fixture
-    def sample_dataframe(self):
-        """Create sample dataframe with year index"""
-        return pd.DataFrame(
-            {"revenue": [100, 120, 140, 160, 180, 200, 220, 240, 260, 280]},
-            index=pd.Index([2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024], name="year"),
-        )
-
-    def test_range_contains_reuse(self, temp_cache_dir, sample_dataframe):
-        """Cached [2015, 2024] should serve query [2020, 2024]"""
+    def test_list_keys(self, temp_cache_dir):
+        """Should list all cached keys"""
         from value_investment.data.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
+        cache.set("key1", "value1")
+        cache.set("key2", "value2")
 
-        # Cache has data for 2015-2024
-        cache.set("fin_600519_2015_2024", sample_dataframe)
+        keys = cache.list_keys()
+        assert "key1" in keys
+        assert "key2" in keys
 
-        # Query for 2020-2024 should reuse cache
-        result = cache.get("fin_600519_2020_2024")
+    def test_persistence_after_restart(self, temp_cache_dir):
+        """Should persist data to disk and survive restart"""
+        from value_investment.data.cache import SmartCache
 
-        assert result is not None
-        assert len(result) == 5
-        assert result.index[0] == 2020
-        assert result.index[-1] == 2024
+        # First instance: set value
+        cache1 = SmartCache(cache_dir=temp_cache_dir)
+        cache1.set("persist_key", {"data": "persisted"})
 
-    def test_range_subset_reuse(self, temp_cache_dir, sample_dataframe):
-        """Cached [2015, 2024] should serve query [2015, 2020]"""
+        # Second instance: should get value from disk
+        cache2 = SmartCache(cache_dir=temp_cache_dir)
+        result = cache2.get("persist_key")
+        assert result == {"data": "persisted"}
+
+    def test_ttl_expiration(self, temp_cache_dir):
+        """Should expire after TTL"""
+        from value_investment.data.cache import SmartCache
+
+        cache = SmartCache(cache_dir=temp_cache_dir, default_ttl=1)
+        cache.set("ttl_key", "value")
+
+        # Immediately should exist
+        assert cache.get("ttl_key") == "value"
+
+        # Wait for expiration
+        time.sleep(1.1)
+
+        # Should be expired
+        assert cache.get("ttl_key") is None
+
+    def test_set_with_ttl(self, temp_cache_dir):
+        """Should respect TTL passed to set()"""
+        from value_investment.data.cache import SmartCache
+
+        cache = SmartCache(cache_dir=temp_cache_dir, default_ttl=3600)
+        cache.set("custom_ttl", "value", ttl=1)
+
+        # Immediately should exist
+        assert cache.get("custom_ttl") == "value"
+
+        # Wait for expiration
+        time.sleep(1.1)
+
+        # Should be expired
+        assert cache.get("custom_ttl") is None
+
+    def test_cache_dataframe(self, temp_cache_dir):
+        """Should cache pandas DataFrame"""
         from value_investment.data.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        cache.set("dataframe", df)
 
-        # Cache has data for 2015-2024
-        cache.set("fin_600519_2015_2024", sample_dataframe)
-
-        # Query for 2015-2020 should reuse cache
-        result = cache.get("fin_600519_2015_2020")
-
-        assert result is not None
-        assert len(result) == 6
-        assert result.index[0] == 2015
-        assert result.index[-1] == 2020
-
-    def test_range_superset_invalidates(self, temp_cache_dir, sample_dataframe):
-        """Cached [2015, 2024] should NOT serve query [2010, 2024]"""
-        from value_investment.data.cache import SmartCache
-
-        cache = SmartCache(cache_dir=temp_cache_dir)
-
-        # Cache has data for 2015-2024
-        cache.set("fin_600519_2015_2024", sample_dataframe)
-
-        # Query for 2010-2024 should invalidate cache
-        result = cache.get("fin_600519_2010_2024")
-
-        # Result should be None (cache invalidated)
-        assert result is None
-
-    def test_non_overlapping_invalidates(self, temp_cache_dir, sample_dataframe):
-        """Non-overlapping ranges should invalidate"""
-        from value_investment.data.cache import SmartCache
-
-        cache = SmartCache(cache_dir=temp_cache_dir)
-
-        # Cache has data for 2015-2024
-        cache.set("fin_600519_2015_2024", sample_dataframe)
-
-        # Query for 2010-2012 should invalidate
-        result = cache.get("fin_600519_2010_2012")
-
-        assert result is None
+        result = cache.get("dataframe")
+        assert isinstance(result, pd.DataFrame)
+        assert result.equals(df)

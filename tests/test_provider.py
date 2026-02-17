@@ -409,206 +409,155 @@ class TestAkshareProviderFinancial:
 
         assert isinstance(result, pd.DataFrame)
 
-
-class TestFinancialDataCache:
-    """Test financial data merged cache functionality"""
-
-    @pytest.fixture
-    def temp_cache_dir(self):
-        """Create a temporary cache directory"""
-        tmp = tempfile.mkdtemp()
-        yield tmp
-        shutil.rmtree(tmp)
-
-    def test_get_financial_data_without_start_year_returns_all(
-        self, temp_cache_dir
-    ):
-        """不传start_year时应获取全量数据"""
-        from value_investment.data.cache import SmartCache
-        from value_investment.data.providers.akshare_provider import (
-            AkshareProvider,
-            _get_ttl_until_june_next_year,
-        )
-
-        cache = SmartCache(cache_dir=temp_cache_dir)
-        provider = AkshareProvider(cache=cache, market="A")
-
-        # Mock data with multiple years
-        balance_data = pd.DataFrame({
-            "SECUCODE": ["600519.SH"] * 3,
-            "SECURITY_CODE": ["600519"] * 3,
-            "REPORT_DATE": ["2024-12-31", "2023-12-31", "2022-12-31"],
-            "TOTAL_ASSETS": [1000, 900, 800],
-        })
-        income_data = pd.DataFrame({
-            "SECUCODE": ["600519.SH"] * 3,
-            "SECURITY_CODE": ["600519"] * 3,
-            "REPORT_DATE": ["2024-12-31", "2023-12-31", "2022-12-31"],
-            "TOTAL_OPERATE_INCOME": [100, 90, 80],
-        })
-        cashflow_data = pd.DataFrame({
-            "SECUCODE": ["600519.SH"] * 3,
-            "SECURITY_CODE": ["600519"] * 3,
-            "REPORT_DATE": ["2024-12-31", "2023-12-31", "2022-12-31"],
-            "SALES_SERVICES": [100, 90, 80],
-        })
-
-        with patch(
-            "akshare.stock_balance_sheet_by_yearly_em",
-            return_value=balance_data,
-        ), patch(
-            "akshare.stock_profit_sheet_by_yearly_em",
-            return_value=income_data,
-        ), patch(
-            "akshare.stock_cash_flow_sheet_by_yearly_em",
-            return_value=cashflow_data,
-        ):
-            # Call without end_year - should return all data (defaults to current year)
-            result = provider.get_financial_data("600519")
-
-        # Should have 3 years of data
-        assert len(result) == 3
-
-    def test_financial_data_cache_key_includes_end_year(self, temp_cache_dir):
-        """不同end_year应生成不同的缓存key"""
+    def test_a_financial_sheet_uses_cache(self, temp_cache_dir):
+        """A股财务报表应使用缓存"""
         from value_investment.data.cache import SmartCache
         from value_investment.data.providers.akshare_provider import AkshareProvider
 
         cache = SmartCache(cache_dir=temp_cache_dir)
         provider = AkshareProvider(cache=cache, market="A")
 
-        # Mock data with multiple years
-        balance_data = pd.DataFrame({
-            "SECUCODE": ["600519.SH"] * 3,
-            "SECURITY_CODE": ["600519"] * 3,
-            "REPORT_DATE": ["2024-12-31", "2023-12-31", "2022-12-31"],
-            "TOTAL_ASSETS": [1000, 900, 800],
-        })
-        income_data = pd.DataFrame({
-            "SECUCODE": ["600519.SH"] * 3,
-            "SECURITY_CODE": ["600519"] * 3,
-            "REPORT_DATE": ["2024-12-31", "2023-12-31", "2022-12-31"],
-            "TOTAL_OPERATE_INCOME": [100, 90, 80],
-        })
-        cashflow_data = pd.DataFrame({
-            "SECUCODE": ["600519.SH"] * 3,
-            "SECURITY_CODE": ["600519"] * 3,
-            "REPORT_DATE": ["2024-12-31", "2023-12-31", "2022-12-31"],
-            "SALES_SERVICES": [100, 90, 80],
+        mock_data = pd.DataFrame({
+            "SECUCODE": ["600519.SH"],
+            "SECURITY_CODE": ["600519"],
+            "REPORT_DATE": ["2024-12-31"]
         })
 
-        with patch(
-            "akshare.stock_balance_sheet_by_yearly_em",
-            return_value=balance_data,
-        ), patch(
-            "akshare.stock_profit_sheet_by_yearly_em",
-            return_value=income_data,
-        ), patch(
-            "akshare.stock_cash_flow_sheet_by_yearly_em",
-            return_value=cashflow_data,
-        ):
-            # Query with different end_years - should create different cache keys
-            provider.get_financial_data("600519", 2024)
-            provider.get_financial_data("600519", 2023)
+        # First call - should call akshare and cache
+        with patch("akshare.stock_balance_sheet_by_yearly_em", return_value=mock_data) as mock_ak:
+            result1 = provider._get_balance_sheet("600519")
 
-        # Check that both cache keys exist
+        mock_ak.assert_called_once()
+        assert "balance_sheet_a_600519" in cache.list_keys()
+
+        # Second call - should use cache, not call akshare
+        with patch("akshare.stock_balance_sheet_by_yearly_em") as mock_ak2:
+            result2 = provider._get_balance_sheet("600519")
+
+        mock_ak2.assert_not_called()
+        assert result1.equals(result2)
+
+    def test_hk_financial_sheet_uses_cache(self, temp_cache_dir):
+        """港股财务报表应使用缓存"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="HK")
+
+        mock_data = pd.DataFrame({
+            "SECURITY_CODE": ["00700"],
+            "STD_ITEM_NAME": ["资产总计"],
+            "AMOUNT": [1000000000],
+            "REPORT_DATE": ["2024-12-31"]
+        })
+
+        # First call
+        with patch("akshare.stock_financial_hk_report_em", return_value=mock_data) as mock_ak:
+            result1 = provider._get_hk_balance_sheet("00700")
+
+        mock_ak.assert_called_once()
+        assert "balance_sheet_hk_00700" in cache.list_keys()
+
+        # Second call - should use cache
+        with patch("akshare.stock_financial_hk_report_em") as mock_ak2:
+            result2 = provider._get_hk_balance_sheet("00700")
+
+        mock_ak2.assert_not_called()
+
+    def test_us_financial_sheet_uses_cache(self, temp_cache_dir):
+        """美股财务报表应使用缓存"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="US")
+
+        mock_data = pd.DataFrame({
+            "SECURITY_CODE": ["AAPL"],
+            "REPORT_DATE": ["2024-12-31"],
+            "TOTAL_ASSETS": [1000000000]
+        })
+
+        # First call
+        with patch("akshare.stock_financial_us_report_em", return_value=mock_data) as mock_ak:
+            result1 = provider._get_us_balance_sheet("AAPL")
+
+        mock_ak.assert_called_once()
+        assert "balance_sheet_us_AAPL" in cache.list_keys()
+
+        # Second call - should use cache
+        with patch("akshare.stock_financial_us_report_em") as mock_ak2:
+            result2 = provider._get_us_balance_sheet("AAPL")
+
+        mock_ak2.assert_not_called()
+
+    def test_financial_sheet_cache_key_no_end_year(self, temp_cache_dir):
+        """财务报表缓存key不应包含end_year（缓存全量数据）"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="A")
+
+        mock_balance = pd.DataFrame({
+            "SECUCODE": ["600519.SH"] * 3,
+            "SECURITY_CODE": ["600519"] * 3,
+            "REPORT_DATE": ["2024-12-31", "2023-12-31", "2022-12-31"],
+            "TOTAL_ASSETS": [1000, 900, 800]
+        })
+        mock_profit = pd.DataFrame({
+            "SECUCODE": ["600519.SH"] * 3,
+            "SECURITY_CODE": ["600519"] * 3,
+            "REPORT_DATE_NAME": ["2024年报", "2023年报", "2022年报"],
+            "TOTAL_OPERATE_INCOME": [100, 90, 80]
+        })
+        mock_cashflow = pd.DataFrame({
+            "SECUCODE": ["600519.SH"] * 3,
+            "SECURITY_CODE": ["600519"] * 3,
+            "REPORT_DATE": ["2024-12-31", "2023-12-31", "2022-12-31"],
+            "SALES_SERVICES": [100, 90, 80]
+        })
+
+        with patch("akshare.stock_balance_sheet_by_yearly_em", return_value=mock_balance), \
+             patch("akshare.stock_profit_sheet_by_yearly_em", return_value=mock_profit), \
+             patch("akshare.stock_cash_flow_sheet_by_yearly_em", return_value=mock_cashflow):
+            # Fetch all three sheets
+            provider._get_balance_sheet("600519")
+            provider._get_profit_sheet("600519")
+            provider._get_cashflow_sheet("600519")
+
+        # Verify cache keys don't include end_year
         keys = cache.list_keys()
-        assert "financial_600519_2024" in keys
-        assert "financial_600519_2023" in keys
+        assert "balance_sheet_a_600519" in keys
+        assert "profit_sheet_a_600519" in keys
+        assert "cashflow_sheet_a_600519" in keys
+        # No keys with end_year suffix
+        assert not any("2024" in k for k in keys if "sheet" in k)
 
-    def test_financial_data_cache_ttl_until_june(self, temp_cache_dir):
-        """缓存TTL应到次年6月底"""
-        from datetime import datetime
-        from value_investment.data.cache import SmartCache
-        from value_investment.data.providers.akshare_provider import (
-            AkshareProvider,
-            _get_ttl_until_june_next_year,
-        )
-
-        cache = SmartCache(cache_dir=temp_cache_dir)
-        provider = AkshareProvider(cache=cache, market="A")
-
-        # Mock data
-        balance_data = pd.DataFrame({
-            "SECUCODE": ["600519.SH"],
-            "SECURITY_CODE": ["600519"],
-            "REPORT_DATE": ["2024-12-31"],
-            "TOTAL_ASSETS": [1000],
-        })
-        income_data = pd.DataFrame({
-            "SECUCODE": ["600519.SH"],
-            "SECURITY_CODE": ["600519"],
-            "REPORT_DATE": ["2024-12-31"],
-            "TOTAL_OPERATE_INCOME": [100],
-        })
-        cashflow_data = pd.DataFrame({
-            "SECUCODE": ["600519.SH"],
-            "SECURITY_CODE": ["600519"],
-            "REPORT_DATE": ["2024-12-31"],
-            "SALES_SERVICES": [100],
-        })
-
-        with patch(
-            "akshare.stock_balance_sheet_by_yearly_em",
-            return_value=balance_data,
-        ), patch(
-            "akshare.stock_profit_sheet_by_yearly_em",
-            return_value=income_data,
-        ), patch(
-            "akshare.stock_cash_flow_sheet_by_yearly_em",
-            return_value=cashflow_data,
-        ):
-            provider.get_financial_data("600519", 2024)
-
-        # Check TTL is approximately correct
-        expected_ttl = _get_ttl_until_june_next_year(2024)
-        june_next_year = datetime(datetime.now().year + 1, 6, 30, 23, 59, 59)
-        expected_seconds = int((june_next_year - datetime.now()).total_seconds())
-
-        # Allow some tolerance (within 60 seconds)
-        assert abs(expected_ttl - expected_seconds) < 60
-
-    def test_get_financial_data_only_end_year_returns_all_data(self, temp_cache_dir):
-        """只传end_year时应返回全量数据，使用者自己决定要哪些"""
+    def test_public_api_filters_by_end_year(self, temp_cache_dir):
+        """公共API应按end_year过滤数据"""
         from value_investment.data.cache import SmartCache
         from value_investment.data.providers.akshare_provider import AkshareProvider
 
         cache = SmartCache(cache_dir=temp_cache_dir)
         provider = AkshareProvider(cache=cache, market="A")
 
-        # Mock data with multiple years
-        balance_data = pd.DataFrame({
+        mock_balance = pd.DataFrame({
             "SECUCODE": ["600519.SH"] * 5,
             "SECURITY_CODE": ["600519"] * 5,
-            "REPORT_DATE": ["2024-12-31", "2023-12-31", "2022-12-31", "2021-12-31", "2020-12-31"],
-            "TOTAL_ASSETS": [1000, 900, 800, 700, 600],
-        })
-        income_data = pd.DataFrame({
-            "SECUCODE": ["600519.SH"] * 5,
-            "SECURITY_CODE": ["600519"] * 5,
-            "REPORT_DATE": ["2024-12-31", "2023-12-31", "2022-12-31", "2021-12-31", "2020-12-31"],
-            "TOTAL_OPERATE_INCOME": [100, 90, 80, 70, 60],
-        })
-        cashflow_data = pd.DataFrame({
-            "SECUCODE": ["600519.SH"] * 5,
-            "SECURITY_CODE": ["600519"] * 5,
-            "REPORT_DATE": ["2024-12-31", "2023-12-31", "2022-12-31", "2021-12-31", "2020-12-31"],
-            "SALES_SERVICES": [100, 90, 80, 70, 60],
+            "REPORT_DATE_NAME": ["2024年报", "2023年报", "2022年报", "2021年报", "2020年报"],
+            "TOTAL_ASSETS": [1000, 900, 800, 700, 600]
         })
 
-        with patch(
-            "akshare.stock_balance_sheet_by_yearly_em",
-            return_value=balance_data,
-        ), patch(
-            "akshare.stock_profit_sheet_by_yearly_em",
-            return_value=income_data,
-        ), patch(
-            "akshare.stock_cash_flow_sheet_by_yearly_em",
-            return_value=cashflow_data,
-        ):
-            # Only pass end_year, should return all 5 years of data
-            result = provider.get_financial_data("600519", 2024)
+        with patch("akshare.stock_balance_sheet_by_yearly_em", return_value=mock_balance):
+            # Query with different end_years
+            result_2024 = provider.get_balance_sheet("600519", end_year=2024)
+            result_2022 = provider.get_balance_sheet("600519", end_year=2022)
 
-        # Should have all 5 years of data
-        assert len(result) == 5
-        assert "year" in result.columns
+        # 2024 should have 5 years (2020-2024)
+        assert len(result_2024) == 5
+        # 2022 should have 3 years (2020-2022)
+        assert len(result_2022) == 3
+        # Both queries should use the same cache
+        assert "balance_sheet_a_600519" in cache.list_keys()

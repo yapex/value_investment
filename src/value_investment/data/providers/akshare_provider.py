@@ -225,6 +225,8 @@ class AkshareProvider:
         if cached is not None:
             # Filter by start_date if provided
             if start_date_normalized is not None:
+                # Convert date column to string for consistent comparison
+                cached["日期"] = pd.to_datetime(cached["日期"]).dt.strftime("%Y-%m-%d")
                 cached = cached[cached["日期"] >= start_date_normalized]
             return cached
 
@@ -236,6 +238,9 @@ class AkshareProvider:
             end_date=end_date,
             adjust=adjust,
         )
+
+        # Convert date column to string for consistent format
+        data["日期"] = pd.to_datetime(data["日期"]).dt.strftime("%Y-%m-%d")
 
         # Cache for 1 year
         self._cache.set(cache_key, data, ttl=86400 * 365)
@@ -270,9 +275,53 @@ class AkshareProvider:
         start_date: str | None = None,
         adjust: str = "hfq",
     ) -> pd.DataFrame:
-        """Get 港股 historical data"""
-        # TODO: Implement HK historical data
-        raise NotImplementedError("HK historical data not implemented yet")
+        """Get 港股 historical data
+
+        Args:
+            symbol: Stock code
+            end_date: End date (YYYYMMDD or YYYY-MM-DD, required)
+            start_date: Start date (YYYYMMDD or YYYY-MM-DD, optional, for filtering)
+            adjust: Adjustment type (ignored for HK, kept for API compatibility)
+
+        Returns:
+            DataFrame with historical prices
+        """
+        # Normalize date format to YYYY-MM-DD for comparison
+        end_date_normalized = self._normalize_date(end_date)
+        start_date_normalized = self._normalize_date(start_date) if start_date else None
+
+        # Use end_date-based cache key
+        cache_key = f"hist_{symbol}_{end_date}_{adjust}"
+
+        # Try cache first
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            # Filter by start_date if provided
+            if start_date_normalized is not None:
+                # Convert date column to string for consistent comparison
+                cached["日期"] = pd.to_datetime(cached["日期"]).dt.strftime("%Y-%m-%d")
+                cached = cached[cached["日期"] >= start_date_normalized]
+            return cached
+
+        # Convert end_date to akshare format (YYYYMMDD)
+        end_date_ak = end_date.replace("-", "") if isinstance(end_date, str) else end_date
+        # Use a reasonable start date for historical data
+        start_date_ak = "19700101"
+
+        # Fetch from akshare
+        data = ak.stock_hk_hist(symbol=symbol, start_date=start_date_ak, end_date=end_date_ak)
+
+        # Convert date column to string for consistent format
+        data["日期"] = pd.to_datetime(data["日期"]).dt.strftime("%Y-%m-%d")
+
+        # Cache for 1 year
+        self._cache.set(cache_key, data, ttl=86400 * 365)
+
+        # Filter by start_date if provided
+        if start_date_normalized is not None:
+            data = data[data["日期"] >= start_date_normalized]
+
+        return data
 
     def _get_us_historical_data(
         self,
@@ -284,125 +333,262 @@ class AkshareProvider:
         # TODO: Implement US historical data
         raise NotImplementedError("US historical data not implemented yet")
 
-    def get_financial_data(
+    def get_balance_sheet(
         self,
         symbol: str,
         end_year: int | None = None,
     ) -> pd.DataFrame:
         """
-        Get unified financial data (merged from three statements)
+        Get balance sheet
 
         Args:
             symbol: Stock code
             end_year: End year (optional, defaults to current year)
 
         Returns:
-            DataFrame with merged financial data (all historical data up to end_year)
+            DataFrame with balance sheet data
         """
         from datetime import datetime
         if end_year is None:
             end_year = datetime.now().year
 
         if self._market == "A":
-            return self._get_a_financial_data(symbol, end_year)
+            df = self._get_balance_sheet(symbol)
+            return self._filter_by_year(df, end_year)
+        elif self._market == "HK":
+            df = self._get_hk_balance_sheet(symbol)
+            return self._filter_by_year(df, end_year)
+        elif self._market == "US":
+            df = self._get_us_balance_sheet(symbol)
+            return self._filter_by_year(df, end_year)
         else:
-            raise NotImplementedError(f"Financial data for {self._market} not implemented yet")
+            raise NotImplementedError(f"Balance sheet for {self._market} not implemented yet")
 
-    def _get_a_financial_data(
+    def get_profit_sheet(
         self,
         symbol: str,
-        end_year: int,
+        end_year: int | None = None,
     ) -> pd.DataFrame:
-        """Get A股 financial data with merged cache
+        """
+        Get profit sheet (income statement)
 
         Args:
             symbol: Stock code
-            end_year: End year (inclusive)
+            end_year: End year (optional, defaults to current year)
 
         Returns:
-            DataFrame with merged financial data (all historical data)
+            DataFrame with profit sheet data
         """
-        # Use merged cache key based on end_year
-        cache_key = f"financial_{symbol}_{end_year}"
-        ttl = _get_ttl_until_june_next_year(end_year)
+        from datetime import datetime
+        if end_year is None:
+            end_year = datetime.now().year
 
-        cached = self._cache.get(cache_key)
-        if cached is not None:
-            return cached
+        if self._market == "A":
+            df = self._get_profit_sheet(symbol)
+            return self._filter_by_year(df, end_year)
+        elif self._market == "HK":
+            df = self._get_hk_profit_sheet(symbol)
+            return self._filter_by_year(df, end_year)
+        elif self._market == "US":
+            df = self._get_us_profit_sheet(symbol)
+            return self._filter_by_year(df, end_year)
+        else:
+            raise NotImplementedError(f"Profit sheet for {self._market} not implemented yet")
 
-        # Get the three statements (still cached individually for other uses)
-        balance = self._get_balance_sheet(symbol)
-        income = self._get_profit_sheet(symbol)
-        cashflow = self._get_cashflow_sheet(symbol)
-
-        # Merge into unified format
-        merged = self._merge_financial_data(balance, income, cashflow)
-
-        # Cache the merged data
-        self._cache.set(cache_key, merged, ttl=ttl)
-
-        return merged
-
-    def _get_balance_sheet(self, symbol: str) -> pd.DataFrame:
-        """Get balance sheet (no separate cache, use merged cache in get_financial_data)"""
-        # Add SH prefix for A股
-        full_symbol = f"SH{symbol}" if not symbol.startswith(("SH", "SZ")) else symbol
-        return ak.stock_balance_sheet_by_yearly_em(symbol=full_symbol)
-
-    def _get_profit_sheet(self, symbol: str) -> pd.DataFrame:
-        """Get profit sheet (income statement) (no separate cache, use merged cache in get_financial_data)"""
-        full_symbol = f"SH{symbol}" if not symbol.startswith(("SH", "SZ")) else symbol
-        return ak.stock_profit_sheet_by_yearly_em(symbol=full_symbol)
-
-    def _get_cashflow_sheet(self, symbol: str) -> pd.DataFrame:
-        """Get cash flow sheet (no separate cache, use merged cache in get_financial_data)"""
-        full_symbol = f"SH{symbol}" if not symbol.startswith(("SH", "SZ")) else symbol
-        return ak.stock_cash_flow_sheet_by_yearly_em(symbol=full_symbol)
-
-    def _merge_financial_data(
+    def get_cashflow_sheet(
         self,
-        balance: pd.DataFrame,
-        income: pd.DataFrame,
-        cashflow: pd.DataFrame,
+        symbol: str,
+        end_year: int | None = None,
     ) -> pd.DataFrame:
         """
-        Merge three financial statements into one unified DataFrame
+        Get cash flow sheet
 
         Args:
-            balance: Balance sheet DataFrame
-            income: Income statement DataFrame
-            cashflow: Cash flow statement DataFrame
+            symbol: Stock code
+            end_year: End year (optional, defaults to current year)
 
         Returns:
-            Merged DataFrame with standardized field names
+            DataFrame with cash flow sheet data
         """
-        # Apply field mapping to each statement
-        balance_std = DataMapper.map_balance_sheet(balance)
-        income_std = DataMapper.map_income_statement(income)
-        cashflow_std = DataMapper.map_cash_flow(cashflow)
+        from datetime import datetime
+        if end_year is None:
+            end_year = datetime.now().year
 
-        # Extract year from REPORT_DATE
-        for df in [balance_std, income_std, cashflow_std]:
-            if "REPORT_DATE" in df.columns:
-                df["year"] = pd.to_datetime(df["REPORT_DATE"]).dt.year
+        if self._market == "A":
+            df = self._get_cashflow_sheet(symbol)
+            return self._filter_by_year(df, end_year)
+        elif self._market == "HK":
+            df = self._get_hk_cashflow_sheet(symbol)
+            return self._filter_by_year(df, end_year)
+        elif self._market == "US":
+            df = self._get_us_cashflow_sheet(symbol)
+            return self._filter_by_year(df, end_year)
+        else:
+            raise NotImplementedError(f"Cash flow sheet for {self._market} not implemented yet")
 
-        # Merge on year and security code
-        merged = balance_std.merge(
-            income_std,
-            on=["SECURITY_CODE", "year"],
-            how="outer",
-            suffixes=("_balance", "_income"),
-        )
+    def _filter_by_year(
+        self,
+        df: pd.DataFrame,
+        end_year: int,
+    ) -> pd.DataFrame:
+        """
+        Filter DataFrame by end_year
 
-        merged = merged.merge(
-            cashflow_std,
-            on=["SECURITY_CODE", "year"],
-            how="outer",
-            suffixes=("", "_cashflow"),
-        )
+        Args:
+            df: Input DataFrame
+            end_year: End year to filter by
 
-        # Convert to standard format and sort by year
-        return DataMapper.to_standard_format(merged)
+        Returns:
+            Filtered DataFrame with data up to end_year
+        """
+        if df.empty:
+            return df
+
+        # Try to find year column - check common column names
+        # Priority: REPORT (fiscal year like "2025/FY") > year > REPORT_DATE_NAME ("2024年报") > REPORT_DATE > FISCAL_YEAR
+        year_col = None
+        for col in ["REPORT", "year", "REPORT_DATE_NAME", "REPORT_DATE", "FISCAL_YEAR"]:
+            if col in df.columns:
+                year_col = col
+                break
+
+        if year_col is None:
+            return df
+
+        # Extract year from the column
+        df = df.copy()
+        try:
+            if year_col == "REPORT":
+                # For US stocks: "2025/FY" -> extract 2025
+                df["_year"] = pd.to_numeric(
+                    df[year_col].astype(str).str.extract(r"(\d{4})")[0],
+                    errors="coerce"
+                )
+            elif year_col == "REPORT_DATE_NAME":
+                # For A股: "2024年报" -> extract 2024
+                df["_year"] = pd.to_numeric(
+                    df[year_col].astype(str).str.extract(r"(\d{4})")[0],
+                    errors="coerce"
+                )
+            elif df[year_col].dtype.kind in ['O', 'U'] or "string" in str(df[year_col].dtype):
+                # For date strings like "2024-12-31" (handle StringArray by converting to str first)
+                df["_year"] = pd.to_datetime(df[year_col].astype(str), errors="coerce").dt.year
+            else:
+                # Already numeric
+                df["_year"] = pd.to_numeric(df[year_col], errors="coerce")
+
+            # Filter: keep rows where year <= end_year (ignore NaN)
+            result = df[df["_year"] <= end_year].drop(columns=["_year"])
+        except Exception:
+            # If anything fails, return original data
+            result = df
+
+        return result
+
+    def _get_hk_balance_sheet(self, symbol: str) -> pd.DataFrame:
+        """Get 港股 balance sheet"""
+        cache_key = f"balance_sheet_hk_{symbol}"
+        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+
+        def fetch():
+            return ak.stock_financial_hk_report_em(
+                stock=symbol, symbol="资产负债表", indicator="年度"
+            )
+
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+
+    def _get_hk_profit_sheet(self, symbol: str) -> pd.DataFrame:
+        """Get 港股 profit sheet (income statement)"""
+        cache_key = f"profit_sheet_hk_{symbol}"
+        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+
+        def fetch():
+            return ak.stock_financial_hk_report_em(
+                stock=symbol, symbol="利润表", indicator="年度"
+            )
+
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+
+    def _get_hk_cashflow_sheet(self, symbol: str) -> pd.DataFrame:
+        """Get 港股 cash flow sheet"""
+        cache_key = f"cashflow_sheet_hk_{symbol}"
+        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+
+        def fetch():
+            return ak.stock_financial_hk_report_em(
+                stock=symbol, symbol="现金流量表", indicator="年度"
+            )
+
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+
+    def _get_us_balance_sheet(self, symbol: str) -> pd.DataFrame:
+        """Get 美股 balance sheet"""
+        cache_key = f"balance_sheet_us_{symbol}"
+        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+
+        def fetch():
+            return ak.stock_financial_us_report_em(
+                stock=symbol, symbol="资产负债表", indicator="年报"
+            )
+
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+
+    def _get_us_profit_sheet(self, symbol: str) -> pd.DataFrame:
+        """Get 美股 profit sheet (income statement)"""
+        cache_key = f"profit_sheet_us_{symbol}"
+        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+
+        def fetch():
+            return ak.stock_financial_us_report_em(
+                stock=symbol, symbol="综合损益表", indicator="年报"
+            )
+
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+
+    def _get_us_cashflow_sheet(self, symbol: str) -> pd.DataFrame:
+        """Get 美股 cash flow sheet"""
+        cache_key = f"cashflow_sheet_us_{symbol}"
+        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+
+        def fetch():
+            return ak.stock_financial_us_report_em(
+                stock=symbol, symbol="现金流量表", indicator="年报"
+            )
+
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+
+    def _get_balance_sheet(self, symbol: str) -> pd.DataFrame:
+        """Get A股 balance sheet"""
+        cache_key = f"balance_sheet_a_{symbol}"
+        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+
+        def fetch():
+            full_symbol = f"SH{symbol}" if not symbol.startswith(("SH", "SZ")) else symbol
+            return ak.stock_balance_sheet_by_yearly_em(symbol=full_symbol)
+
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+
+    def _get_profit_sheet(self, symbol: str) -> pd.DataFrame:
+        """Get A股 profit sheet (income statement)"""
+        cache_key = f"profit_sheet_a_{symbol}"
+        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+
+        def fetch():
+            full_symbol = f"SH{symbol}" if not symbol.startswith(("SH", "SZ")) else symbol
+            return ak.stock_profit_sheet_by_yearly_em(symbol=full_symbol)
+
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+
+    def _get_cashflow_sheet(self, symbol: str) -> pd.DataFrame:
+        """Get A股 cash flow sheet"""
+        cache_key = f"cashflow_sheet_a_{symbol}"
+        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+
+        def fetch():
+            full_symbol = f"SH{symbol}" if not symbol.startswith(("SH", "SZ")) else symbol
+            return ak.stock_cash_flow_sheet_by_yearly_em(symbol=full_symbol)
+
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
 
     def get_financial_indicator(self, symbol: str) -> pd.DataFrame:
         """

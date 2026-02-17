@@ -72,15 +72,38 @@ def hist(
 
 
 @app.command()
-def financial(
+def balance(
     symbol: str = typer.Argument(..., help="Stock code"),
-    start_year: int = typer.Option(None, "--start", "-s", help="Start year (optional, defaults to earliest)"),
     end_year: int = typer.Option(2024, "--end", "-e", help="End year"),
     market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
 ):
-    """Get financial data (merged statements)"""
+    """Get balance sheet"""
     vi = ValueInvestment(market=_get_market(market, symbol))
-    df = vi.get_financial_data(symbol, start_year, end_year)
+    df = vi.get_balance_sheet(symbol, end_year)
+    print(df.to_string())
+
+
+@app.command()
+def profit(
+    symbol: str = typer.Argument(..., help="Stock code"),
+    end_year: int = typer.Option(2024, "--end", "-e", help="End year"),
+    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+):
+    """Get profit sheet (income statement)"""
+    vi = ValueInvestment(market=_get_market(market, symbol))
+    df = vi.get_profit_sheet(symbol, end_year)
+    print(df.to_string())
+
+
+@app.command()
+def cashflow(
+    symbol: str = typer.Argument(..., help="Stock code"),
+    end_year: int = typer.Option(2024, "--end", "-e", help="End year"),
+    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+):
+    """Get cash flow sheet"""
+    vi = ValueInvestment(market=_get_market(market, symbol))
+    df = vi.get_cashflow_sheet(symbol, end_year)
     print(df.to_string())
 
 

@@ -1,5 +1,6 @@
 """Python API for value investment analysis"""
 from typing import Optional
+import pandas as pd
 
 from value_investment.data.cache import SmartCache
 from value_investment.data.providers.akshare_provider import AkshareProvider
@@ -66,22 +67,56 @@ class ValueInvestment:
         """
         return self._provider.get_historical_data(symbol, end_date, start_date, adjust)
 
-    def get_financial_data(
+    def get_balance_sheet(
         self,
         symbol: str,
         end_year: int | None = None,
     ):
         """
-        Get unified financial data
+        Get balance sheet
 
         Args:
             symbol: Stock code
             end_year: End year (optional, defaults to current year)
 
         Returns:
-            DataFrame with merged financial data (all historical data up to end_year)
+            DataFrame with balance sheet data
         """
-        return self._provider.get_financial_data(symbol, end_year)
+        return self._provider.get_balance_sheet(symbol, end_year)
+
+    def get_profit_sheet(
+        self,
+        symbol: str,
+        end_year: int | None = None,
+    ):
+        """
+        Get profit sheet (income statement)
+
+        Args:
+            symbol: Stock code
+            end_year: End year (optional, defaults to current year)
+
+        Returns:
+            DataFrame with profit sheet data
+        """
+        return self._provider.get_profit_sheet(symbol, end_year)
+
+    def get_cashflow_sheet(
+        self,
+        symbol: str,
+        end_year: int | None = None,
+    ):
+        """
+        Get cash flow sheet
+
+        Args:
+            symbol: Stock code
+            end_year: End year (optional, defaults to current year)
+
+        Returns:
+            DataFrame with cash flow sheet data
+        """
+        return self._provider.get_cashflow_sheet(symbol, end_year)
 
     def get_financial_indicator(self, symbol: str):
         """
@@ -135,12 +170,13 @@ class ValueInvestment:
     ) -> tuple:
         """
         Prepare financial data and market cap for indicators.
-        Shared by calculate_indicator and analyze methods.
         """
         from datetime import datetime
 
         current_year = datetime.now().year
-        all_data = self._provider.get_financial_data(stock_code, current_year)
+
+        # Get merged financial data (fetches cached sheets, merges in memory)
+        all_data = self._get_financial_data(stock_code, current_year)
 
         # Take latest years
         if 'year' in all_data.columns:
@@ -162,6 +198,47 @@ class ValueInvestment:
                 pass
 
         return financial_data, market_cap
+
+    def _get_financial_data(
+        self,
+        symbol: str,
+        end_year: int,
+    ) -> pd.DataFrame:
+        """
+        Get merged financial data for indicator calculation.
+        Fetches cached sheets and merges in memory (no merged cache).
+
+        Args:
+            symbol: Stock code
+            end_year: End year
+
+        Returns:
+            Merged DataFrame with all financial data
+        """
+        # Fetch individual sheets (each is cached separately)
+        balance = self._provider.get_balance_sheet(symbol, end_year)
+        profit = self._provider.get_profit_sheet(symbol, end_year)
+        cashflow = self._provider.get_cashflow_sheet(symbol, end_year)
+
+        if balance.empty:
+            return profit if not profit.empty else cashflow
+
+        # Ensure year column exists
+        for df in [balance, profit, cashflow]:
+            if 'year' not in df.columns and 'REPORT_DATE' in df.columns:
+                df['year'] = pd.to_datetime(df['REPORT_DATE']).dt.year
+
+        # Merge on year
+        merged = balance.copy()
+        if not profit.empty and 'year' in profit.columns:
+            profit_cols = [c for c in profit.columns if c not in merged.columns or c == 'year']
+            merged = merged.merge(profit[profit_cols], on='year', how='outer', suffixes=('', '_profit'))
+
+        if not cashflow.empty and 'year' in cashflow.columns:
+            cashflow_cols = [c for c in cashflow.columns if c not in merged.columns or c == 'year']
+            merged = merged.merge(cashflow[cashflow_cols], on='year', how='outer', suffixes=('', '_cashflow'))
+
+        return merged
 
     def analyze(
         self,

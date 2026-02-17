@@ -119,3 +119,86 @@ class TestSmartCache:
         result = cache.get("dataframe")
         assert isinstance(result, pd.DataFrame)
         assert result.equals(df)
+
+    def test_get_or_fetch_cache_hit(self, temp_cache_dir):
+        """get_or_fetch应返回缓存数据，不调用fetch_func"""
+        from value_investment.data.cache import SmartCache
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+
+        # Pre-populate cache
+        cached_data = {"key": "cached_value"}
+        cache.set("test_key", cached_data)
+
+        # fetch_func should not be called
+        call_count = [0]
+
+        def fetch_func():
+            call_count[0] += 1
+            return {"key": "new_value"}
+
+        result = cache.get_or_fetch("test_key", fetch_func)
+
+        assert result == cached_data
+        assert call_count[0] == 0  # fetch_func was not called
+
+    def test_get_or_fetch_cache_miss(self, temp_cache_dir):
+        """get_or_fetch应调用fetch_func并缓存结果"""
+        from value_investment.data.cache import SmartCache
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+
+        fetched_data = {"key": "fetched_value"}
+        call_count = [0]
+
+        def fetch_func():
+            call_count[0] += 1
+            return fetched_data
+
+        result = cache.get_or_fetch("test_key", fetch_func)
+
+        assert result == fetched_data
+        assert call_count[0] == 1  # fetch_func was called once
+        assert "test_key" in cache.list_keys()
+
+    def test_get_or_fetch_second_call_uses_cache(self, temp_cache_dir):
+        """get_or_fetch第二次调用应使用缓存"""
+        from value_investment.data.cache import SmartCache
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+
+        call_count = [0]
+
+        def fetch_func():
+            call_count[0] += 1
+            return {"key": f"value_{call_count[0]}"}
+
+        # First call - should fetch
+        result1 = cache.get_or_fetch("test_key", fetch_func)
+        assert call_count[0] == 1
+
+        # Second call - should use cache
+        result2 = cache.get_or_fetch("test_key", fetch_func)
+        assert call_count[0] == 1  # Still 1, not incremented
+        assert result1 == result2
+
+    def test_get_or_fetch_with_ttl(self, temp_cache_dir):
+        """get_or_fetch应支持TTL参数"""
+        from value_investment.data.cache import SmartCache
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+
+        def fetch_func():
+            return "value"
+
+        cache.get_or_fetch("ttl_key", fetch_func, ttl=1)
+
+        # Immediately should exist
+        assert cache.get("ttl_key") == "value"
+
+        # Wait for expiration
+        time.sleep(1.1)
+
+        # Should be expired
+        assert cache.get("ttl_key") is None
+

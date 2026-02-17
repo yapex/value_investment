@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Callable, List, Optional
 
 import diskcache
 
@@ -33,6 +33,31 @@ class SmartCache:
         """Set value in cache with optional TTL"""
         ttl = ttl if ttl is not None else self.default_ttl
         self._cache.set(key, value, expire=ttl)
+
+    def get_or_fetch(
+        self,
+        key: str,
+        fetch_func: Callable[[], Any],
+        ttl: Optional[int] = None,
+    ) -> Any:
+        """
+        Get from cache or fetch and cache if not present
+
+        Args:
+            key: Cache key
+            fetch_func: Function to fetch data if not cached
+            ttl: Time to live in seconds (optional)
+
+        Returns:
+            Cached or freshly fetched data
+        """
+        cached = self.get(key)
+        if cached is not None:
+            return cached
+
+        data = fetch_func()
+        self.set(key, data, ttl=ttl)
+        return data
 
     def invalidate(self, key: str) -> None:
         """Invalidate a cache entry"""

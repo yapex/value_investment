@@ -8,13 +8,51 @@ from value_investment.api import ValueInvestment
 app = typer.Typer(name="v-investment", help="Value investment analysis tool")
 
 
+def _detect_market_from_code(code: str) -> str:
+    """Detect market from stock code
+
+    Args:
+        code: Stock code
+
+    Returns:
+        Market code: "A", "HK", or "US"
+    """
+    if not code:
+        return "A"
+
+    code = code.strip()
+
+    # A股: 6-digit codes starting with 0, 3, 6
+    if code.isdigit() and len(code) == 6:
+        if code[0] in ("0", "3", "6"):
+            return "A"
+
+    # 港股: 5-digit codes
+    if code.isdigit() and len(code) == 5:
+        return "HK"
+
+    # 美股: alphabetic ticker symbols
+    if code.isalpha():
+        return "US"
+
+    # Default to A股
+    return "A"
+
+
+def _get_market(market: Optional[str], symbol: str) -> str:
+    """Get market, auto-detect from symbol if not specified"""
+    if market:
+        return market
+    return _detect_market_from_code(symbol)
+
+
 @app.command()
 def info(
     symbol: str = typer.Argument(..., help="Stock code (e.g., 600519)"),
-    market: str = typer.Option("A", "--market", "-m", help="Market: A, HK, US"),
+    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
 ):
     """Query stock basic information"""
-    vi = ValueInvestment(market=market)
+    vi = ValueInvestment(market=_get_market(market, symbol))
     df = vi.get_stock_info(symbol)
     print(df.to_string())
 
@@ -25,10 +63,10 @@ def hist(
     start: str = typer.Option("19700101", "--start", "-s", help="Start date (YYYYMMDD, optional, defaults to earliest)"),
     end: str = typer.Option("20241231", "--end", "-e", help="End date (YYYYMMDD)"),
     adjust: str = typer.Option("hfq", "--adjust", "-a", help="Adjustment: '', 'qfq', 'hfq' (default: hfq for backtesting)"),
-    market: str = typer.Option("A", "--market", "-m", help="Market: A, HK, US"),
+    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
 ):
     """Get historical price data"""
-    vi = ValueInvestment(market=market)
+    vi = ValueInvestment(market=_get_market(market, symbol))
     df = vi.get_historical_data(symbol, end, start, adjust)
     print(df.to_string())
 
@@ -38,10 +76,10 @@ def financial(
     symbol: str = typer.Argument(..., help="Stock code"),
     start_year: int = typer.Option(None, "--start", "-s", help="Start year (optional, defaults to earliest)"),
     end_year: int = typer.Option(2024, "--end", "-e", help="End year"),
-    market: str = typer.Option("A", "--market", "-m", help="Market: A, HK, US"),
+    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
 ):
     """Get financial data (merged statements)"""
-    vi = ValueInvestment(market=market)
+    vi = ValueInvestment(market=_get_market(market, symbol))
     df = vi.get_financial_data(symbol, start_year, end_year)
     print(df.to_string())
 
@@ -51,10 +89,10 @@ def indicator(
     name: str = typer.Argument(..., help="Indicator name"),
     stock_code: str = typer.Option(..., "--stock", "-s", help="Stock code"),
     years: int = typer.Option(10, "--years", "-y", help="Number of years"),
-    market: str = typer.Option("A", "--market", "-m", help="Market: A, HK, US"),
+    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
 ):
     """Calculate a specific indicator"""
-    vi = ValueInvestment(market=market)
+    vi = ValueInvestment(market=_get_market(market, stock_code))
     try:
         result = vi.calculate_indicator(name, stock_code, years)
         print(f"{name}: {result.value} {result.unit}")
@@ -74,12 +112,12 @@ def indicator(
 def analyze(
     stock_code: str = typer.Argument(..., help="Stock code"),
     years: int = typer.Option(10, "--years", "-y", help="Number of years"),
-    market: str = typer.Option("A", "--market", "-m", help="Market: A, HK, US"),
+    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
 ):
     """Perform complete analysis"""
     import pandas as pd
 
-    vi = ValueInvestment(market=market)
+    vi = ValueInvestment(market=_get_market(market, stock_code))
 
     # Get stock info first
     try:
@@ -220,10 +258,12 @@ def list_indicators():
 @app.command()
 def cache_clear(
     symbol: Optional[str] = typer.Argument(None, help="Specific stock code to clear"),
-    market: str = typer.Option("A", "--market", "-m", help="Market: A, HK, US"),
+    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
 ):
     """Clear cache"""
-    vi = ValueInvestment(market=market)
+    # Use symbol to detect market if not specified, default to A if no symbol
+    detected_market = _get_market(market, symbol) if symbol else (market or "A")
+    vi = ValueInvestment(market=detected_market)
     vi.clear_cache(symbol)
     if symbol:
         print(f"Cleared cache for {symbol}")

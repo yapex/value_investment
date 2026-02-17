@@ -93,6 +93,127 @@ class TestAkshareProviderStockInfo:
         # Check the cache key exists (diskcache format, not checking internal TTL)
         assert "info_600519" in cache.list_keys()
 
+    def test_get_stock_info_hk_stock(self, temp_cache_dir):
+        """Should get 港股 stock info"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="HK")
+
+        # Mock the akshare call - returns wide format DataFrame
+        mock_data = pd.DataFrame({
+            "公司名称": ["腾讯控股有限公司"],
+            "所属行业": ["软件服务"],
+            "董事长": ["马化腾"]
+        })
+
+        with patch("akshare.stock_hk_company_profile_em", return_value=mock_data):
+            result = provider.get_stock_info("00700")
+
+        assert isinstance(result, pd.DataFrame)
+        assert "item" in result.columns
+        assert "value" in result.columns
+        # Should include stock code as first item
+        assert result.iloc[0]["item"] == "股票代码"
+        assert result.iloc[0]["value"] == "00700"
+
+    def test_get_stock_info_us_stock(self, temp_cache_dir):
+        """Should get 美股 stock info"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="US")
+
+        # Mock the akshare call - returns item/value format directly
+        mock_data = pd.DataFrame({
+            "item": ["org_id", "org_name_cn", "org_name_en", "main_operation_business"],
+            "value": ["T000038499", "苹果公司", "Apple Inc.", "设计，生产和销售移动通信和媒体设备..."]
+        })
+
+        with patch("akshare.stock_individual_basic_info_us_xq", return_value=mock_data):
+            result = provider.get_stock_info("AAPL")
+
+        assert isinstance(result, pd.DataFrame)
+        assert "item" in result.columns
+        assert "value" in result.columns
+        # Should have correct data
+        assert result.iloc[0]["item"] == "org_id"
+        assert result.iloc[0]["value"] == "T000038499"
+
+    def test_get_stock_info_us_uses_cache(self, temp_cache_dir):
+        """US stock info should use cache"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="US")
+
+        # Pre-populate cache
+        cached_data = pd.DataFrame({
+            "item": ["org_id"],
+            "value": ["T000038499"]
+        })
+        cache.set("info_AAPL", cached_data)
+
+        # Mock akshare to fail if called
+        with patch("akshare.stock_individual_basic_info_us_xq") as mock_ak:
+            result = provider.get_stock_info("AAPL")
+
+        # Should return cached data, not call akshare
+        mock_ak.assert_not_called()
+        assert result is not None
+
+    def test_hk_stock_info_cache_expires_at_june(self, temp_cache_dir):
+        """港股股票信息缓存应到次年6月底"""
+        from datetime import datetime
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import (
+            AkshareProvider,
+            _get_ttl_until_june_next_year,
+        )
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="HK")
+
+        # Mock the akshare call
+        mock_data = pd.DataFrame({
+            "公司名称": ["腾讯控股有限公司"],
+        })
+
+        with patch("akshare.stock_hk_company_profile_em", return_value=mock_data):
+            result = provider.get_stock_info("00700")
+
+        assert result is not None
+        # Check cache key exists
+        assert "info_00700" in cache.list_keys()
+
+    def test_us_stock_info_cache_expires_at_june(self, temp_cache_dir):
+        """美股股票信息缓存应到次年6月底"""
+        from datetime import datetime
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import (
+            AkshareProvider,
+            _get_ttl_until_june_next_year,
+        )
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="US")
+
+        # Mock the akshare call
+        mock_data = pd.DataFrame({
+            "item": ["org_id"],
+            "value": ["T000038499"]
+        })
+
+        with patch("akshare.stock_individual_basic_info_us_xq", return_value=mock_data):
+            result = provider.get_stock_info("AAPL")
+
+        assert result is not None
+        # Check cache key exists
+        assert "info_AAPL" in cache.list_keys()
+
 
 class TestAkshareProviderHistorical:
     """Test historical data fetching"""

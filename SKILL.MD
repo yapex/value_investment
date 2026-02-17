@@ -79,18 +79,20 @@ uv tool install -e .
 
 ## 市场参考文档
 
-按市场查看详细字段和指标说明：
+详细字段说明按市场分文档：
 
-- **A股**: 见 [references/a-stock.md](references/a-stock.md)
-- **港股**: 待添加
-- **美股**: 待添加
+- **A股**: [references/a-stock.md](references/a-stock.md)
+- **港股**: [references/hk-stock.md](references/hk-stock.md)
+- **美股**: [references/us-stock.md](references/us-stock.md)
 
 ---
 
 ## 缓存策略
 
-- 个股信息: 次日凌晨失效
-- 历史数据: 1年
-- 财务数据: 次年6月底
+| 数据类型 | A股 | 港股/美股 |
+|----------|-----|-----------|
+| 个股信息 | 次日凌晨 | 次年6月底 |
+| 历史数据 | 1年 | - |
+| 财务数据 | 次年6月底 | - |
 
 缓存支持范围复用: 缓存[2015-2024]可服务于[2020-2024]查询。

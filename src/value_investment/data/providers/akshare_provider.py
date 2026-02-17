@@ -114,13 +114,58 @@ class AkshareProvider:
 
     def _get_hk_stock_info(self, symbol: str) -> pd.DataFrame:
         """Get 港股 stock info"""
-        # TODO: Implement HK stock info
-        raise NotImplementedError("HK stock info not implemented yet")
+        cache_key = f"info_{symbol}"
+
+        # Try cache first
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        # Fetch from akshare
+        data = ak.stock_hk_company_profile_em(symbol=symbol)
+
+        # Convert wide format to item/value format
+        # Original: single row DataFrame with columns as fields
+        # Target: DataFrame with "item" and "value" columns
+        items = []
+        values = []
+
+        # Add stock code
+        items.append("股票代码")
+        values.append(symbol)
+
+        # Add all columns from the profile data
+        for col in data.columns:
+            items.append(col)
+            # Get the value from the first row
+            val = data.iloc[0][col]
+            values.append(val)
+
+        result = pd.DataFrame({"item": items, "value": values})
+
+        # Cache until next June 30th (company info rarely changes)
+        self._cache.set(
+            cache_key, result, ttl=_get_ttl_until_june_next_year(datetime.now().year)
+        )
+        return result
 
     def _get_us_stock_info(self, symbol: str) -> pd.DataFrame:
         """Get 美股 stock info"""
-        # TODO: Implement US stock info
-        raise NotImplementedError("US stock info not implemented yet")
+        cache_key = f"info_{symbol}"
+
+        # Try cache first
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        # Fetch from akshare - returns item/value format directly
+        data = ak.stock_individual_basic_info_us_xq(symbol=symbol)
+
+        # Cache until next June 30th (company info rarely changes)
+        self._cache.set(
+            cache_key, data, ttl=_get_ttl_until_june_next_year(datetime.now().year)
+        )
+        return data
 
     def get_historical_data(
         self,

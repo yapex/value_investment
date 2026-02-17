@@ -158,8 +158,13 @@ class CAGRIndicator(BaseIndicator):
                 values=[]
             )
 
-        start_value = values.iloc[0]
-        end_value = values.iloc[-1]
+        # Sort by year to ensure correct order (ascending)
+        if 'year' in data.columns:
+            sorted_idx = data['year'].argsort()
+            values = values.iloc[sorted_idx]
+
+        start_value = values.iloc[0]  # Earliest year
+        end_value = values.iloc[-1]   # Latest year
         years = len(values) - 1  # Period is (n-1) years for n data points
 
         if start_value <= 0 or end_value <= 0:

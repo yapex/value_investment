@@ -59,7 +59,13 @@ def indicator(
         result = vi.calculate_indicator(name, stock_code, years)
         print(f"{name}: {result.value} {result.unit}")
         print(f"Description: {result.description}")
-        print(f"Years: {result.years}")
+        if result.values and len(result.values) > 0:
+            # Show per-year values
+            print("\nYear-by-Year:")
+            for year, val in zip(result.years, result.values):
+                print(f"  {year}: {val:.2f}{result.unit}")
+        else:
+            print(f"Years: {result.years}")
     except Exception as e:
         print(f"Error: {e}")
 

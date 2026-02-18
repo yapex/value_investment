@@ -37,60 +37,6 @@
 | 涨跌额 | 涨跌额(元) | -36.0 |
 | 换手率 | 换手率(%) | 0.40 |
 
-## 财务数据字段
-
-`financial` 命令返回三张财务报表的合并数据，按年份组织。
-
-### 资产负债表
-
-| 字段 | 说明 |
-|------|------|
-| total_assets | 总资产 |
-| current_assets | 流动资产 |
-| non_current_assets | 非流动资产 |
-| total_liabilities | 总负债 |
-| current_liabilities | 流动负债 |
-| non_current_liabilities | 非流动负债 |
-| total_equity | 所有者权益 |
-| cash_and_equivalents | 货币资金 |
-| accounts_receivable | 应收账款 |
-| inventory | 存货 |
-| fixed_assets | 固定资产 |
-| intangible_assets | 无形资产 |
-| long_term_equity_invest | 长期股权投资 |
-
-### 利润表
-
-| 字段 | 说明 |
-|------|------|
-| total_revenue | 营业总收入 |
-| operating_income | 营业收入 |
-| total_operating_cost | 营业总成本 |
-| operating_cost | 营业成本 |
-| sales_expense | 销售费用 |
-| management_expense | 管理费用 |
-| financial_expense | 财务费用 |
-| research_expense | 研发费用 |
-| operating_profit | 营业利润 |
-| total_profit | 利润总额 |
-| net_profit | 净利润 |
-| parent_net_profit | 归属母公司净利润 |
-| income_tax | 所得税 |
-| basic_eps | 基本每股收益 |
-| gross_profit | 毛利润 |
-| ebit | 息税前利润 |
-
-### 现金流量表
-
-| 字段 | 说明 |
-|------|------|
-| operating_cash_flow | 经营活动现金流 |
-| investing_cash_flow | 投资活动现金流 |
-| financing_cash_flow | 筹资活动现金流 |
-| capital_expenditure | 资本支出 |
-| free_cash_flow | 自由现金流 |
-| cash_and_equivalents_end | 期末现金及等价物 |
-
 ## 直接查询指标 (东方财富)
 
 这些指标由东方财富直接计算，通过 `stock_financial_analysis_indicator_em` 接口获取：

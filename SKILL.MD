@@ -1,18 +1,10 @@
+---
+name: v-invest
+description: |
+  A股/港股/美股基本面分析工具。触发场景：(1) 股票基本信息/市值/行业查询 (2) 历史股价 (3) 财务报表（资产负债表/利润表/现金流量表）(4) 财务指标计算（ROE/ROA/毛利率/DCF等）(5) 基本面/价值投资分析
+---
+
 # v-invest
-
-A股/港股/美股基本面分析工具，基于akshare数据。
-
----
-
-## 安装
-
-```bash
-git clone https://github.com/yapex/value_investment.git
-cd value_investment
-uv tool install -e .
-```
-
----
 
 ## 场景化使用
 
@@ -34,43 +26,15 @@ uv tool install -e .
 - **避免冗余**：查询单个指标时只执行 `indicator`，不要执行 `analyze`
 - **`analyze` 适用场景**：用户明确要求"完整分析"、"全面分析"时使用
 
----
-
-## CLI 命令
-
-| 命令 | 说明 | 支持市场 |
-|------|------|----------|
-| `info <code>` | 个股信息 | A股/港股/美股 |
-| `hist <code> [--end YYYYMMDD]` | 历史行情 | A股/港股 |
-| `balance <code> [--end YYYY]` | 资产负债表 | A股/港股/美股 |
-| `profit <code> [--end YYYY]` | 利润表 | A股/港股/美股 |
-| `cashflow <code> [--end YYYY]` | 现金流量表 | A股/港股/美股 |
-| `indicator <name> -s <code>` | 计算指标 | A股 |
-| `analyze <code>` | 完整分析 | A股 |
-| `list` | 指标列表 | - |
-
-### 市场代码格式
+### 代码格式
 
 - A股: 6位数字 (600519)
 - 港股: 5位数字 (00700)
 - 美股: 字母 (AAPL)
 
-### 支持市场详情
-
-| 功能 | A股 | 港股 | 美股 |
-|------|-----|------|------|
-| 个股信息 (info) | ✓ | ✓ | ✓ |
-| 历史行情 (hist) | ✓ | ✓ | - |
-| 资产负债表 (balance) | ✓ | ✓ | ✓ |
-| 利润表 (profit) | ✓ | ✓ | ✓ |
-| 现金流量表 (cashflow) | ✓ | ✓ | ✓ |
-| 指标计算 (indicator/analyze) | ✓ | - | - |
-
 ---
 
 ## 指标体系
-
-### 自研计算指标
 
 | 指标 | 说明 | 公式 |
 |------|------|------|
@@ -92,22 +56,14 @@ uv tool install -e .
 
 ---
 
-## 市场参考文档
+## 参考文档（按需读取）
 
-详细字段说明按市场分文档：
+**市场字段**（需要了解具体返回字段时读取）：
+- A股: [references/a-stock.md](references/a-stock.md)
+- 港股: [references/hk-stock.md](references/hk-stock.md)
+- 美股: [references/us-stock.md](references/us-stock.md)
 
-- **A股**: [references/a-stock.md](references/a-stock.md)
-- **港股**: [references/hk-stock.md](references/hk-stock.md)
-- **美股**: [references/us-stock.md](references/us-stock.md)
-
----
-
-## 缓存策略
-
-| 数据类型 | A股 | 港股 | 美股 |
-|----------|-----|------|------|
-| 个股信息 | 次日凌晨 | 次年6月底 | 次年6月底 |
-| 历史数据 | 1年 | 1年 | - |
-| 财务报表 | 次年6月底 | 次年6月底 | 次年6月底 |
-
-**缓存复用**：财务报表缓存全量历史数据，按 end_year 过滤返回。
+**财务报表字段**（需要了解数据格式/列名时读取）：
+- 资产负债表: [references/balance.md](references/balance.md)
+- 利润表: [references/profit.md](references/profit.md)
+- 现金流量表: [references/cashflow.md](references/cashflow.md)

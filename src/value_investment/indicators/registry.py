@@ -319,7 +319,7 @@ DEFAULT_CALCULATED_INDICATORS = [
     {
         "name": "gross_margin",
         "display_name": "毛利率",
-        "type": IndicatorType.SIMPLE,
+        "type": IndicatorType.CALCULATED,
         "description": "毛利率 (毛利润/营业收入)",
         "unit": "%",
         "market_fields": {
@@ -330,7 +330,7 @@ DEFAULT_CALCULATED_INDICATORS = [
     {
         "name": "roe",
         "display_name": "净资产收益率",
-        "type": IndicatorType.SIMPLE,
+        "type": IndicatorType.CALCULATED,
         "description": "净资产收益率 ROE (净利润/股东权益)",
         "unit": "%",
         "market_fields": {
@@ -341,7 +341,7 @@ DEFAULT_CALCULATED_INDICATORS = [
     {
         "name": "roa",
         "display_name": "总资产收益率",
-        "type": IndicatorType.SIMPLE,
+        "type": IndicatorType.CALCULATED,
         "description": "总资产收益率 ROA (净利润/总资产)",
         "unit": "%",
         "market_fields": {
@@ -352,60 +352,134 @@ DEFAULT_CALCULATED_INDICATORS = [
     {
         "name": "net_profit_margin",
         "display_name": "净利率",
-        "type": IndicatorType.SIMPLE,
+        "type": IndicatorType.CALCULATED,
         "description": "净利率 (净利润/营业收入)",
         "unit": "%",
-        "market_fields": {},
+        "market_fields": {
+            "A股": "净利率(%)",
+            "港股": "销售净利率(%)",
+        },
     },
     # Liquidity indicators
     {
         "name": "current_ratio",
         "display_name": "流动比率",
-        "type": IndicatorType.SIMPLE,
+        "type": IndicatorType.CALCULATED,
         "description": "流动比率 (流动资产/流动负债)",
         "unit": "ratio",
-        "market_fields": {},
+        "market_fields": {
+            "A股": "流动比率",
+            "港股": "流动比率",
+        },
     },
     {
         "name": "quick_ratio",
         "display_name": "速动比率",
-        "type": IndicatorType.SIMPLE,
+        "type": IndicatorType.CALCULATED,
         "description": "速动比率 ((流动资产-存货)/流动负债)",
         "unit": "ratio",
-        "market_fields": {},
+        "market_fields": {
+            "A股": "速动比率",
+            "港股": "速动比率",
+        },
     },
     # Leverage indicators
     {
         "name": "debt_ratio",
         "display_name": "资产负债率",
-        "type": IndicatorType.SIMPLE,
+        "type": IndicatorType.CALCULATED,
         "description": "资产负债率 (负债合计/资产总计)",
         "unit": "%",
-        "market_fields": {},
+        "market_fields": {
+            "A股": "资产负债率(%)",
+            "港股": "资产负债率",
+        },
     },
     # Efficiency indicators
     {
         "name": "inventory_turnover",
         "display_name": "存货周转率",
-        "type": IndicatorType.SIMPLE,
+        "type": IndicatorType.CALCULATED,
         "description": "存货周转率 (营业成本/平均存货)",
         "unit": "ratio",
-        "market_fields": {},
+        "market_fields": {
+            "A股": "存货周转率(次)",
+            "港股": "存货周转率",
+        },
     },
     {
         "name": "receivable_turnover",
         "display_name": "应收账款周转率",
-        "type": IndicatorType.SIMPLE,
+        "type": IndicatorType.CALCULATED,
         "description": "应收账款周转率 (营业收入/平均应收账款)",
         "unit": "ratio",
-        "market_fields": {},
+        "market_fields": {
+            "A股": "应收账款周转率(次)",
+            "港股": "应收账款周转率",
+        },
     },
     {
         "name": "asset_turnover",
         "display_name": "总资产周转率",
-        "type": IndicatorType.SIMPLE,
+        "type": IndicatorType.CALCULATED,
         "description": "总资产周转率 (营业收入/平均总资产)",
         "unit": "ratio",
+        "market_fields": {
+            "A股": "总资产周转率(次)",
+            "港股": "总资产周转率",
+        },
+    },
+    {
+        "name": "payable_turnover",
+        "display_name": "应付账款周转率",
+        "type": IndicatorType.CALCULATED,
+        "description": "应付账款周转率 (营业成本/平均应付账款)",
+        "unit": "ratio",
+        "market_fields": {
+            "A股": "应付账款周转率",
+            "港股": "应付账款周转率",
+        },
+    },
+    # Cash flow indicators
+    {
+        "name": "cfo_to_netprofit_sum",
+        "display_name": "累计净现比",
+        "type": IndicatorType.CALCULATED,
+        "description": "经营现金流累计/净利润累计 (盈利质量验证)",
+        "unit": "%",
+        "market_fields": {},
+    },
+    # Complex indicators
+    {
+        "name": "ROIC",
+        "display_name": "投资资本回报率",
+        "type": IndicatorType.CALCULATED,
+        "description": "ROIC = NOPAT / 投入资本",
+        "unit": "%",
+        "market_fields": {},
+    },
+    {
+        "name": "CAGR",
+        "display_name": "复合增长率",
+        "type": IndicatorType.CALCULATED,
+        "description": "复合增长率，支持 revenue/net_profit",
+        "unit": "%",
+        "market_fields": {},
+    },
+    {
+        "name": "ImpliedGrowth",
+        "display_name": "市场隐含增长率",
+        "type": IndicatorType.CALCULATED,
+        "description": "基于DCF模型反推增长率",
+        "unit": "%",
+        "market_fields": {},
+    },
+    {
+        "name": "PEPct",
+        "display_name": "PE历史百分位",
+        "type": IndicatorType.CALCULATED,
+        "description": "当前PE在历史PE序列中的位置",
+        "unit": "%",
         "market_fields": {},
     },
 ]

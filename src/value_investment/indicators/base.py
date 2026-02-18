@@ -11,9 +11,8 @@ if TYPE_CHECKING:
 class IndicatorType(str, Enum):
     """Types of indicators"""
 
-    RAW = "RAW"  # Raw financial data from API
-    SIMPLE = "SIMPLE"  # Simple calculated indicators (ROE, ROA, etc.)
-    COMPLEX = "COMPLEX"  # Complex calculated indicators (DCF, CAGR, etc.)
+    RAW = "RAW"  # Raw financial data from API (direct field mapping)
+    CALCULATED = "CALCULATED"  # Calculated indicators (need computation logic)
 
 
 @dataclass
@@ -57,7 +56,7 @@ class BaseIndicator(ABC):
 
     name: str = ""
     description: str = ""
-    type: IndicatorType = IndicatorType.SIMPLE  # Default to SIMPLE
+    type: IndicatorType = IndicatorType.CALCULATED  # Default to CALCULATED
 
     @abstractmethod
     def calculate(

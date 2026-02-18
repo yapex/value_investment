@@ -118,15 +118,50 @@ def indicator(
     vi = ValueInvestment(market=_get_market(market, stock_code))
     try:
         result = vi.calculate_indicator(name, stock_code, years)
-        print(f"{name}: {result.value} {result.unit}")
-        print(f"Description: {result.description}")
-        if result.values and len(result.values) > 0:
-            # Show per-year values
-            print("\nYear-by-Year:")
-            for year, val in zip(result.years, result.values):
-                print(f"  {year}: {val:.2f}{result.unit}")
+
+        # 特殊处理PEPct指标：显示百分位，但year-by-year显示PE值
+        if name.upper() in ('PEPCT', 'PE_PCT'):
+            print(f"{name}: {result.value:.1f}{result.unit}")
+            print(f"Description: {result.description}")
+            if result.values and len(result.values) > 0:
+                print("\n历史PE:")
+                for year, val in zip(result.years, result.values):
+                    print(f"  {year}: {val:.1f}x")
+            print(f"PE Range: {min(result.values):.1f}x ~ {max(result.values):.1f}x")
         else:
-            print(f"Years: {result.years}")
+            print(f"{name}: {result.value} {result.unit}")
+            print(f"Description: {result.description}")
+            if result.values and len(result.values) > 0:
+                # Show per-year values
+                print("\nYear-by-Year:")
+                for year, val in zip(result.years, result.values):
+                    print(f"  {year}: {val:.2f}{result.unit}")
+            else:
+                print(f"Years: {result.years}")
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+@app.command()
+def finind(
+    stock_code: str = typer.Argument(..., help="Stock code"),
+    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+):
+    """Get financial indicators directly from data source (no calculation needed)"""
+    vi = ValueInvestment(market=_get_market(market, stock_code))
+
+    try:
+        df = vi.get_financial_indicator(stock_code)
+        if df is None or df.empty:
+            print(f"No financial indicators found for {stock_code}")
+            return
+
+        # Print each indicator
+        print(f"=== Financial Indicators for {stock_code} ===")
+        for col in df.columns:
+            val = df[col].iloc[0]
+            if pd.notna(val):
+                print(f"{col}: {val}")
     except Exception as e:
         print(f"Error: {e}")
 

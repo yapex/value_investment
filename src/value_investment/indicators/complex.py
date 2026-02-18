@@ -283,6 +283,21 @@ class ImpliedGrowthIndicator(BaseIndicator):
         wacc = kwargs.get("wacc", 0.10)  # Weighted Average Cost of Capital
         market_cap = kwargs.get("market_cap", None)  # Required for implied growth
 
+        # Auto-fetch latest market cap if not provided
+        if not market_cap or market_cap <= 0:
+            provider = kwargs.get('provider')
+            stock_code = kwargs.get('stock_code')
+            if provider and stock_code:
+                try:
+                    # 使用 LatestMarketCapIndicator 获取市值
+                    from value_investment.indicators.simple import LatestMarketCapIndicator
+                    mc_indicator = LatestMarketCapIndicator()
+                    mc_result = mc_indicator.calculate(pd.DataFrame(), provider=provider, stock_code=stock_code)
+                    if mc_result and mc_result.value > 0:
+                        market_cap = mc_result.value
+                except Exception:
+                    pass
+
         # Calculate FCF = Operating Cash Flow - Capital Expenditure
         # HK: 经营业务现金净额, A股: 经营活动现金流
         op_cash_flow_col = self._find_column(data, [
@@ -403,12 +418,14 @@ class ImpliedGrowthIndicator(BaseIndicator):
         return None
 
 
+
+
 class PEPercentileIndicator(BaseIndicator):
     """
-    PE历史百分位指标
+    PE历史百分位
 
-    计算当前PE在历史PE序列中的百分位，用于判断估值高低。
-    使用年度净利润和年末股价计算PE。
+    计算当前PE在历史PE序列中的百分位。
+    通过历年末股价 × 当时股本 / 当时净利润计算历史PE。
     """
 
     name = "PEPct"
@@ -416,11 +433,7 @@ class PEPercentileIndicator(BaseIndicator):
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        """计算PE历史百分位
-
-        需要通过provider获取额外数据：历史股价、当前市值、股本
-        """
-        # 从kwargs获取provider和数据
+        """计算PE历史百分位"""
         provider = kwargs.get('provider')
         stock_code = kwargs.get('stock_code')
         years = kwargs.get('years', 10)
@@ -428,170 +441,188 @@ class PEPercentileIndicator(BaseIndicator):
         if not provider or not stock_code:
             return IndicatorResult(
                 value=0.0,
-                unit="%",
-                description="PE历史百分位 (需要stock_code参数)",
+                unit="",
+                description="PEPct (需要stock_code参数)",
                 years=[],
                 values=[]
             )
 
         try:
-            # 1. 获取个股信息（获取总股本和当前市值）
-            info = provider.get_stock_info(stock_code)
-            total_shares = None
-            current_market_cap = None
+            # 1. 获取最新市值（用于当前PE计算）
+            from value_investment.indicators.simple import LatestMarketCapIndicator
+            mc_indicator = LatestMarketCapIndicator()
+            mc_result = mc_indicator.calculate(pd.DataFrame(), provider=provider, stock_code=stock_code)
 
-            if 'item' in info.columns:
-                for _, row in info.iterrows():
-                    item = str(row['item'])
-                    if '总股本' in item:
-                        total_shares = float(row['value'])
-                    elif '总市值' in item:
-                        current_market_cap = float(row['value'])
-
-            if not total_shares or not current_market_cap:
+            if not mc_result or mc_result.value <= 0:
                 return IndicatorResult(
                     value=0.0,
-                    unit="%",
-                    description="PE历史百分位 (无法获取股本/市值数据)",
+                    unit="",
+                    description="PEPct (无法获取市值)",
                     years=[],
                     values=[]
                 )
 
-            # 2. 获取年度净利润数据
+            current_market_cap = mc_result.value
+
+            # 2. 获取财务指标（获取当前PE和股本）
+            finind = provider.get_financial_indicator(stock_code)
+            if finind.empty:
+                return IndicatorResult(
+                    value=0.0,
+                    unit="",
+                    description="PEPct (无财务指标数据)",
+                    years=[],
+                    values=[]
+                )
+
+            # 获取当前PE
+            pe_col = None
+            for col in finind.columns:
+                if '市盈率' in col:
+                    pe_col = col
+                    break
+
+            if not pe_col:
+                return IndicatorResult(
+                    value=0.0,
+                    unit="",
+                    description="PEPct (无PE数据)",
+                    years=[],
+                    values=[]
+                )
+
+            current_pe = float(finind[pe_col].iloc[0])
+
+            # 获取股本
+            total_shares = None
+            for col in ['已发行股本(股)', 'total_shares', '总股本']:
+                if col in finind.columns:
+                    total_shares = float(finind[col].iloc[0])
+                    break
+
+            if not total_shares:
+                return IndicatorResult(
+                    value=0.0,
+                    unit="",
+                    description="PEPct (无股本数据)",
+                    years=[],
+                    values=[]
+                )
+
+            # 3. 获取利润表历年数据
             from datetime import datetime
             current_year = datetime.now().year
+            profit_sheet = provider.get_profit_sheet(stock_code, current_year + 1)
 
-            # 使用provider获取利润表数据
-            profit_sheet = provider.get_profit_sheet(stock_code, current_year)
-
-            if profit_sheet.empty:
+            if profit_sheet.empty or 'year' not in profit_sheet.columns:
+                # 直接返回当前PE
                 return IndicatorResult(
-                    value=0.0,
-                    unit="%",
-                    description="PE历史百分位 (无利润表数据)",
+                    value=current_pe,
+                    unit="x",
+                    description=f"当前PE: {current_pe:.1f}x (历史百分位数据不足)",
                     years=[],
                     values=[]
                 )
 
-            # 提取净利润列（优先使用扣非归母净利润，更合理）
-            net_profit_col = self._find_column(profit_sheet, [
-                'DEDUCT_PARENT_NETPROFIT', '扣非归母净利润',  # 扣非归母净利润
-                'PARENT_NETPROFIT', '归母净利润',  # 归母净利润
-                'NETPROFIT', 'net_profit', '净利润',  # 净利润
-            ])
+            # 提取净利润列 - 优先使用股东应占溢利/除税后溢利
+            net_profit_col = None
+            priority_cols = ['股东应占溢利', '除税后溢利', '净利润', 'NETPROFIT', 'net_profit']
+            for col in profit_sheet.columns:
+                if col in priority_cols:
+                    net_profit_col = col
+                    break
+            # 如果没有优先列，再匹配其他包含"溢利"的列
+            if not net_profit_col:
+                for col in profit_sheet.columns:
+                    if '溢利' in col:
+                        net_profit_col = col
+                        break
 
             if not net_profit_col:
                 return IndicatorResult(
-                    value=0.0,
-                    unit="%",
-                    description="PE历史百分位 (无净利润数据)",
+                    value=current_pe,
+                    unit="x",
+                    description=f"当前PE: {current_pe:.1f}x (无净利润数据)",
                     years=[],
                     values=[]
                 )
 
-            # 3. 提取年份和净利润
-            if 'year' not in profit_sheet.columns:
-                if 'REPORT_DATE' in profit_sheet.columns:
-                    profit_sheet['year'] = pd.to_datetime(profit_sheet['REPORT_DATE']).dt.year
-                elif 'REPORT_DATE_NAME' in profit_sheet.columns:
-                    profit_sheet['year'] = profit_sheet['REPORT_DATE_NAME'].astype(str).str.extract(r'(\d{4})')[0].astype(float)
-
-            # 过滤出年报数据（年份匹配）
-            profit_sheet = profit_sheet[profit_sheet['year'].notna()].copy()
+            # 获取最近N年的年报数据
             profit_sheet = profit_sheet.sort_values('year', ascending=False)
-
-            # 只取最近N年的数据
             profit_sheet = profit_sheet.head(years)
 
-            # 4. 获取每年的年末股价，计算PE
+            # 4. 计算历史PE
             pe_list = []
             valid_years = []
 
             for _, row in profit_sheet.iterrows():
-                year = int(row['year'])
-                net_profit = row[net_profit_col]
+                year = row.get('year')
+                if year is None or pd.isna(year):
+                    continue
 
-                # 跳过无效净利润
+                year = int(year)
+                net_profit = row.get(net_profit_col)
+
                 if pd.isna(net_profit) or net_profit <= 0:
                     continue
 
-                # 获取该年最后一天的股价（不复权，用于计算历史PE）
+                # 获取该年年末股价
                 try:
-                    year_end = f"{year}1231"
-                    # 使用不复权价格(adjust="")计算历史PE，避免后复权高估市值
+                    year_end = f"{int(year)}1231"
                     hist = provider.get_historical_data(stock_code, year_end, adjust="")
-                    if hist.empty:
-                        hist = provider.get_historical_data(stock_code, f"{year}1231", adjust="")
-                        if hist.empty:
-                            continue
 
-                    # 获取最后一天的收盘价 (支持中文"收盘"和英文"close")
-                    close_col = '收盘' if '收盘' in hist.columns else 'close'
-                    last_price = hist[close_col].iloc[-1]
-                    if pd.isna(last_price) or last_price <= 0:
+                    if hist.empty:
                         continue
 
-                    # 计算市值 = 股价 × 总股本
-                    market_cap = last_price * total_shares
+                    close_col = '收盘' if '收盘' in hist.columns else 'close'
+                    last_price = float(hist[close_col].iloc[-1])
 
-                    # 计算PE = 市值 / 净利润
-                    pe = market_cap / net_profit
-                    if pe > 0 and pe < 1000:  # 过滤异常值
-                        pe_list.append(pe)
+                    if last_price <= 0:
+                        continue
+
+                    # 计算当时市值
+                    year_market_cap = last_price * total_shares
+
+                    # 计算当时PE
+                    year_pe = year_market_cap / net_profit
+
+                    if 0 < year_pe < 500:
+                        pe_list.append(year_pe)
                         valid_years.append(year)
                 except Exception:
                     continue
 
             if len(pe_list) < 3:
                 return IndicatorResult(
-                    value=0.0,
-                    unit="%",
-                    description=f"PE历史百分位 (数据不足，仅{len(pe_list)}年)",
+                    value=current_pe,
+                    unit="x",
+                    description=f"当前PE: {current_pe:.1f}x (历史数据仅{len(pe_list)}年)",
                     years=valid_years,
                     values=pe_list
                 )
 
-            # 5. 计算当前PE
-            # 当前市值已经获取，用当前市值 / 最近年度净利润
-            latest_year = valid_years[0]
-            latest_net_profit = profit_sheet[profit_sheet['year'] == latest_year][net_profit_col].iloc[0]
-            current_pe = current_market_cap / latest_net_profit if latest_net_profit > 0 else 0
-
-            # 6. 计算百分位
+            # 5. 计算百分位
             percentile = sum(1 for pe in pe_list if pe < current_pe) / len(pe_list) * 100
 
-            # 计算历史PE范围
             pe_min = min(pe_list)
             pe_max = max(pe_list)
-            pe_median = sorted(pe_list)[len(pe_list) // 2]
 
-            # 返回结果
             return IndicatorResult(
                 value=percentile,
                 unit="%",
-                description=f"PE历史百分位 (当前PE: {current_pe:.1f}x, 历史范围: {pe_min:.1f}x ~ {pe_max:.1f}x)",
+                description=f"PE百分位: {percentile:.1f}% (当前PE={current_pe:.1f}x, 历史范围={pe_min:.1f}x~{pe_max:.1f}x)",
                 years=valid_years,
-                values=pe_list  # 存储历史PE序列用于展示
+                values=pe_list
             )
 
         except Exception as e:
             return IndicatorResult(
                 value=0.0,
-                unit="%",
-                description=f"PE历史百分位 (计算错误: {str(e)})",
+                unit="",
+                description=f"PEPct (计算错误: {str(e)})",
                 years=[],
                 values=[]
             )
 
     def get_required_fields(self) -> List[str]:
-        return ['net_profit']
-
-    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
-        for col in candidates:
-            if col in df.columns:
-                return col
-        for col in df.columns:
-            for cand in candidates:
-                if cand.lower() in col.lower():
-                    return col
-        return None
+        return []

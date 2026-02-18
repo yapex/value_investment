@@ -159,6 +159,10 @@ class ValueInvestment:
         if market_cap:
             kwargs['market_cap'] = market_cap
 
+        # Pass provider and stock_code for indicators that need direct data access (like PEPct)
+        kwargs['provider'] = self._provider
+        kwargs['stock_code'] = stock_code
+
         # Pass data to indicator (data-passing pattern)
         return indicator.calculate(financial_data, **kwargs)
 
@@ -338,7 +342,7 @@ class ValueInvestment:
                 meta = IndicatorMeta(
                     name=name,
                     display_name=name,
-                    type=IndicatorType.SIMPLE,
+                    type=IndicatorType.CALCULATED,
                     description="",
                 )
                 results.append(meta)

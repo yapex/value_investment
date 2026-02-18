@@ -15,11 +15,13 @@ from value_investment.indicators.simple import (
     ReceivableTurnoverIndicator,
     PayableTurnoverIndicator,
     CfoToNetprofitSumIndicator,
+    LatestMarketCapIndicator,
 )
 from value_investment.indicators.complex import (
     ROICIndicator,
     CAGRIndicator,
     ImpliedGrowthIndicator,
+    PEPercentileIndicator,
 )
 
 if TYPE_CHECKING:
@@ -40,10 +42,10 @@ class IndicatorFactory:
             ROEIndicator, ROAIndicator, GrossMarginIndicator, NetProfitMarginIndicator,
             CurrentRatioIndicator, AssetTurnoverIndicator, InventoryTurnoverIndicator,
             QuickRatioIndicator, DebtRatioIndicator, ReceivableTurnoverIndicator,
-            PayableTurnoverIndicator, CfoToNetprofitSumIndicator,
+            PayableTurnoverIndicator, CfoToNetprofitSumIndicator, LatestMarketCapIndicator,
         )
         from value_investment.indicators.complex import (
-            ROICIndicator, CAGRIndicator, ImpliedGrowthIndicator,
+            ROICIndicator, CAGRIndicator, ImpliedGrowthIndicator, PEPercentileIndicator,
         )
 
         indicators = [
@@ -59,9 +61,11 @@ class IndicatorFactory:
             ReceivableTurnoverIndicator(),
             PayableTurnoverIndicator(),
             CfoToNetprofitSumIndicator(),
+            LatestMarketCapIndicator(),
             ROICIndicator(),
             CAGRIndicator(),
             ImpliedGrowthIndicator(),
+            PEPercentileIndicator(),
         ]
         for indicator in indicators:
             self.register(indicator)

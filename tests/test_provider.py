@@ -347,6 +347,137 @@ class TestAkshareProviderHistorical:
         assert all(result2["日期"] >= "2024")
 
 
+class TestAkshareProviderHistoricalUS:
+    """Test US historical data fetching"""
+
+    @pytest.fixture
+    def temp_cache_dir(self):
+        """Create a temporary cache directory"""
+        tmp = tempfile.mkdtemp()
+        yield tmp
+        shutil.rmtree(tmp)
+
+    def test_get_us_historical_data(self, temp_cache_dir):
+        """Should get US stock historical data"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="US")
+
+        # Mock返回美股历史数据
+        mock_data = pd.DataFrame({
+            "日期": ["2024-01-02", "2024-01-03", "2024-01-04"],
+            "股票代码": ["AAPL", "AAPL", "AAPL"],
+            "开盘": [185.0, 186.0, 187.0],
+            "收盘": [186.0, 187.0, 188.0],
+            "最高": [187.0, 188.0, 189.0],
+            "最低": [184.0, 185.0, 186.0],
+            "成交量": [1000000, 1100000, 1200000]
+        })
+
+        with patch("akshare.stock_us_hist", return_value=mock_data):
+            result = provider.get_historical_data(
+                "AAPL",
+                end_date="2024-01-31",
+                start_date="2024-01-01"
+            )
+
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 3
+        assert "日期" in result.columns
+
+    def test_get_us_historical_data_without_start_date(self, temp_cache_dir):
+        """不传start_date时应获取全量数据"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="US")
+
+        # Mock返回全量数据
+        mock_data = pd.DataFrame({
+            "日期": ["2023-01-02", "2023-12-29", "2024-01-02", "2024-12-31"],
+            "股票代码": ["AAPL"] * 4,
+            "开盘": [150.0, 160.0, 170.0, 180.0],
+            "收盘": [155.0, 165.0, 175.0, 185.0]
+        })
+
+        with patch("akshare.stock_us_hist", return_value=mock_data) as mock_ak:
+            result = provider.get_historical_data(
+                "AAPL",
+                end_date="20241231"
+            )
+
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 4
+        # 验证调用akshare时使用19700101作为start_date
+        mock_ak.assert_called_once()
+        call_kwargs = mock_ak.call_args.kwargs
+        assert call_kwargs["start_date"] == "19700101"
+        assert call_kwargs["end_date"] == "20241231"
+
+    def test_us_historical_data_uses_cache(self, temp_cache_dir):
+        """US历史行情应使用缓存"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="US")
+
+        mock_data = pd.DataFrame({
+            "日期": ["2024-12-31"],
+            "股票代码": ["AAPL"],
+            "开盘": [180.0],
+            "收盘": [185.0]
+        })
+
+        # First call - should call akshare
+        with patch("akshare.stock_us_hist", return_value=mock_data) as mock_ak:
+            result1 = provider.get_historical_data("AAPL", end_date="20241231")
+
+        mock_ak.assert_called_once()
+        assert "hist_us_AAPL" in cache.list_keys()
+
+        # Second call - should use cache
+        with patch("akshare.stock_us_hist") as mock_ak2:
+            result2 = provider.get_historical_data("AAPL", end_date="20241231")
+
+        mock_ak2.assert_not_called()
+        assert result1.equals(result2)
+
+    def test_us_historical_data_cache_filters_by_start_date(self, temp_cache_dir):
+        """缓存命中后应按start_date过滤"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="US")
+
+        # 全量数据(2023-2024)
+        mock_full_data = pd.DataFrame({
+            "日期": ["2023-01-02", "2023-12-29", "2024-01-02", "2024-12-31"],
+            "股票代码": ["AAPL"] * 4,
+            "开盘": [150.0, 160.0, 170.0, 180.0],
+            "收盘": [155.0, 165.0, 175.0, 185.0]
+        })
+
+        with patch("akshare.stock_us_hist", return_value=mock_full_data):
+            # 首次调用获取全量
+            result1 = provider.get_historical_data("AAPL", end_date="20241231")
+            # 再次调用带 start_date 过滤
+            result2 = provider.get_historical_data(
+                "AAPL",
+                end_date="20241231",
+                start_date="20240101"
+            )
+
+        # 首次调用返回全量(4条)
+        assert len(result1) == 4
+        # 第二次调用返回过滤后数据(2条，2024年的)
+        assert len(result2) == 2
+
+
 class TestAkshareProviderFinancial:
     """Test financial data fetching"""
 

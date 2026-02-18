@@ -54,7 +54,7 @@ def info(
     """Query stock basic information"""
     vi = ValueInvestment(market=_get_market(market, symbol))
     df = vi.get_stock_info(symbol)
-    print(df.to_string())
+    print(df.to_markdown(index=False))
 
 
 @app.command()
@@ -68,7 +68,7 @@ def hist(
     """Get historical price data"""
     vi = ValueInvestment(market=_get_market(market, symbol))
     df = vi.get_historical_data(symbol, end, start, adjust)
-    print(df.to_string())
+    print(df.to_markdown(index=False))
 
 
 @app.command()
@@ -80,7 +80,7 @@ def balance(
     """Get balance sheet"""
     vi = ValueInvestment(market=_get_market(market, symbol))
     df = vi.get_balance_sheet(symbol, end_year)
-    print(df.to_string())
+    print(df.to_markdown(index=False))
 
 
 @app.command()
@@ -92,7 +92,7 @@ def profit(
     """Get profit sheet (income statement)"""
     vi = ValueInvestment(market=_get_market(market, symbol))
     df = vi.get_profit_sheet(symbol, end_year)
-    print(df.to_string())
+    print(df.to_markdown(index=False))
 
 
 @app.command()
@@ -104,7 +104,7 @@ def cashflow(
     """Get cash flow sheet"""
     vi = ValueInvestment(market=_get_market(market, symbol))
     df = vi.get_cashflow_sheet(symbol, end_year)
-    print(df.to_string())
+    print(df.to_markdown(index=False))
 
 
 @app.command()

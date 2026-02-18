@@ -10,14 +10,14 @@ description: |
 
 | 需求 | 命令 |
 |------|------|
-| 股票基本信息 | `v-invest info 600519` |
-| 历史股价 | `v-invest hist 600519 --end 20241231` |
-| 资产负债表 | `v-invest balance 600519 --end 2024` |
-| 利润表 | `v-invest profit 600519 --end 2024` |
-| 现金流量表 | `v-invest cashflow 600519 --end 2024` |
-| 财务指标 | `v-invest finind 600519 -m A` |
-| 单个指标 | `v-invest indicator ROIC -s 00700 -m HK` |
-| 完整分析 | `v-invest analyze 600519` |
+| 股票基本信息 | `uv run python -m value_investment.cli info 600519` |
+| 历史股价 | `uv run python -m value_investment.cli hist 600519 --end 20241231` |
+| 资产负债表 | `uv run python -m value_investment.cli balance 600519 --end 2024` |
+| 利润表 | `uv run python -m value_investment.cli profit 600519 --end 2024` |
+| 现金流量表 | `uv run python -m value_investment.cli cashflow 600519 --end 2024` |
+| 财务指标 | `uv run python -m value_investment.cli finind 600519 -m A` |
+| 单个指标 | `uv run python -m value_investment.cli indicator ROIC -s 00700 -m HK` |
+| 完整分析 | `uv run python -m value_investment.cli analyze 600519` |
 
 ### 股票代码
 
@@ -29,16 +29,24 @@ description: |
 
 ```bash
 # 港股示例
-v-invest indicator ROIC -s 00700 -m HK           # 投资资本回报率
-v-invest indicator CAGR -s 00700 -m HK            # 营收复合增长率
-v-invest indicator ImpliedGrowth -s 00700 -m HK  # 市场隐含增长率
-v-invest indicator PEPct -s 00700 -m HK -y 10   # PE历史百分位
-v-invest indicator latest_market_cap -s 00700 -m HK  # 最新市值
+uv run python -m value_investment.cli indicator ROIC -s 00700 -m HK           # 投资资本回报率
+uv run python -m value_investment.cli indicator CAGR -s 00700 -m HK            # 营收复合增长率
+uv run python -m value_investment.cli indicator ImpliedGrowth -s 00700 -m HK  # 市场隐含增长率
+uv run python -m value_investment.cli indicator PEPct -s 00700 -m HK -y 10   # PE历史百分位
+uv run python -m value_investment.cli indicator latest_market_cap -s 00700 -m HK  # 最新市值
 
 # A股示例
-v-invest indicator ROIC -s 600519 -m A
-v-invest indicator PEPct -s 600519 -m A -y 10
+uv run python -m value_investment.cli indicator ROIC -s 600519 -m A
+uv run python -m value_investment.cli indicator PEPct -s 600519 -m A -y 10
 ```
+
+---
+
+### 数据格式说明
+
+- **CLI输出格式**: 使用Markdown表格格式（易于解析和阅读）
+- **查看格式**: 使用 `head -n 5` 先查看数据格式
+- **解析提示**: Agent可使用正则或简单字符串解析Markdown表格
 
 ---
 

@@ -282,8 +282,8 @@ class TestAkshareProviderHistorical:
         assert call_kwargs["start_date"] == "19700101"
         assert call_kwargs["end_date"] == "20241231"
 
-    def test_historical_data_cache_key_includes_end_date(self, temp_cache_dir):
-        """不同end_date应生成不同的缓存key"""
+    def test_historical_data_cache_key_no_end_date(self, temp_cache_dir):
+        """不同end_date应使用相同的缓存key（全量缓存）"""
         from value_investment.data.cache import SmartCache
         from value_investment.data.providers.akshare_provider import AkshareProvider
 
@@ -297,16 +297,21 @@ class TestAkshareProviderHistorical:
             "收盘": [1850.0]
         })
 
-        with patch("akshare.stock_zh_a_hist", return_value=mock_data):
+        with patch("akshare.stock_zh_a_hist", return_value=mock_data) as mock_fetch:
             # 查询 end_date=20241231
             provider.get_historical_data("600519", end_date="20241231")
+            # 第一次调用应该 fetch
+            assert mock_fetch.call_count == 1
+
             # 查询 end_date=20241230
             provider.get_historical_data("600519", end_date="20241230")
+            # 第二次调用应该使用缓存，不应该再次 fetch
+            assert mock_fetch.call_count == 1
 
-        # 验证生成了两个不同的缓存key
+        # 验证只生成了一个缓存key（不包含end_date）
         cache_keys = cache.list_keys()
-        assert "hist_600519_20241231_hfq" in cache_keys
-        assert "hist_600519_20241230_hfq" in cache_keys
+        assert "hist_600519_hfq" in cache_keys
+        assert len(cache_keys) == 1
 
     def test_historical_data_cache_filters_by_start_date(self, temp_cache_dir):
         """缓存命中后应按start_date过滤"""

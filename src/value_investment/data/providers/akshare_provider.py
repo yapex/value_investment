@@ -202,7 +202,7 @@ class AkshareProvider:
         start_date: str | None = None,
         adjust: str = "hfq",
     ) -> pd.DataFrame:
-        """Get A股 historical data with end_date-based cache
+        """Get A股 historical data with smart cache (full data cached, filtered on retrieval)
 
         Args:
             symbol: Stock code
@@ -213,43 +213,37 @@ class AkshareProvider:
         Returns:
             DataFrame with historical prices
         """
-        # Normalize date format to YYYY-MM-DD for comparison
+        # Normalize date format to YYYY-MM-DD for filtering
         end_date_normalized = self._normalize_date(end_date)
         start_date_normalized = self._normalize_date(start_date) if start_date else None
 
-        # Use end_date-based cache key
-        cache_key = f"hist_{symbol}_{end_date}_{adjust}"
+        # Use symbol-based cache key (no end_date in key)
+        cache_key = f"hist_{symbol}_{adjust}"
 
-        # Try cache first
-        cached = self._cache.get(cache_key)
-        if cached is not None:
-            # Filter by start_date if provided
-            if start_date_normalized is not None:
-                # Convert date column to string for consistent comparison
-                cached["日期"] = pd.to_datetime(cached["日期"]).dt.strftime("%Y-%m-%d")
-                cached = cached[cached["日期"] >= start_date_normalized]
-            return cached
+        def fetch_full_data() -> pd.DataFrame:
+            """Fetch full historical data from akshare"""
+            data = ak.stock_zh_a_hist(
+                symbol=symbol,
+                period="daily",
+                start_date="19700101",  # Fetch from earliest available
+                end_date=end_date,
+                adjust=adjust,
+            )
+            # Convert date column to string for consistent format
+            data["日期"] = pd.to_datetime(data["日期"]).dt.strftime("%Y-%m-%d")
+            return data
 
-        # Fetch full data from akshare (from earliest to end_date)
-        data = ak.stock_zh_a_hist(
-            symbol=symbol,
-            period="daily",
-            start_date="19700101",  # Fetch from earliest available
-            end_date=end_date,
-            adjust=adjust,
+        # Use smart cache with range filtering
+        result = self._cache.get_or_fetch_with_range(
+            key=cache_key,
+            date_column="日期",
+            fetch_func=fetch_full_data,
+            start_date=start_date_normalized,
+            end_date=end_date_normalized,
+            ttl=86400 * 365,  # Cache for 1 year
         )
 
-        # Convert date column to string for consistent format
-        data["日期"] = pd.to_datetime(data["日期"]).dt.strftime("%Y-%m-%d")
-
-        # Cache for 1 year
-        self._cache.set(cache_key, data, ttl=86400 * 365)
-
-        # Filter by start_date if provided
-        if start_date_normalized is not None:
-            data = data[data["日期"] >= start_date_normalized]
-
-        return data
+        return result
 
     def _normalize_date(self, date_str: str) -> str:
         """Normalize date string to YYYY-MM-DD format for comparison
@@ -275,7 +269,7 @@ class AkshareProvider:
         start_date: str | None = None,
         adjust: str = "hfq",
     ) -> pd.DataFrame:
-        """Get 港股 historical data
+        """Get 港股 historical data with smart cache (full data cached, filtered on retrieval)
 
         Args:
             symbol: Stock code
@@ -286,42 +280,36 @@ class AkshareProvider:
         Returns:
             DataFrame with historical prices
         """
-        # Normalize date format to YYYY-MM-DD for comparison
+        # Normalize date format to YYYY-MM-DD for filtering
         end_date_normalized = self._normalize_date(end_date)
         start_date_normalized = self._normalize_date(start_date) if start_date else None
 
-        # Use end_date-based cache key
-        cache_key = f"hist_{symbol}_{end_date}_{adjust}"
+        # Use symbol-based cache key (no end_date in key)
+        cache_key = f"hist_{symbol}_{adjust}"
 
-        # Try cache first
-        cached = self._cache.get(cache_key)
-        if cached is not None:
-            # Filter by start_date if provided
-            if start_date_normalized is not None:
-                # Convert date column to string for consistent comparison
-                cached["日期"] = pd.to_datetime(cached["日期"]).dt.strftime("%Y-%m-%d")
-                cached = cached[cached["日期"] >= start_date_normalized]
-            return cached
+        def fetch_full_data() -> pd.DataFrame:
+            """Fetch full historical data from akshare"""
+            # Convert end_date to akshare format (YYYYMMDD)
+            end_date_ak = end_date.replace("-", "") if isinstance(end_date, str) else end_date
+            # Use a reasonable start date for historical data
+            start_date_ak = "19700101"
 
-        # Convert end_date to akshare format (YYYYMMDD)
-        end_date_ak = end_date.replace("-", "") if isinstance(end_date, str) else end_date
-        # Use a reasonable start date for historical data
-        start_date_ak = "19700101"
+            data = ak.stock_hk_hist(symbol=symbol, start_date=start_date_ak, end_date=end_date_ak)
+            # Convert date column to string for consistent format
+            data["日期"] = pd.to_datetime(data["日期"]).dt.strftime("%Y-%m-%d")
+            return data
 
-        # Fetch from akshare
-        data = ak.stock_hk_hist(symbol=symbol, start_date=start_date_ak, end_date=end_date_ak)
+        # Use smart cache with range filtering
+        result = self._cache.get_or_fetch_with_range(
+            key=cache_key,
+            date_column="日期",
+            fetch_func=fetch_full_data,
+            start_date=start_date_normalized,
+            end_date=end_date_normalized,
+            ttl=86400 * 365,  # Cache for 1 year
+        )
 
-        # Convert date column to string for consistent format
-        data["日期"] = pd.to_datetime(data["日期"]).dt.strftime("%Y-%m-%d")
-
-        # Cache for 1 year
-        self._cache.set(cache_key, data, ttl=86400 * 365)
-
-        # Filter by start_date if provided
-        if start_date_normalized is not None:
-            data = data[data["日期"] >= start_date_normalized]
-
-        return data
+        return result
 
     def _get_us_historical_data(
         self,

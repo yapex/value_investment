@@ -313,18 +313,129 @@ DEFAULT_RAW_INDICATORS = [
     },
 ]
 
+# Default calculated financial indicators (SIMPLE)
+DEFAULT_CALCULATED_INDICATORS = [
+    # Profitability indicators
+    {
+        "name": "gross_margin",
+        "display_name": "毛利率",
+        "type": IndicatorType.SIMPLE,
+        "description": "毛利率 (毛利润/营业收入)",
+        "unit": "%",
+        "market_fields": {
+            "A股": "销售毛利率(%)",
+            "港股": "毛利率",
+        },
+    },
+    {
+        "name": "roe",
+        "display_name": "净资产收益率",
+        "type": IndicatorType.SIMPLE,
+        "description": "净资产收益率 ROE (净利润/股东权益)",
+        "unit": "%",
+        "market_fields": {
+            "A股": "净资产收益率(%)",
+            "港股": "股东权益回报率(%)",
+        },
+    },
+    {
+        "name": "roa",
+        "display_name": "总资产收益率",
+        "type": IndicatorType.SIMPLE,
+        "description": "总资产收益率 ROA (净利润/总资产)",
+        "unit": "%",
+        "market_fields": {
+            "A股": "总资产收益率(%)",
+            "港股": "总资产回报率(%)",
+        },
+    },
+    {
+        "name": "net_profit_margin",
+        "display_name": "净利率",
+        "type": IndicatorType.SIMPLE,
+        "description": "净利率 (净利润/营业收入)",
+        "unit": "%",
+        "market_fields": {},
+    },
+    # Liquidity indicators
+    {
+        "name": "current_ratio",
+        "display_name": "流动比率",
+        "type": IndicatorType.SIMPLE,
+        "description": "流动比率 (流动资产/流动负债)",
+        "unit": "ratio",
+        "market_fields": {},
+    },
+    {
+        "name": "quick_ratio",
+        "display_name": "速动比率",
+        "type": IndicatorType.SIMPLE,
+        "description": "速动比率 ((流动资产-存货)/流动负债)",
+        "unit": "ratio",
+        "market_fields": {},
+    },
+    # Leverage indicators
+    {
+        "name": "debt_ratio",
+        "display_name": "资产负债率",
+        "type": IndicatorType.SIMPLE,
+        "description": "资产负债率 (负债合计/资产总计)",
+        "unit": "%",
+        "market_fields": {},
+    },
+    # Efficiency indicators
+    {
+        "name": "inventory_turnover",
+        "display_name": "存货周转率",
+        "type": IndicatorType.SIMPLE,
+        "description": "存货周转率 (营业成本/平均存货)",
+        "unit": "ratio",
+        "market_fields": {},
+    },
+    {
+        "name": "receivable_turnover",
+        "display_name": "应收账款周转率",
+        "type": IndicatorType.SIMPLE,
+        "description": "应收账款周转率 (营业收入/平均应收账款)",
+        "unit": "ratio",
+        "market_fields": {},
+    },
+    {
+        "name": "asset_turnover",
+        "display_name": "总资产周转率",
+        "type": IndicatorType.SIMPLE,
+        "description": "总资产周转率 (营业收入/平均总资产)",
+        "unit": "ratio",
+        "market_fields": {},
+    },
+]
+
 
 def register_defaults() -> None:
     """Register default raw financial indicators"""
     registry = IndicatorRegistry.get_instance()
 
+    # Register RAW indicators
     for indicator_data in DEFAULT_RAW_INDICATORS:
         meta = IndicatorMeta(
             name=indicator_data["name"],
             display_name=indicator_data["display_name"],
             type=IndicatorType.RAW,
-            field_names=indicator_data["field_names"],
-            market_fields=indicator_data["market_fields"],
+            field_names=indicator_data.get("field_names", []),
+            market_fields=indicator_data.get("market_fields", {}),
+            description=indicator_data["description"],
+            unit=indicator_data["unit"],
+        )
+        registry.register(meta)
+
+    # Register calculated (SIMPLE) indicators
+    for indicator_data in DEFAULT_CALCULATED_INDICATORS:
+        meta = IndicatorMeta(
+            name=indicator_data["name"],
+            display_name=indicator_data["display_name"],
+            type=indicator_data["type"],
+            field_names=indicator_data.get("field_names", []),
+            market_fields=indicator_data.get("market_fields", {}),
             description=indicator_data["description"],
             unit=indicator_data["unit"],
         )

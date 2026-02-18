@@ -146,6 +146,171 @@ DEFAULT_RAW_INDICATORS = [
         "description": "企业营业利润",
         "unit": "元",
     },
+    # 港股财务指标 (stock_hk_financial_indicator_em)
+    {
+        "name": "eps",
+        "display_name": "每股收益",
+        "field_names": ["基本每股收益(元)"],
+        "market_fields": {
+            "港股": "基本每股收益(元)",
+        },
+        "description": "基本每股收益(元)",
+        "unit": "元",
+    },
+    {
+        "name": "bvps",
+        "display_name": "每股净资产",
+        "field_names": ["每股净资产(元)"],
+        "market_fields": {
+            "港股": "每股净资产(元)",
+        },
+        "description": "每股净资产(元)",
+        "unit": "元",
+    },
+    {
+        "name": "legal_capital",
+        "display_name": "法定股本",
+        "field_names": ["法定股本(股)"],
+        "market_fields": {
+            "港股": "法定股本(股)",
+        },
+        "description": "法定股本(股)",
+        "unit": "股",
+    },
+    {
+        "name": "dividend_per_share",
+        "display_name": "每股股息",
+        "field_names": ["每股股息TTM(港元)"],
+        "market_fields": {
+            "港股": "每股股息TTM(港元)",
+        },
+        "description": "每股股息TTM(港元)",
+        "unit": "港元",
+    },
+    {
+        "name": "payout_ratio",
+        "display_name": "派息比率",
+        "field_names": ["派息比率(%)"],
+        "market_fields": {
+            "港股": "派息比率(%)",
+        },
+        "description": "派息比率(%)",
+        "unit": "%",
+    },
+    {
+        "name": "issued_shares",
+        "display_name": "已发行股本",
+        "field_names": ["已发行股本(股)"],
+        "market_fields": {
+            "港股": "已发行股本(股)",
+        },
+        "description": "已发行股本(股)",
+        "unit": "股",
+    },
+    {
+        "name": "h_shares",
+        "display_name": "H股股本",
+        "field_names": ["已发行股本-H股(股)"],
+        "market_fields": {
+            "港股": "已发行股本-H股(股)",
+        },
+        "description": "已发行股本-H股(股)",
+        "unit": "股",
+    },
+    {
+        "name": "cfo_per_share",
+        "display_name": "每股经营现金流",
+        "field_names": ["每股经营现金流(元)"],
+        "market_fields": {
+            "港股": "每股经营现金流(元)",
+        },
+        "description": "每股经营现金流(元)",
+        "unit": "元",
+    },
+    {
+        "name": "dividend_yield",
+        "display_name": "股息率",
+        "field_names": ["股息率TTM(%)"],
+        "market_fields": {
+            "港股": "股息率TTM(%)",
+        },
+        "description": "股息率TTM(%)",
+        "unit": "%",
+    },
+    {
+        "name": "hk_market_cap",
+        "display_name": "港股市值",
+        "field_names": ["港股市值(港元)"],
+        "market_fields": {
+            "港股": "港股市值(港元)",
+        },
+        "description": "港股市值(港元)",
+        "unit": "港元",
+    },
+    {
+        "name": "revenue_growth",
+        "display_name": "营收环比增长",
+        "field_names": ["营业总收入滚动环比增长(%)"],
+        "market_fields": {
+            "港股": "营业总收入滚动环比增长(%)",
+        },
+        "description": "营业总收入滚动环比增长(%)",
+        "unit": "%",
+    },
+    {
+        "name": "net_profit_margin",
+        "display_name": "销售净利率",
+        "field_names": ["销售净利率(%)"],
+        "market_fields": {
+            "港股": "销售净利率(%)",
+        },
+        "description": "销售净利率(%)",
+        "unit": "%",
+    },
+    {
+        "name": "net_profit_growth",
+        "display_name": "净利润环比增长",
+        "field_names": ["净利润滚动环比增长(%)"],
+        "market_fields": {
+            "港股": "净利润滚动环比增长(%)",
+        },
+        "description": "净利润滚动环比增长(%)",
+        "unit": "%",
+    },
+    {
+        "name": "pe",
+        "display_name": "市盈率",
+        "field_names": ["市盈率"],
+        "market_fields": {
+            "港股": "市盈率",
+            "A股": "市盈率",
+        },
+        "description": "市盈率 (PE = 市值/净利润)",
+        "unit": "",
+    },
+    {
+        "name": "pb",
+        "display_name": "市净率",
+        "field_names": ["市净率"],
+        "market_fields": {
+            "港股": "市净率",
+            "A股": "市净率",
+        },
+        "description": "市净率 (PB = 市值/股东权益)",
+        "unit": "",
+    },
+    {
+        "name": "market_cap",
+        "display_name": "总市值",
+        "field_names": ["总市值(元)", "总市值(港元)", "总市值(美元)"],
+        "market_fields": {
+            "港股": "总市值(港元)",
+            "A股": "总市值(元)",
+            "美股": "总市值(美元)",
+        },
+        "description": "股票总市值",
+        "unit": "元/港元/美元",
+    },
 ]
 
 

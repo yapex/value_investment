@@ -54,6 +54,8 @@ v-invest list
 
 ## 开发
 
+> 注意：`uv run` 需要在项目根目录执行，使用 `pwd` 获取当前路径后再执行命令。
+
 ```bash
 # 安装开发依赖
 uv sync --group dev

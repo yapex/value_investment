@@ -651,8 +651,8 @@ class CfoToNetprofitSumIndicator(BaseIndicator):
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
         # HK: 经营业务现金净额, 股东应占溢利
-        cfo_col = self._find_column(data, ['operating_cash_flow', 'OPERATE_NETCASH_BALANCE', '经营活动产生的现金流量净额', '经营业务现金净额'])
-        np_col = self._find_column(data, ['net_profit', 'NET_PROFIT', '净利润', '股东应占溢利'])
+        cfo_col = self._find_column(data, ['NETCASH_OPERATE', 'OPERATE_NETCASH_BALANCE', 'operating_cash_flow', '经营活动产生的现金流量净额', '经营业务现金净额'])
+        np_col = self._find_column(data, ['NETPROFIT', 'PARENT_NETPROFIT', 'net_profit', 'NET_PROFIT', '净利润', '股东应占溢利'])
 
         if cfo_col is None or np_col is None:
             return IndicatorResult(

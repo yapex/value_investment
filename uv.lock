@@ -905,7 +905,7 @@ wheels = [
 ]
 
 [[package]]
-name = "value-investment-skill"
+name = "value-investment"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

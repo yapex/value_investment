@@ -31,20 +31,3 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-
-[tool.poe.tasks.skill]
-help = "Copy skill files to dist/v-invest/"
-shell = """
-rm -rf dist/v-invest
-mkdir -p dist/v-invest
-cp SKILL.MD dist/v-invest/
-cp -r references dist/v-invest/
-"""
-
-[tool.poe.tasks.to_nanobot]
-help = "Deploy skill to ~/.nanobot/workspace/skills/"
-deps = ["skill"]
-shell = """
-rm -rf ~/.nanobot/workspace/skills/v-invest
-cp -r dist/v-invest ~/.nanobot/workspace/skills/
-"""

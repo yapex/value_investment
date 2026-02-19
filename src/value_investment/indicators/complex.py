@@ -185,10 +185,10 @@ class CAGRIndicator(BaseIndicator):
         # Define column mappings for each metric
         # HK fields: 营业额/营运收入, 股东应占溢利, 总资产, 股东权益
         metric_columns = {
-            "revenue": ['operating_income', 'OPERATING_INCOME', '营业收入', 'total_revenue', 'TOTAL_REVENUE', '营业额', '营运收入'],
-            "net_profit": ['net_profit', 'NET_PROFIT', '净利润', 'parent_net_profit', 'PARENT_NET_PROFIT', '股东应占溢利'],
-            "total_assets": ['total_assets', 'TOTAL_ASSETS', '资产总计', 'ASSET_BALANCE', '总资产'],
-            "total_equity": ['total_equity', 'TOTAL_EQUITY', '股东权益', 'EQUITY_BALANCE', '股东权益']
+            "revenue": ['OPERATE_INCOME', 'TOTAL_OPERATE_INCOME', 'operating_income', 'OPERATING_INCOME', '营业收入', 'total_revenue', 'TOTAL_REVENUE', '营业额', '营运收入'],
+            "net_profit": ['NETPROFIT', 'PARENT_NET_PROFIT', 'net_profit', 'NET_PROFIT', '净利润', 'parent_net_profit', '股东应占溢利'],
+            "total_assets": ['TOTAL_ASSETS', 'total_assets', 'TOTAL_ASSETS', '资产总计', 'ASSET_BALANCE', '总资产'],
+            "total_equity": ['TOTAL_EQUITY', 'total_equity', 'EQUITY_BALANCE', '股东权益', 'PARENT_EQUITY']
         }
 
         # Get candidates for the specific metric

@@ -301,11 +301,11 @@ class ImpliedGrowthIndicator(BaseIndicator):
         # Calculate FCF = Operating Cash Flow - Capital Expenditure
         # HK: 经营业务现金净额, A股: 经营活动现金流
         op_cash_flow_col = self._find_column(data, [
-            'operating_cash_flow', 'OPERATING_CASH_FLOW', '经营活动现金流', '经营业务现金净额'
+            'NETCASH_OPERATE', 'operating_cash_flow', 'OPERATING_CASH_FLOW', '经营活动现金流', '经营业务现金净额'
         ])
         # HK: 购建固定资产, A股: 资本支出
         capex_col = self._find_column(data, [
-            'capital_expenditure', 'CAPITAL_EXPENDITURE', '资本支出', '购建固定资产'
+            'CONSTRUCT_LONG_ASSET', 'capital_expenditure', 'CAPITAL_EXPENDITURE', '资本支出', '购建固定资产'
         ])
 
         if not op_cash_flow_col:

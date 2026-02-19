@@ -15,16 +15,18 @@ description: |
 
 ```bash
 # 基本信息 | 历史股价 | 完整分析
-uv run info 600519 | uv run hist 600519 | uv run analyze 600519
+uv run python -m value_investment.cli info 600519
+uv run python -m value_investment.cli hist 600519
+uv run python -m value_investment.cli analyze 600519
 
 # 财务指标
-uv run indicator ROIC -s 600519     # 单个指标
-uv run indicator PEPct -s 600519 -y 10  # PE百分位
+uv run python -m value_investment.cli indicator ROIC -s 600519
+uv run python -m value_investment.cli indicator PEPct -s 600519 -y 10
 
 # 财务报表
-uv run profit 600519    # 利润表
-uv run balance 600519   # 资产负债表
-uv run cashflow 600519 # 现金流量表
+uv run python -m value_investment.cli profit 600519
+uv run python -m value_investment.cli balance 600519
+uv run python -m value_investment.cli cashflow 600519
 ```
 
 **市场代码**：A股`600519` | 港股`00700` | 美股`AAPL`

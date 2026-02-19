@@ -73,17 +73,6 @@ uv run python -m value_investment.cli indicator PEPct -s 600519 -m A -y 10
 
 ---
 
-## 🚀 高效查询原则
-
-### 核心原则：最少查询，最大化信息
-
-**问题场景**：用户问"茅台近10年营收增长率"，错误做法是：
-1. 先查财务报表获取营收 → 2. 再单独查增长率
-
-**正确做法**：
-- 优先使用 `indicator CAGR` 直接获取增长率
-- 或使用 `financial` 一次性获取所有数据（包含增长率）
-
 ### 查询策略决策树
 
 ```
@@ -101,25 +90,6 @@ uv run python -m value_investment.cli indicator PEPct -s 600519 -m A -y 10
     └─ 隐含增长率 → indicator ImpliedGrowth
 ```
 
-### 必须避免的查询模式
-
-❌ **低效模式：多次拆分查询**
-```bash
-# 第1次：查财务报表获取营收
-uv run python -m value_investment.cli income 600519 -m A
-# 第2次：再单独查增长率
-uv run python -m value_investment.cli indicator CAGR -s 600519 -m A
-```
-
-✅ **高效模式：一次性获取**
-```bash
-# 方法A：直接获取增长率（最简洁）
-uv run python -m value_investment.cli indicator CAGR -s 600519 -m A
-
-# 方法B：获取完整财务数据（包含增长率）
-uv run python -m value_investment.cli financial 600519 --end 2024 --years 10
-# 输出已包含：营收、利润、CAGR、ROE、ROIC 等
-```
 
 ### 优先级指南
 
@@ -147,6 +117,82 @@ uv run python -m value_investment.cli financial 600519 --end 2024 --years 10
 - **CLI输出格式**: 使用Markdown表格格式（易于解析和阅读）
 - **查看格式**: 使用 `head -n 5` 先查看数据格式
 - **解析提示**: Agent可使用正则或简单字符串解析Markdown表格
+
+---
+
+## Agent 查询流程
+
+### 流程概述
+
+```
+主Agent收到查询请求
+    │
+    ├─ sub_agent_a: 制定查询计划
+    │   ├─ 查询 indicators.md 确认是否有现成指标
+    │   ├─ 如满足 → 直接返回结果
+    │   └─ 如不满足 → 制定查询计划
+    │       ├─ 确定需要用到的三表字段（balance/profit/cashflow）
+    │       ├─ 查询相关字段文档确认字段名
+    │       └─ 返回 Markdown 格式的查询计划
+    │
+    ├─ sub_agent_b: 执行查询计划
+    │   ├─ 执行 CLI 命令获取原始数据
+    │   ├─ 如需要 → 进行计算
+    │   └─ 返回 Markdown 格式的结果
+    │
+    └─ 主Agent: 展示最终结果
+```
+
+### sub_agent_a 任务：制定查询计划
+
+**输入**：用户的查询需求（如"查询002027最近10年营收情况"）
+
+**步骤**：
+1. 查询 `references/indicators.md`，确认是否有现成指标满足需求
+2. 如有 → 执行查询并返回结果
+3. 如无 → 制定查询计划：
+   - 确定需要用到的三表（balance/profit/cashflow）
+   - 查询对应字段文档（balance.md/profit.md/cashflow.md）确认字段名
+   - 输出 Markdown 格式的查询计划
+
+**输出格式**：
+```markdown
+## 查询计划
+
+| 项目 | 内容 |
+|------|------|
+| 命令 | `profit <股票代码> -e <年份>` |
+| 目标字段 | `<字段名>`（<字段说明>） |
+| 需要计算 | <如有计算需求> |
+| 返回格式 | 年份 | 数值 | 同比增长率 |
+```
+
+### sub_agent_b 任务：执行查询
+
+**输入**：sub_agent_a 制定的查询计划
+
+**步骤**：
+1. 切换到技能根目录：`cd /Users/yapex/.nanobot/workspace/skills/value_investment`
+2. 执行计划中的 CLI 命令
+3. 提取目标字段数据
+4. 如需要 → 进行计算（如同比增长率、复合增长率等）
+5. 返回 Markdown 格式结果
+
+**输出格式**：
+```markdown
+## 查询结果
+
+| 年份 | 营收(亿元) | 同比增长率 |
+|------|-----------|------------|
+| 2024 | xxx | xx% |
+| ... | ... | ... |
+```
+
+### 数据格式规范
+
+- **所有agent间交换数据使用 Markdown 表格格式**
+- **CLI输出本身已是Markdown格式**
+- **主Agent展示时直接使用agent返回的Markdown内容**
 
 ---
 

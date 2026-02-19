@@ -8,22 +8,23 @@ description: |
 
 ## 执行前提
 
-> 开始前：获取当前日期（判断财报年份），确认项目目录
+> 开始前：获取当前日期（判断财报年份）
+> 执行 uv run 前，必须先 cd 到 SKILL.md 所在目录
 
 ## 快速查询
 
 ```bash
 # 基本信息 | 历史股价 | 完整分析
-info 600519 | hist 600519 | analyze 600519
+uv run info 600519 | uv run hist 600519 | uv run analyze 600519
 
 # 财务指标
-indicator ROIC -s 600519     # 单个指标
-indicator PEPct -s 600519 -y 10  # PE百分位
+uv run indicator ROIC -s 600519     # 单个指标
+uv run indicator PEPct -s 600519 -y 10  # PE百分位
 
 # 财务报表
-profit 600519    # 利润表
-balance 600519   # 资产负债表
-cashflow 600519 # 现金流量表
+uv run profit 600519    # 利润表
+uv run balance 600519   # 资产负债表
+uv run cashflow 600519 # 现金流量表
 ```
 
 **市场代码**：A股`600519` | 港股`00700` | 美股`AAPL`

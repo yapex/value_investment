@@ -172,7 +172,7 @@ uv run python -m value_investment.cli indicator PEPct -s 600519 -m A -y 10
 **输入**：sub_agent_a 制定的查询计划
 
 **步骤**：
-1. 切换到技能根目录：`cd /Users/yapex/.nanobot/workspace/skills/value_investment`
+1. 确认当前项目目录，使用 `pwd` 获取路径后执行 `uv run` 命令
 2. 执行计划中的 CLI 命令
 3. 提取目标字段数据
 4. 如需要 → 进行计算（如同比增长率、复合增长率等）

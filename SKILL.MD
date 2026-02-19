@@ -73,6 +73,75 @@ uv run python -m value_investment.cli indicator PEPct -s 600519 -m A -y 10
 
 ---
 
+## 🚀 高效查询原则
+
+### 核心原则：最少查询，最大化信息
+
+**问题场景**：用户问"茅台近10年营收增长率"，错误做法是：
+1. 先查财务报表获取营收 → 2. 再单独查增长率
+
+**正确做法**：
+- 优先使用 `indicator CAGR` 直接获取增长率
+- 或使用 `financial` 一次性获取所有数据（包含增长率）
+
+### 查询策略决策树
+
+```
+用户需求
+    ├─ 股票基本信息/市值/行业 → info
+    ├─ 历史股价数据 → hist
+    ├─ 财务报表原始数据（特定字段）
+    │   ├─ 利润表 → income
+    │   ├─ 资产负债表 → balance
+    │   └─ 现金流量表 → cashflow
+    ├─ 增长率/估值指标/复合指标
+    │   ├─ 单个指标 → indicator <指标名>
+    │   ├─ 多个综合数据 → financial --years N
+    │   └─ 完整基本面分析 → analyze
+    └─ 隐含增长率 → indicator ImpliedGrowth
+```
+
+### 必须避免的查询模式
+
+❌ **低效模式：多次拆分查询**
+```bash
+# 第1次：查财务报表获取营收
+uv run python -m value_investment.cli income 600519 -m A
+# 第2次：再单独查增长率
+uv run python -m value_investment.cli indicator CAGR -s 600519 -m A
+```
+
+✅ **高效模式：一次性获取**
+```bash
+# 方法A：直接获取增长率（最简洁）
+uv run python -m value_investment.cli indicator CAGR -s 600519 -m A
+
+# 方法B：获取完整财务数据（包含增长率）
+uv run python -m value_investment.cli financial 600519 --end 2024 --years 10
+# 输出已包含：营收、利润、CAGR、ROE、ROIC 等
+```
+
+### 优先级指南
+
+| 优先级 | 命令 | 适用场景 | 返回内容 |
+|-------|------|---------|---------|
+| ⭐⭐⭐ | `indicator <指标名>` | 单个特定指标（CAGR/ROIC/PE百分位等） | 直接返回指标值 |
+| ⭐⭐⭐ | `financial --years N` | 多年财务综合分析（营收、利润、增长率、指标） | 完整数据 + 计算结果 |
+| ⭐⭐ | `analyze` | 完整基本面/价值投资分析 | 综合报告 |
+| ⭐ | `income/balance/cashflow` | 需要特定报表字段 | 原始报表数据 |
+
+### 记住：理解工具能力是关键
+
+`financial` 和 `analyze` 命令已经内部计算了：
+- CAGR（营收/利润复合增长率）
+- ROE/ROIC/ROA
+- 毛利率/净利率
+- 现金流质量指标
+
+**不要手动计算或单独查询这些指标！**
+
+---
+
 ### 数据格式说明
 
 - **CLI输出格式**: 使用Markdown表格格式（易于解析和阅读）

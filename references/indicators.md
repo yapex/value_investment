@@ -15,7 +15,7 @@
 | `inventory_turnover` | 存货周转率 | 营业成本 / 存货 | A股/港股 |
 | `receivable_turnover` | 应收周转率 | 营业收入 / 应收账款 | A股/港股 |
 | `payable_turnover` | 应付周转率 | 营业成本 / 应付账款 | A股 |
-| `cfo_to_netprofit_sum` | 累计净现比 | 经营现金流累计 / 净利润累计 | A股/港股 |
+| `cfo_to_netprofit_sum` | 净利润含金量（累计净现比） | 经营现金流累计 / 净利润累计 | A股/港股 |
 | `ROIC` | 投资资本回报率 | NOPAT / 投入资本 | A股/港股 |
 | `CAGR` | 复合增长率 | (终值/初值)^(1/年数)-1 | A股/港股 |
 | `ImpliedGrowth` | 市场隐含增长率 | 基于DCF模型反推 | A股/港股 |

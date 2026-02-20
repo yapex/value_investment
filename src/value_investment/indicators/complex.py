@@ -640,8 +640,12 @@ class PEPercentileIndicator(BaseIndicator):
                     values=pe_list
                 )
 
-            # 5. 计算百分位
-            percentile = sum(1 for pe in pe_list if pe < current_pe) / len(pe_list) * 100
+            # 5. 计算百分位（使用排名公式，避免0%和100%）
+            # 公式: (小于当前值的个数 + 0.5) / 总数 * 100
+            # 这样最低PE显示5%，最高PE显示95%
+            rank = sum(1 for pe in pe_list if pe < current_pe)
+            percentile = (rank + 0.5) / len(pe_list) * 100
+            percentile = max(0, min(100, percentile))  # 限制范围
 
             pe_min = min(pe_list)
             pe_max = max(pe_list)

@@ -214,6 +214,37 @@ class TestAkshareProviderStockInfo:
         # Check cache key exists
         assert "info_AAPL" in cache.list_keys()
 
+    def test_get_stock_info_force_refresh(self, temp_cache_dir):
+        """force_refresh=True时应强制从数据源重新获取"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="A")
+
+        # Pre-populate cache with old data
+        cached_data = pd.DataFrame({
+            "item": ["股票代码"],
+            "value": ["OLD"]
+        })
+        cache.set("info_600519", cached_data)
+
+        # Mock akshare to return new data
+        mock_data = pd.DataFrame({
+            "item": ["股票代码", "股票简称"],
+            "value": ["600519", "贵州茅台"]
+        })
+
+        with patch("akshare.stock_individual_info_em", return_value=mock_data) as mock_ak:
+            result = provider.get_stock_info("600519", force_refresh=True)
+
+        # Should call akshare
+        mock_ak.assert_called_once()
+        # Return new data
+        assert result.iloc[0]["value"] == "600519"
+        # Cache should be updated
+        assert cache.get("info_600519").iloc[0]["value"] == "600519"
+
 
 class TestAkshareProviderHistorical:
     """Test historical data fetching"""
@@ -345,6 +376,38 @@ class TestAkshareProviderHistorical:
         assert len(result2) == 2
         # 验证数据被正确过滤
         assert all(result2["日期"] >= "2024")
+
+    def test_historical_data_force_refresh(self, temp_cache_dir):
+        """force_refresh=True时应强制从数据源重新获取"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="A")
+
+        # Pre-populate cache with old data
+        cached_data = pd.DataFrame({
+            "日期": ["2023-01-02", "2023-12-29"],
+            "股票代码": ["600519"] * 2,
+            "收盘": [1500.0, 1600.0]
+        })
+        cache._set_with_metadata("hist_600519_hfq", cached_data, "2023-12-31")
+
+        # Mock akshare to return new data
+        mock_data = pd.DataFrame({
+            "日期": ["2024-01-02", "2024-12-31"],
+            "股票代码": ["600519"] * 2,
+            "收盘": [1700.0, 1800.0]
+        })
+
+        with patch("akshare.stock_zh_a_hist", return_value=mock_data) as mock_ak:
+            result = provider.get_historical_data("600519", end_date="20241231", force_refresh=True)
+
+        # Should call akshare
+        mock_ak.assert_called_once()
+        # Should return new data
+        assert len(result) == 2
+        assert "2024-01-02" in result["日期"].values
 
 
 class TestAkshareProviderHistoricalUS:

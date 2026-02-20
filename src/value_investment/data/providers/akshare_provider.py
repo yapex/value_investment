@@ -77,28 +77,33 @@ class AkshareProvider:
 
         return None
 
-    def get_stock_info(self, symbol: str) -> pd.DataFrame:
+    def get_stock_info(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """
         Get stock basic information
 
         Args:
             symbol: Stock code (e.g., "600519" for A股)
+            force_refresh: If True, force refresh from data source
 
         Returns:
             DataFrame with stock info
         """
         if self._market == "A":
-            return self._get_a_stock_info(symbol)
+            return self._get_a_stock_info(symbol, force_refresh=force_refresh)
         elif self._market == "HK":
-            return self._get_hk_stock_info(symbol)
+            return self._get_hk_stock_info(symbol, force_refresh=force_refresh)
         elif self._market == "US":
-            return self._get_us_stock_info(symbol)
+            return self._get_us_stock_info(symbol, force_refresh=force_refresh)
         else:
             raise ValueError(f"Unsupported market: {self._market}")
 
-    def _get_a_stock_info(self, symbol: str) -> pd.DataFrame:
+    def _get_a_stock_info(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get A股 stock info"""
         cache_key = f"info_{symbol}"
+
+        # Force refresh: invalidate cache first
+        if force_refresh:
+            self._cache.invalidate(cache_key)
 
         # Try cache first
         cached = self._cache.get(cache_key)
@@ -112,9 +117,13 @@ class AkshareProvider:
         self._cache.set(cache_key, data, ttl=_get_ttl_until_next_midnight())
         return data
 
-    def _get_hk_stock_info(self, symbol: str) -> pd.DataFrame:
+    def _get_hk_stock_info(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 港股 stock info"""
         cache_key = f"info_{symbol}"
+
+        # Force refresh: invalidate cache first
+        if force_refresh:
+            self._cache.invalidate(cache_key)
 
         # Try cache first
         cached = self._cache.get(cache_key)
@@ -149,9 +158,13 @@ class AkshareProvider:
         )
         return result
 
-    def _get_us_stock_info(self, symbol: str) -> pd.DataFrame:
+    def _get_us_stock_info(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 美股 stock info"""
         cache_key = f"info_{symbol}"
+
+        # Force refresh: invalidate cache first
+        if force_refresh:
+            self._cache.invalidate(cache_key)
 
         # Try cache first
         cached = self._cache.get(cache_key)
@@ -173,6 +186,7 @@ class AkshareProvider:
         end_date: str,
         start_date: str | None = None,
         adjust: str = "hfq",
+        force_refresh: bool = False,
     ) -> pd.DataFrame:
         """
         Get historical price data
@@ -182,16 +196,17 @@ class AkshareProvider:
             end_date: End date (YYYYMMDD, required)
             start_date: Start date (YYYYMMDD, optional, defaults to earliest available)
             adjust: Adjustment type - "" (none), "qfq" (forward), "hfq" (backward)
+            force_refresh: If True, force refresh from data source
 
         Returns:
             DataFrame with historical prices
         """
         if self._market == "A":
-            return self._get_a_historical_data(symbol, end_date, start_date, adjust)
+            return self._get_a_historical_data(symbol, end_date, start_date, adjust, force_refresh=force_refresh)
         elif self._market == "HK":
-            return self._get_hk_historical_data(symbol, end_date, start_date, adjust)
+            return self._get_hk_historical_data(symbol, end_date, start_date, adjust, force_refresh=force_refresh)
         elif self._market == "US":
-            return self._get_us_historical_data(symbol, end_date, start_date)
+            return self._get_us_historical_data(symbol, end_date, start_date, force_refresh=force_refresh)
         else:
             raise ValueError(f"Unsupported market: {self._market}")
 
@@ -201,6 +216,7 @@ class AkshareProvider:
         end_date: str,
         start_date: str | None = None,
         adjust: str = "hfq",
+        force_refresh: bool = False,
     ) -> pd.DataFrame:
         """Get A股 historical data with smart cache (full data cached, filtered on retrieval)
 
@@ -209,6 +225,7 @@ class AkshareProvider:
             end_date: End date (YYYYMMDD or YYYY-MM-DD, required)
             start_date: Start date (YYYYMMDD or YYYY-MM-DD, optional, for filtering)
             adjust: Adjustment type
+            force_refresh: If True, force refresh from data source
 
         Returns:
             DataFrame with historical prices
@@ -241,6 +258,7 @@ class AkshareProvider:
             start_date=start_date_normalized,
             end_date=end_date_normalized,
             ttl=86400 * 365,  # Cache for 1 year
+            force_refresh=force_refresh,
         )
 
         return result
@@ -323,6 +341,7 @@ class AkshareProvider:
             start_date=start_date_normalized,
             end_date=end_date_normalized,
             ttl=86400 * 365,  # Cache for 1 year
+            force_refresh=force_refresh,
         )
 
         return result
@@ -332,11 +351,15 @@ class AkshareProvider:
         symbol: str,
         end_date: str,
         start_date: str | None = None,
+        force_refresh: bool = False,
     ) -> pd.DataFrame:
         """Get 美股 historical data with smart cache (full data cached, filtered on retrieval)
 
         Args:
             symbol: Stock code
+            end_date: End date (YYYYMMDD or YYYY-MM-DD, required)
+            start_date: Start date (YYYYMMDD or YYYY-MM-DD, optional, for filtering)
+            force_refresh: If True, force refresh from data source
             end_date: End date (YYYYMMDD or YYYY-MM-DD, required)
             start_date: Start date (YYYYMMDD or YYYY-MM-DD, optional, for filtering)
 
@@ -376,6 +399,7 @@ class AkshareProvider:
             start_date=start_date_normalized,
             end_date=end_date_normalized,
             ttl=86400 * 365,  # Cache for 1 year
+            force_refresh=force_refresh,
         )
 
         return result
@@ -384,6 +408,7 @@ class AkshareProvider:
         self,
         symbol: str,
         end_year: int | None = None,
+        force_refresh: bool = False,
     ) -> pd.DataFrame:
         """
         Get balance sheet
@@ -391,6 +416,7 @@ class AkshareProvider:
         Args:
             symbol: Stock code
             end_year: End year (optional, defaults to current year)
+            force_refresh: If True, force refresh from data source
 
         Returns:
             DataFrame with balance sheet data
@@ -400,13 +426,13 @@ class AkshareProvider:
             end_year = datetime.now().year
 
         if self._market == "A":
-            df = self._get_balance_sheet(symbol)
+            df = self._get_balance_sheet(symbol, force_refresh=force_refresh)
             return self._filter_by_year(df, end_year)
         elif self._market == "HK":
-            df = self._get_hk_balance_sheet(symbol)
+            df = self._get_hk_balance_sheet(symbol, force_refresh=force_refresh)
             return self._filter_by_year(df, end_year)
         elif self._market == "US":
-            df = self._get_us_balance_sheet(symbol)
+            df = self._get_us_balance_sheet(symbol, force_refresh=force_refresh)
             return self._filter_by_year(df, end_year)
         else:
             raise NotImplementedError(f"Balance sheet for {self._market} not implemented yet")
@@ -415,6 +441,7 @@ class AkshareProvider:
         self,
         symbol: str,
         end_year: int | None = None,
+        force_refresh: bool = False,
     ) -> pd.DataFrame:
         """
         Get profit sheet (income statement)
@@ -422,6 +449,7 @@ class AkshareProvider:
         Args:
             symbol: Stock code
             end_year: End year (optional, defaults to current year)
+            force_refresh: If True, force refresh from data source
 
         Returns:
             DataFrame with profit sheet data
@@ -431,13 +459,13 @@ class AkshareProvider:
             end_year = datetime.now().year
 
         if self._market == "A":
-            df = self._get_profit_sheet(symbol)
+            df = self._get_profit_sheet(symbol, force_refresh=force_refresh)
             return self._filter_by_year(df, end_year)
         elif self._market == "HK":
-            df = self._get_hk_profit_sheet(symbol)
+            df = self._get_hk_profit_sheet(symbol, force_refresh=force_refresh)
             return self._filter_by_year(df, end_year)
         elif self._market == "US":
-            df = self._get_us_profit_sheet(symbol)
+            df = self._get_us_profit_sheet(symbol, force_refresh=force_refresh)
             return self._filter_by_year(df, end_year)
         else:
             raise NotImplementedError(f"Profit sheet for {self._market} not implemented yet")
@@ -446,6 +474,7 @@ class AkshareProvider:
         self,
         symbol: str,
         end_year: int | None = None,
+        force_refresh: bool = False,
     ) -> pd.DataFrame:
         """
         Get cash flow sheet
@@ -453,6 +482,7 @@ class AkshareProvider:
         Args:
             symbol: Stock code
             end_year: End year (optional, defaults to current year)
+            force_refresh: If True, force refresh from data source
 
         Returns:
             DataFrame with cash flow sheet data
@@ -462,13 +492,13 @@ class AkshareProvider:
             end_year = datetime.now().year
 
         if self._market == "A":
-            df = self._get_cashflow_sheet(symbol)
+            df = self._get_cashflow_sheet(symbol, force_refresh=force_refresh)
             return self._filter_by_year(df, end_year)
         elif self._market == "HK":
-            df = self._get_hk_cashflow_sheet(symbol)
+            df = self._get_hk_cashflow_sheet(symbol, force_refresh=force_refresh)
             return self._filter_by_year(df, end_year)
         elif self._market == "US":
-            df = self._get_us_cashflow_sheet(symbol)
+            df = self._get_us_cashflow_sheet(symbol, force_refresh=force_refresh)
             return self._filter_by_year(df, end_year)
         else:
             raise NotImplementedError(f"Cash flow sheet for {self._market} not implemented yet")
@@ -580,7 +610,7 @@ class AkshareProvider:
             # If pivot fails, return original data
             return df
 
-    def _get_hk_balance_sheet(self, symbol: str) -> pd.DataFrame:
+    def _get_hk_balance_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 港股 balance sheet"""
         cache_key = f"balance_sheet_hk_{symbol}"
         ttl = _get_ttl_until_june_next_year(datetime.now().year)
@@ -591,9 +621,9 @@ class AkshareProvider:
             )
             return self._transform_hk_financial_data(df)
 
-        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
-    def _get_hk_profit_sheet(self, symbol: str) -> pd.DataFrame:
+    def _get_hk_profit_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 港股 profit sheet (income statement)"""
         cache_key = f"profit_sheet_hk_{symbol}"
         ttl = _get_ttl_until_june_next_year(datetime.now().year)
@@ -604,9 +634,9 @@ class AkshareProvider:
             )
             return self._transform_hk_financial_data(df)
 
-        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
-    def _get_hk_cashflow_sheet(self, symbol: str) -> pd.DataFrame:
+    def _get_hk_cashflow_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 港股 cash flow sheet"""
         cache_key = f"cashflow_sheet_hk_{symbol}"
         ttl = _get_ttl_until_june_next_year(datetime.now().year)
@@ -617,9 +647,9 @@ class AkshareProvider:
             )
             return self._transform_hk_financial_data(df)
 
-        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
-    def _get_us_balance_sheet(self, symbol: str) -> pd.DataFrame:
+    def _get_us_balance_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 美股 balance sheet"""
         cache_key = f"balance_sheet_us_{symbol}"
         ttl = _get_ttl_until_june_next_year(datetime.now().year)
@@ -629,9 +659,9 @@ class AkshareProvider:
                 stock=symbol, symbol="资产负债表", indicator="年报"
             )
 
-        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
-    def _get_us_profit_sheet(self, symbol: str) -> pd.DataFrame:
+    def _get_us_profit_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 美股 profit sheet (income statement)"""
         cache_key = f"profit_sheet_us_{symbol}"
         ttl = _get_ttl_until_june_next_year(datetime.now().year)
@@ -641,9 +671,9 @@ class AkshareProvider:
                 stock=symbol, symbol="综合损益表", indicator="年报"
             )
 
-        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
-    def _get_us_cashflow_sheet(self, symbol: str) -> pd.DataFrame:
+    def _get_us_cashflow_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 美股 cash flow sheet"""
         cache_key = f"cashflow_sheet_us_{symbol}"
         ttl = _get_ttl_until_june_next_year(datetime.now().year)
@@ -653,9 +683,9 @@ class AkshareProvider:
                 stock=symbol, symbol="现金流量表", indicator="年报"
             )
 
-        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
-    def _get_balance_sheet(self, symbol: str) -> pd.DataFrame:
+    def _get_balance_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get A股 balance sheet"""
         cache_key = f"balance_sheet_a_{symbol}"
         ttl = _get_ttl_until_june_next_year(datetime.now().year)
@@ -664,9 +694,9 @@ class AkshareProvider:
             full_symbol = self._format_stock_symbol(symbol)
             return ak.stock_balance_sheet_by_yearly_em(symbol=full_symbol)
 
-        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
-    def _get_profit_sheet(self, symbol: str) -> pd.DataFrame:
+    def _get_profit_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get A股 profit sheet (income statement)"""
         cache_key = f"profit_sheet_a_{symbol}"
         ttl = _get_ttl_until_june_next_year(datetime.now().year)
@@ -676,9 +706,9 @@ class AkshareProvider:
             full_symbol = self._format_stock_symbol(symbol)
             return ak.stock_profit_sheet_by_yearly_em(symbol=full_symbol)
 
-        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
-    def _get_cashflow_sheet(self, symbol: str) -> pd.DataFrame:
+    def _get_cashflow_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get A股 cash flow sheet"""
         cache_key = f"cashflow_sheet_a_{symbol}"
         ttl = _get_ttl_until_june_next_year(datetime.now().year)
@@ -687,49 +717,56 @@ class AkshareProvider:
             full_symbol = self._format_stock_symbol(symbol)
             return ak.stock_cash_flow_sheet_by_yearly_em(symbol=full_symbol)
 
-        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
-    def get_financial_indicator(self, symbol: str) -> pd.DataFrame:
+    def get_financial_indicator(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """
         Get financial analysis indicators
 
         Args:
             symbol: Stock code
+            force_refresh: If True, force refresh from data source
 
         Returns:
             DataFrame with financial indicators
         """
         if self._market == "A":
-            return self._get_a_financial_indicator(symbol)
+            return self._get_a_financial_indicator(symbol, force_refresh=force_refresh)
         elif self._market == "HK":
-            return self._get_hk_financial_indicator(symbol)
+            return self._get_hk_financial_indicator(symbol, force_refresh=force_refresh)
         elif self._market == "US":
             raise NotImplementedError(f"Financial indicators for {self._market} not implemented")
         else:
             raise NotImplementedError(f"Financial indicators for {self._market} not implemented")
 
-    def get_quarterly_indicator(self, symbol: str) -> pd.DataFrame:
+    def get_quarterly_indicator(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """
         Get quarterly financial indicators (单季度数据)
 
         Args:
             symbol: Stock code
+            force_refresh: If True, force refresh from data source
 
         Returns:
             DataFrame with quarterly financial indicators
         """
         if self._market == "A":
-            return self._get_a_quarterly_indicator(symbol)
+            return self._get_a_quarterly_indicator(symbol, force_refresh=force_refresh)
         elif self._market == "HK":
-            return self._get_hk_quarterly_indicator(symbol)
+            return self._get_hk_quarterly_indicator(symbol, force_refresh=force_refresh)
         elif self._market == "US":
             raise NotImplementedError(f"Quarterly indicators for {self._market} not implemented")
         else:
             raise NotImplementedError(f"Quarterly indicators for {self._market} not implemented")
 
-    def _get_hk_quarterly_indicator(self, symbol: str) -> pd.DataFrame:
+    def _get_hk_quarterly_indicator(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 港股 quarterly/half-year financial indicators"""
         cache_key = f"quarterly_hk_{symbol}"
+
+        # Force refresh: invalidate cache first
+        if force_refresh:
+            self._cache.invalidate(cache_key)
+
         cached = self._cache.get(cache_key)
         if cached is not None:
             return cached
@@ -747,9 +784,14 @@ class AkshareProvider:
         self._cache.set(cache_key, data, ttl=86400 * 365)
         return data
 
-    def _get_a_financial_indicator(self, symbol: str) -> pd.DataFrame:
+    def _get_a_financial_indicator(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get A股 financial indicators"""
         cache_key = f"indicator_a_{symbol}"
+
+        # Force refresh: invalidate cache first
+        if force_refresh:
+            self._cache.invalidate(cache_key)
+
         cached = self._cache.get(cache_key)
         if cached is not None:
             return cached
@@ -766,9 +808,14 @@ class AkshareProvider:
         self._cache.set(cache_key, data, ttl=86400 * 365)
         return data
 
-    def _get_a_quarterly_indicator(self, symbol: str) -> pd.DataFrame:
+    def _get_a_quarterly_indicator(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get A股 quarterly financial indicators (单季度数据)"""
         cache_key = f"quarterly_a_{symbol}"
+
+        # Force refresh: invalidate cache first
+        if force_refresh:
+            self._cache.invalidate(cache_key)
+
         cached = self._cache.get(cache_key)
         if cached is not None:
             return cached
@@ -896,7 +943,7 @@ class AkshareProvider:
 
         return df
 
-    def _get_hk_financial_indicator(self, symbol: str) -> pd.DataFrame:
+    def _get_hk_financial_indicator(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 港股 financial indicators"""
         cache_key = f"indicator_hk_{symbol}"
         ttl = _get_ttl_until_june_next_year(datetime.now().year)
@@ -904,4 +951,4 @@ class AkshareProvider:
         def fetch():
             return ak.stock_hk_financial_indicator_em(symbol=symbol)
 
-        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl)
+        return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)

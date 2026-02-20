@@ -50,10 +50,11 @@ def _get_market(market: Optional[str], symbol: str) -> str:
 def info(
     symbol: str = typer.Argument(..., help="Stock code (e.g., 600519)"),
     market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+    refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
 ):
     """Query stock basic information"""
     vi = ValueInvestment(market=_get_market(market, symbol))
-    df = vi.get_stock_info(symbol)
+    df = vi.get_stock_info(symbol, force_refresh=refresh)
     print(df.to_markdown(index=False))
 
 
@@ -64,10 +65,11 @@ def hist(
     end: str = typer.Option("20241231", "--end", "-e", help="End date (YYYYMMDD)"),
     adjust: str = typer.Option("hfq", "--adjust", "-a", help="Adjustment: '', 'qfq', 'hfq' (default: hfq for backtesting)"),
     market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+    refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
 ):
     """Get historical price data"""
     vi = ValueInvestment(market=_get_market(market, symbol))
-    df = vi.get_historical_data(symbol, end, start, adjust)
+    df = vi.get_historical_data(symbol, end, start, adjust, force_refresh=refresh)
     print(df.to_markdown(index=False))
 
 
@@ -76,10 +78,11 @@ def balance(
     symbol: str = typer.Argument(..., help="Stock code"),
     end_year: int = typer.Option(2024, "--end", "-e", help="End year"),
     market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+    refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
 ):
     """Get balance sheet"""
     vi = ValueInvestment(market=_get_market(market, symbol))
-    df = vi.get_balance_sheet(symbol, end_year)
+    df = vi.get_balance_sheet(symbol, end_year, force_refresh=refresh)
     print(df.to_markdown(index=False))
 
 
@@ -88,10 +91,11 @@ def profit(
     symbol: str = typer.Argument(..., help="Stock code"),
     end_year: int = typer.Option(2024, "--end", "-e", help="End year"),
     market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+    refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
 ):
     """Get profit sheet (income statement)"""
     vi = ValueInvestment(market=_get_market(market, symbol))
-    df = vi.get_profit_sheet(symbol, end_year)
+    df = vi.get_profit_sheet(symbol, end_year, force_refresh=refresh)
     print(df.to_markdown(index=False))
 
 
@@ -100,10 +104,11 @@ def cashflow(
     symbol: str = typer.Argument(..., help="Stock code"),
     end_year: int = typer.Option(2024, "--end", "-e", help="End year"),
     market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+    refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
 ):
     """Get cash flow sheet"""
     vi = ValueInvestment(market=_get_market(market, symbol))
-    df = vi.get_cashflow_sheet(symbol, end_year)
+    df = vi.get_cashflow_sheet(symbol, end_year, force_refresh=refresh)
     print(df.to_markdown(index=False))
 
 
@@ -146,12 +151,13 @@ def indicator(
 def finind(
     stock_code: str = typer.Argument(..., help="Stock code"),
     market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+    refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
 ):
     """Get financial indicators directly from data source (no calculation needed)"""
     vi = ValueInvestment(market=_get_market(market, stock_code))
 
     try:
-        df = vi.get_financial_indicator(stock_code)
+        df = vi.get_financial_indicator(stock_code, force_refresh=refresh)
         if df is None or df.empty:
             print(f"No financial indicators found for {stock_code}")
             return

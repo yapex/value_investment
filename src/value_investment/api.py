@@ -34,17 +34,18 @@ class ValueInvestment:
         # Initialize indicator registry with defaults
         register_defaults()
 
-    def get_stock_info(self, symbol: str):
+    def get_stock_info(self, symbol: str, force_refresh: bool = False):
         """
         Get stock basic information
 
         Args:
             symbol: Stock code (e.g., "600519")
+            force_refresh: If True, force refresh from data source
 
         Returns:
             DataFrame with stock info
         """
-        return self._provider.get_stock_info(symbol)
+        return self._provider.get_stock_info(symbol, force_refresh=force_refresh)
 
     def get_historical_data(
         self,
@@ -52,6 +53,7 @@ class ValueInvestment:
         end_date: str,
         start_date: str | None = None,
         adjust: str = "hfq",
+        force_refresh: bool = False,
     ):
         """
         Get historical price data
@@ -61,16 +63,18 @@ class ValueInvestment:
             end_date: End date (YYYYMMDD, required)
             start_date: Start date (YYYYMMDD, optional, defaults to earliest available)
             adjust: Adjustment type - "" (none), "qfq" (forward), "hfq" (backward, default for backtesting)
+            force_refresh: If True, force refresh from data source
 
         Returns:
             DataFrame with historical prices
         """
-        return self._provider.get_historical_data(symbol, end_date, start_date, adjust)
+        return self._provider.get_historical_data(symbol, end_date, start_date, adjust, force_refresh=force_refresh)
 
     def get_balance_sheet(
         self,
         symbol: str,
         end_year: int | None = None,
+        force_refresh: bool = False,
     ):
         """
         Get balance sheet
@@ -78,16 +82,18 @@ class ValueInvestment:
         Args:
             symbol: Stock code
             end_year: End year (optional, defaults to current year)
+            force_refresh: If True, force refresh from data source
 
         Returns:
             DataFrame with balance sheet data
         """
-        return self._provider.get_balance_sheet(symbol, end_year)
+        return self._provider.get_balance_sheet(symbol, end_year, force_refresh=force_refresh)
 
     def get_profit_sheet(
         self,
         symbol: str,
         end_year: int | None = None,
+        force_refresh: bool = False,
     ):
         """
         Get profit sheet (income statement)
@@ -95,16 +101,18 @@ class ValueInvestment:
         Args:
             symbol: Stock code
             end_year: End year (optional, defaults to current year)
+            force_refresh: If True, force refresh from data source
 
         Returns:
             DataFrame with profit sheet data
         """
-        return self._provider.get_profit_sheet(symbol, end_year)
+        return self._provider.get_profit_sheet(symbol, end_year, force_refresh=force_refresh)
 
     def get_cashflow_sheet(
         self,
         symbol: str,
         end_year: int | None = None,
+        force_refresh: bool = False,
     ):
         """
         Get cash flow sheet
@@ -112,23 +120,25 @@ class ValueInvestment:
         Args:
             symbol: Stock code
             end_year: End year (optional, defaults to current year)
+            force_refresh: If True, force refresh from data source
 
         Returns:
             DataFrame with cash flow sheet data
         """
-        return self._provider.get_cashflow_sheet(symbol, end_year)
+        return self._provider.get_cashflow_sheet(symbol, end_year, force_refresh=force_refresh)
 
-    def get_financial_indicator(self, symbol: str):
+    def get_financial_indicator(self, symbol: str, force_refresh: bool = False):
         """
         Get financial analysis indicators
 
         Args:
             symbol: Stock code
+            force_refresh: If True, force refresh from data source
 
         Returns:
             DataFrame with financial indicators
         """
-        return self._provider.get_financial_indicator(symbol)
+        return self._provider.get_financial_indicator(symbol, force_refresh=force_refresh)
 
     def calculate_indicator(
         self,

@@ -424,3 +424,127 @@ class TestSmartCacheRangeFilter:
         assert cached["_cached_end_date"] == "2024-12-31"
         assert len(cached["data"]) == 3
 
+
+class TestSmartCacheForceRefresh:
+    """Test force_refresh functionality in cache"""
+
+    @pytest.fixture
+    def temp_cache_dir(self):
+        """Create a temporary cache directory"""
+        tmp = tempfile.mkdtemp()
+        yield tmp
+        shutil.rmtree(tmp)
+
+    def test_get_or_fetch_force_refresh_invalidates_cache(self, temp_cache_dir):
+        """force_refresh=True时应先删除缓存再获取"""
+        from value_investment.data.cache import SmartCache
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+
+        # 预填充缓存
+        cache.set("test_key", {"data": "cached_value"})
+
+        # 验证缓存已存在
+        assert cache.get("test_key") == {"data": "cached_value"}
+
+        # 使用 force_refresh=True
+        call_count = [0]
+
+        def fetch_func():
+            call_count[0] += 1
+            return {"data": "new_value"}
+
+        result = cache.get_or_fetch("test_key", fetch_func, force_refresh=True)
+
+        # 应该调用了 fetch_func
+        assert call_count[0] == 1
+        # 返回的是新数据
+        assert result == {"data": "new_value"}
+        # 缓存已更新
+        assert cache.get("test_key") == {"data": "new_value"}
+
+    def test_get_or_fetch_force_refresh_cache_miss(self, temp_cache_dir):
+        """force_refresh=True但缓存不存在时正常获取"""
+        from value_investment.data.cache import SmartCache
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+
+        call_count = [0]
+
+        def fetch_func():
+            call_count[0] += 1
+            return {"data": "fetched_value"}
+
+        # 缓存不存在，使用 force_refresh
+        result = cache.get_or_fetch("nonexistent_key", fetch_func, force_refresh=True)
+
+        assert call_count[0] == 1
+        assert result == {"data": "fetched_value"}
+
+    def test_get_or_fetch_with_range_force_refresh(self, temp_cache_dir):
+        """get_or_fetch_with_range 的 force_refresh 参数应正常工作"""
+        from value_investment.data.cache import SmartCache
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+
+        # 预填充带日期元数据的缓存
+        cached_data = pd.DataFrame({
+            "日期": ["2024-01-01", "2024-06-15", "2024-12-31"]
+        })
+        cache._set_with_metadata("hist_test_hfq", cached_data, "2024-12-31")
+
+        call_count = [0]
+
+        def fetch_func():
+            call_count[0] += 1
+            return pd.DataFrame({
+                "日期": ["2025-01-01", "2025-06-15"]
+            })
+
+        # 使用 force_refresh=True
+        result = cache.get_or_fetch_with_range(
+            key="hist_test_hfq",
+            date_column="日期",
+            fetch_func=fetch_func,
+            start_date=None,
+            end_date="2025-12-31",
+            force_refresh=True
+        )
+
+        # 应该调用了 fetch_func
+        assert call_count[0] == 1
+        # 返回新数据
+        assert len(result) == 2
+
+    def test_force_refresh_updates_cache_with_new_data(self, temp_cache_dir):
+        """force_refresh 应更新缓存为新数据"""
+        from value_investment.data.cache import SmartCache
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+
+        # 第一次获取
+        call_count = [0]
+
+        def fetch_func():
+            call_count[0] += 1
+            return {"version": call_count[0]}
+
+        result1 = cache.get_or_fetch("version_key", fetch_func)
+        assert result1 == {"version": 1}
+        assert call_count[0] == 1
+
+        # 第二次不带 force_refresh - 使用缓存
+        result2 = cache.get_or_fetch("version_key", fetch_func)
+        assert result2 == {"version": 1}
+        assert call_count[0] == 1  # 未增加
+
+        # 第三次带 force_refresh - 重新获取
+        result3 = cache.get_or_fetch("version_key", fetch_func, force_refresh=True)
+        assert result3 == {"version": 2}
+        assert call_count[0] == 2
+
+        # 第四次不带 force_refresh - 使用新缓存
+        result4 = cache.get_or_fetch("version_key", fetch_func)
+        assert result4 == {"version": 2}
+        assert call_count[0] == 2  # 未增加
+

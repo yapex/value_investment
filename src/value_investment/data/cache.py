@@ -40,6 +40,7 @@ class SmartCache:
         key: str,
         fetch_func: Callable[[], Any],
         ttl: Optional[int] = None,
+        force_refresh: bool = False,
     ) -> Any:
         """
         Get from cache or fetch and cache if not present.
@@ -50,10 +51,15 @@ class SmartCache:
             key: Cache key
             fetch_func: Function to fetch data if not cached
             ttl: Time to live in seconds (optional)
+            force_refresh: If True, invalidate cache and fetch fresh data
 
         Returns:
             Cached or freshly fetched data
         """
+        # Force refresh: invalidate cache first
+        if force_refresh:
+            self.invalidate(key)
+
         return self.get_or_fetch_with_range(
             key=key,
             date_column=None,  # 无需过滤
@@ -112,6 +118,7 @@ class SmartCache:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         ttl: Optional[int] = None,
+        force_refresh: bool = False,
     ) -> Any:
         """
         Get from cache or fetch and cache if not present, with intelligent date range handling.
@@ -129,10 +136,14 @@ class SmartCache:
             start_date: Start date for filtering (inclusive), format: YYYY-MM-DD
             end_date: End date for filtering (inclusive), format: YYYY-MM-DD
             ttl: Time to live in seconds (optional, used as fallback expiration)
+            force_refresh: If True, invalidate cache and fetch fresh data
 
         Returns:
             Cached or freshly fetched data (filtered if date_column provided)
         """
+        # Force refresh: invalidate cache first
+        if force_refresh:
+            self.invalidate(key)
         # If no date filtering needed, use simple path
         if date_column is None:
             cached = self.get(key)

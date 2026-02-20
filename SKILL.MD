@@ -9,27 +9,73 @@ description: |
 ## 执行前提
 
 > 开始前：获取当前日期（判断财报年份）
-> 执行 uv run 前，必须先 cd 到 SKILL.md 所在目录
+
+## ⚠️ 执行前必读
+
+**在执行 `uv run` 命令前，必须使用 `--directory .` 参数指定当前目录（SKILL.md 所在的目录）。**
+
+```bash
+# Agent 执行流程
+# 1. 读取 SKILL.md 得知项目在当前目录
+# 2. 使用 --directory . 执行命令
+
+# 正确的执行方式
+uv run --directory . python -m value_investment.cli info 600519
+```
+
+**原因**：`uv run` 会从指定目录加载项目依赖和配置，必须在技能根目录执行才能正常工作。
 
 ## 快速查询
 
 ```bash
 # 基本信息 | 历史股价 | 完整分析
-uv run python -m value_investment.cli info 600519
-uv run python -m value_investment.cli hist 600519
-uv run python -m value_investment.cli analyze 600519
+uv run --directory . python -m value_investment.cli info 600519
+uv run --directory . python -m value_investment.cli hist 600519
+uv run --directory . python -m value_investment.cli analyze 600519
 
 # 财务指标
-uv run python -m value_investment.cli indicator ROIC -s 600519
-uv run python -m value_investment.cli indicator PEPct -s 600519 -y 10
+uv run --directory . python -m value_investment.cli indicator ROIC -s 600519
+uv run --directory . python -m value_investment.cli indicator PEPct -s 600519 -y 10
 
 # 财务报表
-uv run python -m value_investment.cli profit 600519
-uv run python -m value_investment.cli balance 600519
-uv run python -m value_investment.cli cashflow 600519
+uv run --directory . python -m value_investment.cli profit 600519
+uv run --directory . python -m value_investment.cli balance 600519
+uv run --directory . python -m value_investment.cli cashflow 600519
 ```
 
 **市场代码**：A股`600519` | 港股`00700` | 美股`AAPL`
+
+---
+
+## 完整命令参考
+
+### 快速命令
+
+| 需求 | 命令 |
+|------|------|
+| 股票基本信息 | `uv run --directory . python -m value_investment.cli info 600519` |
+| 历史股价 | `uv run --directory . python -m value_investment.cli hist 600519 --end 20241231` |
+| 利润表（净利润） | `uv run --directory . python -m value_investment.cli income 600519` |
+| 资产负债表 | `uv run --directory . python -m value_investment.cli balance 600519` |
+| 现金流量表 | `uv run --directory . python -m value_investment.cli cashflow 600519` |
+| 财务指标 | `uv run --directory . python -m value_investment.cli finind 600519 -m A` |
+| 单个指标 | `uv run --directory . python -m value_investment.cli indicator ROIC -s 00700 -m HK` |
+| 完整分析 | `uv run --directory . python -m value_investment.cli analyze 600519` |
+
+### 常用指标
+
+```bash
+# 港股示例
+uv run --directory . python -m value_investment.cli indicator ROIC -s 00700 -m HK           # 投资资本回报率
+uv run --directory . python -m value_investment.cli indicator CAGR -s 00700 -m HK            # 营收复合增长率
+uv run --directory . python -m value_investment.cli indicator ImpliedGrowth -s 00700 -m HK  # 市场隐含增长率
+uv run --directory . python -m value_investment.cli indicator PEPct -s 00700 -m HK -y 10   # PE历史百分位
+uv run --directory . python -m value_investment.cli indicator latest_market_cap -s 00700 -m HK  # 最新市值
+
+# A股示例
+uv run --directory . python -m value_investment.cli indicator ROIC -s 600519 -m A
+uv run --directory . python -m value_investment.cli indicator PEPct -s 600519 -m A -y 10
+```
 
 ---
 

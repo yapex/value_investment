@@ -708,6 +708,26 @@ class AkshareProvider:
         else:
             raise NotImplementedError(f"Financial indicators for {self._market} not implemented")
 
+    def get_quarterly_indicator(self, symbol: str) -> pd.DataFrame:
+        """
+        Get quarterly financial indicators (单季度数据)
+
+        Args:
+            symbol: Stock code
+
+        Returns:
+            DataFrame with quarterly financial indicators
+        """
+        if self._market == "A":
+            return self._get_a_quarterly_indicator(symbol)
+        elif self._market == "HK":
+            # 港股暂无完整季度数据，返回空DataFrame
+            return pd.DataFrame()
+        elif self._market == "US":
+            raise NotImplementedError(f"Quarterly indicators for {self._market} not implemented")
+        else:
+            raise NotImplementedError(f"Quarterly indicators for {self._market} not implemented")
+
     def _get_a_financial_indicator(self, symbol: str) -> pd.DataFrame:
         """Get A股 financial indicators"""
         cache_key = f"indicator_a_{symbol}"
@@ -724,6 +744,23 @@ class AkshareProvider:
         # 计算 PE, PB (使用最新市值)
         data = self._calculate_pe_pb_for_a(data, symbol)
 
+        self._cache.set(cache_key, data, ttl=86400 * 365)
+        return data
+
+    def _get_a_quarterly_indicator(self, symbol: str) -> pd.DataFrame:
+        """Get A股 quarterly financial indicators (单季度数据)"""
+        cache_key = f"quarterly_a_{symbol}"
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        # Get quarterly financial indicators
+        data = ak.stock_financial_abstract_ths(symbol=symbol, indicator="按单季度")
+
+        # Convert string values
+        data = self._convert_a_financial_strings(data)
+
+        # 缓存1年
         self._cache.set(cache_key, data, ttl=86400 * 365)
         return data
 

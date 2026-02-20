@@ -25,6 +25,15 @@ uv run --directory . python -m value_investment.cli info 600519
 
 **原因**：`uv run` 会从指定目录加载项目依赖和配置，必须在技能根目录执行才能正常工作。
 
+### 强制刷新缓存
+
+所有查询命令支持 `--refresh` / `-r` 参数强制从数据源重新获取数据并更新缓存：
+
+```bash
+uv run --directory . python -m value_investment.cli info 600519 --refresh
+uv run --directory . python -m value_investment.cli hist 600519 -r
+```
+
 ## 快速查询
 
 ```bash

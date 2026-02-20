@@ -466,7 +466,7 @@ class PEPercentileIndicator(BaseIndicator):
             )
 
     def _calculate_pe_ttm_percentile(self, provider, stock_code: str, years: int):
-        """使用PE-TTM计算百分位（A股）"""
+        """使用PE-TTM计算百分位（支持A股和港股）"""
         from datetime import datetime
         import pandas as pd
 
@@ -475,6 +475,13 @@ class PEPercentileIndicator(BaseIndicator):
         if quarterly_data.empty:
             return None
 
+        # 检测是否为港股（港股有 DATE_TYPE_CODE 字段）
+        is_hk = 'DATE_TYPE_CODE' in quarterly_data.columns
+
+        if is_hk:
+            return self._calculate_hk_pe_ttm_percentile(quarterly_data, provider, stock_code, years)
+
+        # A股处理逻辑
         # 检查是否有净利润字段
         net_profit_col = None
         for col in ['净利润', 'NETPROFIT']:
@@ -628,6 +635,178 @@ class PEPercentileIndicator(BaseIndicator):
             value=percentile,
             unit="%",
             description=f"PE-TTM百分位: {percentile:.1f}% (当前PE-TTM={current_pe:.1f}x, 历史范围={pe_min:.1f}x~{pe_max:.1f}x, {len(pe_ttm_list)}个季度)",
+            years=year_labels,
+            values=pe_ttm_list
+        )
+
+    def _calculate_hk_pe_ttm_percentile(self, quarterly_data, provider, stock_code: str, years: int):
+        """使用港股半年报数据计算PE-TTM百分位"""
+        from datetime import datetime
+        import pandas as pd
+
+        # 港股字段映射
+        net_profit_col = 'HOLDER_PROFIT'  # 股东应占溢利
+        if net_profit_col not in quarterly_data.columns:
+            return None
+
+        # 处理数据
+        data = quarterly_data.copy()
+        data['_report_date'] = pd.to_datetime(data['REPORT_DATE'], errors='coerce')
+        data = data.dropna(subset=['_report_date', net_profit_col])
+        data = data.sort_values('_report_date')
+
+        # 过滤近年数据
+        current_year = datetime.now().year
+        cutoff_year = current_year - years
+        data = data[data['_report_date'].dt.year > cutoff_year]
+
+        if len(data) < 4:
+            return None
+
+        # 提取净利润和日期
+        data['_profit'] = pd.to_numeric(data[net_profit_col], errors='coerce')
+
+        # 构建TTM数据：使用半年报 + 去年的半年报
+        # TTM = 当前半年报 + (去年年报 - 去年半年报)
+        ttm_list = []
+        ttm_dates = []
+
+        # 按年份组织数据
+        data['_year'] = data['_report_date'].dt.year
+        data['_month'] = data['_report_date'].dt.month
+
+        # 创建年份-报告类型到利润的映射
+        year_data = {}
+        for _, row in data.iterrows():
+            year = row['_year']
+            dtype = row['DATE_TYPE_CODE']
+            profit = row['_profit']
+            if pd.isna(profit) or profit <= 0:
+                continue
+            if year not in year_data:
+                year_data[year] = {}
+            year_data[year][dtype] = profit
+
+        # 计算TTM
+        years_sorted = sorted(year_data.keys())
+        for i, year in enumerate(years_sorted):
+            if year not in year_data:
+                continue
+            # 需要有本年半年报(002)和去年年报(001)
+            if '002' not in year_data[year]:
+                continue
+            if i == 0:
+                continue  # 去年没有数据，无法计算TTM
+            prev_year = years_sorted[i - 1]
+            if '001' not in year_data.get(prev_year, {}):
+                continue
+
+            # TTM = 本年半年报 + (去年年报 - 去年半年报)
+            h1_current = year_data[year]['002']
+            annual_prev = year_data[prev_year]['001']
+            h1_prev = year_data.get(prev_year, {}).get('002', 0)
+
+            if h1_current > 0 and annual_prev > 0:
+                ttm = h1_current + (annual_prev - h1_prev)
+                if ttm > 0:
+                    # 使用半年报日期
+                    for _, row in data.iterrows():
+                        if row['_year'] == year and row['DATE_TYPE_CODE'] == '002':
+                            ttm_list.append(ttm)
+                            ttm_dates.append(row['_report_date'])
+                            break
+
+        if len(ttm_list) < 3:
+            # 如果TTM数据不足，回退到使用年报数据
+            return None
+
+        # 获取股本
+        total_shares = None
+        try:
+            stock_info = provider.get_stock_info(stock_code)
+            if not stock_info.empty:
+                for item_col in ['item', 'Item']:
+                    if item_col in stock_info.columns:
+                        for _, row in stock_info.iterrows():
+                            item = str(row.get(item_col, ''))
+                            if '总股本' in item:
+                                total_shares = float(row.get('value', 0))
+                                break
+                        if total_shares and total_shares > 0:
+                            break
+        except Exception:
+            pass
+
+        if not total_shares or total_shares <= 0:
+            return None
+
+        # 计算各时点的PE-TTM
+        pe_ttm_list = []
+        valid_dates = []
+
+        for ttm, quarter_date in zip(ttm_list, ttm_dates):
+            try:
+                # 使用半年末的日期
+                if quarter_date.month == 6:
+                    date_str = f"{quarter_date.year}0630"
+                else:
+                    date_str = f"{quarter_date.year}1231"
+
+                hist = provider.get_historical_data(stock_code, date_str, adjust="")
+                if hist.empty:
+                    continue
+
+                close_col = '收盘' if '收盘' in hist.columns else 'close'
+                end_price = float(hist[close_col].iloc[-1])
+
+                if end_price <= 0:
+                    continue
+
+                # 计算市值和PE-TTM
+                market_cap = end_price * total_shares
+                pe_ttm = market_cap / ttm
+
+                if 0 < pe_ttm < 500:
+                    pe_ttm_list.append(pe_ttm)
+                    valid_dates.append(quarter_date.year + quarter_date.month / 12)
+            except Exception:
+                continue
+
+        if len(pe_ttm_list) < 3:
+            return None
+
+        # 获取当前PE-TTM
+        finind = provider.get_financial_indicator(stock_code)
+        current_pe = None
+        if '市盈率' in finind.columns:
+            current_pe = float(finind['市盈率'].iloc[0])
+
+        if not current_pe or current_pe <= 0:
+            # 使用最新市值和最新TTM计算
+            from value_investment.indicators.simple import LatestMarketCapIndicator
+            mc_indicator = LatestMarketCapIndicator()
+            mc_result = mc_indicator.calculate(pd.DataFrame(), provider=provider, stock_code=stock_code)
+            if mc_result and mc_result.value > 0 and ttm_list:
+                current_pe = mc_result.value / ttm_list[-1]
+
+        if not current_pe or current_pe <= 0:
+            return None
+
+        # 计算百分位
+        rank = sum(1 for pe in pe_ttm_list if pe < current_pe)
+        percentile = (rank + 0.5) / len(pe_ttm_list) * 100
+        percentile = max(0, min(100, percentile))
+
+        pe_min = min(pe_ttm_list)
+        pe_max = max(pe_ttm_list)
+
+        # 整理年份输出
+        year_labels = [f"{int(d)}H" for d in valid_dates]
+
+        return IndicatorResult(
+            value=percentile,
+            unit="%",
+            description=f"PE-TTM百分位: {percentile:.1f}% (当前PE-TTM={current_pe:.1f}x, 历史范围={pe_min:.1f}x~{pe_max:.1f}x, {len(pe_ttm_list)}个半年)",
             years=year_labels,
             values=pe_ttm_list
         )

@@ -721,12 +721,31 @@ class AkshareProvider:
         if self._market == "A":
             return self._get_a_quarterly_indicator(symbol)
         elif self._market == "HK":
-            # 港股暂无完整季度数据，返回空DataFrame
-            return pd.DataFrame()
+            return self._get_hk_quarterly_indicator(symbol)
         elif self._market == "US":
             raise NotImplementedError(f"Quarterly indicators for {self._market} not implemented")
         else:
             raise NotImplementedError(f"Quarterly indicators for {self._market} not implemented")
+
+    def _get_hk_quarterly_indicator(self, symbol: str) -> pd.DataFrame:
+        """Get 港股 quarterly/half-year financial indicators"""
+        cache_key = f"quarterly_hk_{symbol}"
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        # 获取港股财务分析指标（包含所有报告类型）
+        try:
+            data = ak.stock_hk_financial_analysis_indicator_em(symbol=symbol, indicator="报告期")
+        except Exception:
+            return pd.DataFrame()
+
+        if data.empty:
+            return pd.DataFrame()
+
+        # 缓存1年
+        self._cache.set(cache_key, data, ttl=86400 * 365)
+        return data
 
     def _get_a_financial_indicator(self, symbol: str) -> pd.DataFrame:
         """Get A股 financial indicators"""

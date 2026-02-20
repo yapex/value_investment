@@ -553,8 +553,22 @@ class LatestMarketCapIndicator(BaseIndicator):
             )
 
         try:
-            # 1. 从财务指标获取股本
+            # 1. 从财务指标获取市值（优先使用）
             finind = provider.get_financial_indicator(stock_code)
+            if not finind.empty:
+                # 优先使用总市值字段
+                if '总市值(元)' in finind.columns:
+                    market_cap = float(finind['总市值(元)'].iloc[0])
+                    if market_cap and market_cap > 0:
+                        return IndicatorResult(
+                            value=market_cap,
+                            unit="",
+                            description=f"最新市值 (从财务指标获取)",
+                            years=[],
+                            values=[]
+                        )
+
+            # 如果没有总市值字段，则尝试计算
             if finind.empty:
                 return IndicatorResult(
                     value=0.0,

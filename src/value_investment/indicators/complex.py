@@ -493,18 +493,44 @@ class PEPercentileIndicator(BaseIndicator):
 
             current_pe = float(finind[pe_col].iloc[0])
 
-            # 获取股本
+            # 获取股本或市值
             total_shares = None
-            for col in ['已发行股本(股)', 'total_shares', '总股本']:
-                if col in finind.columns:
-                    total_shares = float(finind[col].iloc[0])
-                    break
+            current_market_cap_field = None
 
-            if not total_shares:
+            # 优先使用总市值字段
+            if '总市值(元)' in finind.columns:
+                current_market_cap_field = float(finind['总市值(元)'].iloc[0])
+
+            # 如果没有总市值字段，则尝试获取股本
+            if not current_market_cap_field or current_market_cap_field <= 0:
+                for col in ['已发行股本(股)', 'total_shares', '总股本']:
+                    if col in finind.columns:
+                        total_shares = float(finind[col].iloc[0])
+                        break
+
+            # 如果还是没有股本，尝试从stock info获取（A股）
+            if not total_shares or total_shares <= 0:
+                try:
+                    stock_info = provider.get_stock_info(stock_code)
+                    if not stock_info.empty:
+                        # 查找总股本字段
+                        for item_col in ['item', 'Item']:
+                            if item_col in stock_info.columns:
+                                for _, row in stock_info.iterrows():
+                                    item = str(row.get(item_col, ''))
+                                    if '总股本' in item:
+                                        total_shares = float(row.get('value', 0))
+                                        break
+                                if total_shares and total_shares > 0:
+                                    break
+                except Exception:
+                    pass
+
+            if not total_shares or total_shares <= 0:
                 return IndicatorResult(
                     value=0.0,
                     unit="",
-                    description="PEPct (无股本数据)",
+                    description="PEPct (无股本/市值数据)",
                     years=[],
                     values=[]
                 )
@@ -514,8 +540,7 @@ class PEPercentileIndicator(BaseIndicator):
             current_year = datetime.now().year
             profit_sheet = provider.get_profit_sheet(stock_code, current_year + 1)
 
-            if profit_sheet.empty or 'year' not in profit_sheet.columns:
-                # 直接返回当前PE
+            if profit_sheet.empty:
                 return IndicatorResult(
                     value=current_pe,
                     unit="x",
@@ -548,7 +573,14 @@ class PEPercentileIndicator(BaseIndicator):
                 )
 
             # 获取最近N年的年报数据
-            profit_sheet = profit_sheet.sort_values('year', ascending=False)
+            # 从REPORT_DATE列提取年份（A股格式）
+            if 'REPORT_DATE' in profit_sheet.columns:
+                profit_sheet = profit_sheet.copy()
+                profit_sheet['_year'] = pd.to_datetime(profit_sheet['REPORT_DATE'], errors='coerce').dt.year
+                profit_sheet = profit_sheet.dropna(subset=['_year'])
+                profit_sheet = profit_sheet.sort_values('_year', ascending=False)
+            elif 'year' in profit_sheet.columns:
+                profit_sheet = profit_sheet.sort_values('year', ascending=False)
             profit_sheet = profit_sheet.head(years)
 
             # 4. 计算历史PE
@@ -556,7 +588,8 @@ class PEPercentileIndicator(BaseIndicator):
             valid_years = []
 
             for _, row in profit_sheet.iterrows():
-                year = row.get('year')
+                # 优先使用_year列，否则用year列
+                year = row.get('_year') or row.get('year')
                 if year is None or pd.isna(year):
                     continue
 
@@ -580,8 +613,14 @@ class PEPercentileIndicator(BaseIndicator):
                     if last_price <= 0:
                         continue
 
-                    # 计算当时市值
-                    year_market_cap = last_price * total_shares
+                    # 计算当时市值：有市值字段用市值，否则用股价×股本
+                    if current_market_cap_field and total_shares:
+                        # 使用当前市值比例估算历史市值
+                        year_market_cap = last_price * total_shares
+                    elif total_shares:
+                        year_market_cap = last_price * total_shares
+                    else:
+                        continue
 
                     # 计算当时PE
                     year_pe = year_market_cap / net_profit

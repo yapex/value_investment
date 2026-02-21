@@ -862,18 +862,21 @@ class PEPercentileIndicator(BaseIndicator):
         total_shares = None
         current_market_cap_field = None
 
-        # 优先使用总市值字段
-        if '总市值(元)' in finind.columns:
-            current_market_cap_field = float(finind['总市值(元)'].iloc[0])
-
-        # 如果没有总市值字段，则尝试获取股本
-        if not current_market_cap_field or current_market_cap_field <= 0:
-            for col in ['已发行股本(股)', 'total_shares', '总股本']:
-                if col in finind.columns:
-                    total_shares = float(finind[col].iloc[0])
+        # 优先使用总市值字段（A股用元，港股用港元）
+        for cap_col in ['总市值(元)', '总市值(港元)']:
+            if cap_col in finind.columns:
+                current_market_cap_field = float(finind[cap_col].iloc[0])
+                if current_market_cap_field and current_market_cap_field > 0:
                     break
 
-        # 如果还是没有股本，尝试从stock info获取（A股）
+        # 尝试获取股本（优先从财务指标，A股和港股都可能有）
+        for col in ['已发行股本(股)', 'total_shares', '总股本']:
+            if col in finind.columns:
+                total_shares = float(finind[col].iloc[0])
+                if total_shares and total_shares > 0:
+                    break
+
+        # 如果还是没有股本，尝试从stock info获取
         if not total_shares or total_shares <= 0:
             try:
                 stock_info = provider.get_stock_info(stock_code)

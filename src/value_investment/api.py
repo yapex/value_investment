@@ -378,15 +378,15 @@ class ValueInvestment:
         if symbol:
             self._cache.invalidate(f"info_{symbol}")
             # Clear financial data cache (all end_years)
-            for key in list(self._cache._memory_cache.keys()):
+            for key in self._cache.list_keys():
                 if key.startswith(f"financial_{symbol}_"):
                     self._cache.invalidate(key)
             # Clear historical data cache (all end_dates)
-            for key in list(self._cache._memory_cache.keys()):
+            for key in self._cache.list_keys():
                 if key.startswith(f"hist_{symbol}_"):
                     self._cache.invalidate(key)
             self._cache.invalidate(f"indicator_{symbol}")
         else:
             # Clear all cache
-            for key in list(self._cache._memory_cache.keys()):
+            for key in self._cache.list_keys():
                 self._cache.invalidate(key)

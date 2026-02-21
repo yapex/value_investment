@@ -302,6 +302,7 @@ class AkshareProvider:
         end_date: str,
         start_date: str | None = None,
         adjust: str = "hfq",
+        force_refresh: bool = False,
     ) -> pd.DataFrame:
         """Get 港股 historical data with smart cache (full data cached, filtered on retrieval)
 

@@ -7,8 +7,9 @@ from typing import Optional
 class DataMapper:
     """A股字段 -> 国际标准字段映射器"""
 
-    # 资产负债表映射 (A股字段 -> 标准字段)
+    # 资产负债表映射 (A股字段 -> 标准字段, 港股字段 -> 标准字段)
     BALANCE_MAPPING = {
+        # A股字段
         "TOTAL_ASSETS": "total_assets",
         "TOTAL_CURRENT_ASSETS": "current_assets",
         "TOTAL_NONCURRENT_ASSETS": "non_current_assets",
@@ -35,10 +36,34 @@ class DataMapper:
         "OTHER_CURRENT_LIAB": "other_current_liabilities",
         "DEFERRED_TAX_LIAB": "deferred_tax_liabilities",
         "TOTAL_EQUITY": "total_equity",
+        # 港股字段
+        "总资产": "total_assets",
+        "总负债": "total_liabilities",
+        "总权益": "total_equity",
+        "流动资产合计": "current_assets",
+        "非流动资产合计": "non_current_assets",
+        "流动负债合计": "current_liabilities",
+        "非流动负债合计": "non_current_liabilities",
+        "现金及等价物": "cash_and_equivalents",
+        "应收帐款": "accounts_receivable",
+        "存货": "inventory",
+        "固定资产": "fixed_assets",
+        "无形资产": "intangible_assets",
+        "短期贷款": "short_term_debt",
+        "长期贷款": "long_term_debt",
+        "应付帐款": "accounts_payable",
+        "股东权益": "shareholders_equity",
+        "股本": "share_capital",
+        "股本溢价": "share_premium",
+        "保留溢利(累计亏损)": "retained_earnings",
+        "在建工程": "construction_in_progress",
+        "联营公司权益": "investment_in_associates",
+        "合营公司权益": "investment_in_joint_ventures",
     }
 
-    # 利润表映射
+    # 利润表映射 (A股字段 -> 标准字段, 港股字段 -> 标准字段)
     INCOME_MAPPING = {
+        # A股字段
         "TOTAL_OPERATE_INCOME": "total_revenue",
         "OPERATE_INCOME": "operating_income",
         "TOTAL_OPERATE_COST": "total_operating_cost",
@@ -60,10 +85,26 @@ class DataMapper:
         "WEIGHTED_AVG_ROE": "weighted_roe",
         "BASIC_EPS": "basic_eps",
         "DILUTED_EPS": "diluted_eps",
+        # 港股字段
+        "营业额": "total_revenue",
+        "经营溢利": "operating_profit",
+        "毛利": "gross_profit",
+        "除税前溢利": "profit_before_tax",
+        "除税后溢利": "profit_after_tax",
+        "股东应占溢利": "parent_net_profit",
+        "持续经营业务税后利润": "net_profit_from_continuing_operations",
+        "本公司拥有人应占全面收益总额": "total_comprehensive_income",
+        "税项": "income_tax",
+        "利息收入": "interest_income",
+        "融资成本": "finance_cost",
+        "行政开支": "administrative_expenses",
+        "销售及分销费用": "selling_distribution_expenses",
+        "折旧及摊销": "depreciation_amortization",
     }
 
-    # 现金流量表映射
+    # 现金流量表映射 (A股字段 -> 标准字段, 港股字段 -> 标准字段)
     CASHFLOW_MAPPING = {
+        # A股字段
         "NETCASH_OPERATE": "operating_cash_flow",
         "NETCASH_INVEST": "investing_cash_flow",
         "NETCASH_FINANCE": "financing_cash_flow",
@@ -79,6 +120,22 @@ class DataMapper:
         "BOND_ISSUE": "bond_issuance",
         "DEBT_REPAYMENT": "debt_repayment",
         "DIVIDEND_PAYMENT": "dividend_paid",
+        # 港股字段
+        "经营业务现金净额": "operating_cash_flow",
+        "投资业务现金净额": "investing_cash_flow",
+        "融资业务现金净额": "financing_cash_flow",
+        "购建固定资产": "capital_expenditure",
+        "购建无形资产及其他资产": "capital_expenditure_intangible",
+        "已付利息(经营)": "interest_paid_operating",
+        "已付利息(融资)": "interest_paid_financing",
+        "已付税项": "taxes_paid",
+        "已收利息(投资)": "interest_received",
+        "已收股息(投资)": "dividend_received",
+        "期初现金": "cash_begin",
+        "期末现金": "cash_end",
+        "现金净额": "net_cash_change",
+        "经营产生现金": "cash_generated_from_operations",
+        "营运资金变动前经营溢利": "operating_profit_before_working_capital",
     }
 
     # 基础字段（不映射）

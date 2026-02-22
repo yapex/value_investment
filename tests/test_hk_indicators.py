@@ -101,11 +101,11 @@ class TestHKIndicatorsCalculation:
         """Should calculate gross margin correctly"""
         from value_investment.indicators.simple import GrossMarginIndicator
 
-        # Create mock data
+        # Create mock data with standardized field names
         data = pd.DataFrame({
             'year': [2023, 2022, 2021],
-            'revenue': [1000000, 900000, 800000],
-            'cost_of_sales': [600000, 540000, 480000]
+            'operating_income': [1000000, 900000, 800000],
+            'operating_cost': [600000, 540000, 480000]
         })
 
         indicator = GrossMarginIndicator()

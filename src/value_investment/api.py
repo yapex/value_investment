@@ -3,11 +3,13 @@ from typing import Optional
 import pandas as pd
 
 from value_investment.data.cache import SmartCache
+from value_investment.data.mapper import DataMapper
 from value_investment.data.providers.akshare_provider import AkshareProvider
 from value_investment.indicators.factory import IndicatorFactory
 from value_investment.indicators.base import IndicatorResult
 from value_investment.indicators.registry import IndicatorRegistry, register_defaults
 from value_investment.indicators.base import IndicatorMeta
+from value_investment.core.dependencies import DependencyRegistry, DataProvider
 
 
 class ValueInvestment:
@@ -31,6 +33,9 @@ class ValueInvestment:
         self._cache = SmartCache(cache_dir=cache_dir or "./.cache")
         self._provider = AkshareProvider(cache=self._cache, market=market)
         self._factory = IndicatorFactory(provider=self._provider)
+        # Add dependency injection
+        self._data_provider = DataProvider(self._provider)
+        self._registry = DependencyRegistry(self._data_provider)
         # Initialize indicator registry with defaults
         register_defaults()
 
@@ -159,7 +164,23 @@ class ValueInvestment:
         Returns:
             IndicatorResult with calculated value
         """
+        # 计算日期范围，用于获取多年历史数据（如prices依赖）
+        from datetime import datetime
+        end_date = datetime.now().strftime('%Y%m%d')
+        start_year = datetime.now().year - years
+        start_date = f'{start_year}0101'
+
+        # 将日期范围传入kwargs，这样prices依赖会获取多年数据
+        # 注意：使用不复权价格(adjust="")来计算历史PE，因为复权价格会扭曲历史PE
+        kwargs['start_date'] = start_date
+        kwargs['end_date'] = end_date
+        kwargs['adjust'] = ""
+
         indicator = self._factory.get(indicator_name)
+
+        # Resolve dependencies if indicator has 'needs'
+        needs = getattr(indicator, 'needs', [])
+        injected = self._registry.resolve(needs, stock_code, **kwargs)
 
         # Use shared method to prepare data
         years = kwargs.pop('years', 10)
@@ -169,12 +190,14 @@ class ValueInvestment:
         if market_cap:
             kwargs['market_cap'] = market_cap
 
-        # Pass provider and stock_code for indicators that need direct data access (like PEPct)
-        kwargs['provider'] = self._provider
+        # Pass stock_code for indicators that need it
         kwargs['stock_code'] = stock_code
 
+        # Merge injected data into kwargs for indicators that need it
+        full_kwargs = {**kwargs, **injected}
+
         # Pass data to indicator (data-passing pattern)
-        return indicator.calculate(financial_data, **kwargs)
+        return indicator.calculate(financial_data, **full_kwargs)
 
     def _prepare_data(
         self,
@@ -233,6 +256,11 @@ class ValueInvestment:
         balance = self._provider.get_balance_sheet(symbol, end_year)
         profit = self._provider.get_profit_sheet(symbol, end_year)
         cashflow = self._provider.get_cashflow_sheet(symbol, end_year)
+
+        # Apply field mapping to standardize column names to IFRS standard
+        balance = DataMapper.map_balance_sheet(balance)
+        profit = DataMapper.map_income_statement(profit)
+        cashflow = DataMapper.map_cash_flow(cashflow)
 
         if balance.empty:
             return profit if not profit.empty else cashflow

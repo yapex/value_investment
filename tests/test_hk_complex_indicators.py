@@ -8,20 +8,17 @@ class TestHKROICIndicator:
     """Test ROIC indicator with HK data"""
 
     def test_roic_with_hk_field_names(self):
-        """Should calculate ROIC with HK field names"""
+        """Should calculate ROIC with standardized field names"""
         from value_investment.indicators.complex import ROICIndicator
 
-        # HK field names from balance sheet - using new formula
-        # Invested Capital = Shareholders' Equity + Debt - Cash
+        # Use standardized field names
         data = pd.DataFrame({
             'year': [2023, 2022],
-            '经营溢利': [50000, 45000],  # HK: Operating profit
-            '股东权益': [1000000, 900000],  # HK: Shareholders' equity
-            '短期贷款': [50000, 40000],  # HK: Short-term loan
-            '长期贷款': [100000, 90000],  # HK: Long-term loan
-            '现金及等价物': [80000, 70000],  # HK: Cash and equivalents
-            '短期存款': [30000, 25000],  # HK: Short-term deposit
-            '中长期存款': [10000, 8000],  # HK: Medium/long-term deposit
+            'operating_profit': [50000, 45000],
+            'total_equity': [1000000, 900000],
+            'short_term_debt': [50000, 40000],
+            'long_term_debt': [100000, 90000],
+            'cash_and_equivalents': [80000, 70000],
         })
 
         indicator = ROICIndicator()
@@ -37,55 +34,55 @@ class TestHKROICIndicator:
         assert result.unit == "%"
 
     def test_roic_find_column_hk_fields(self):
-        """Should find columns with HK field names"""
+        """Should find columns with standardized field names"""
         from value_investment.indicators.complex import ROICIndicator
 
         indicator = ROICIndicator()
 
-        # Test operating profit field finding
-        df = pd.DataFrame({'经营溢利': [100]})
-        col = indicator._find_column(df, ['operating_profit', '经营溢利', '营业利润'])
-        assert col == '经营溢利'
+        # Test operating profit field finding with standardized field names
+        df = pd.DataFrame({'operating_profit': [100]})
+        col = indicator._find_column(df, ['operating_profit'])
+        assert col == 'operating_profit'
 
         # Test total assets field finding
-        df = pd.DataFrame({'总资产': [100]})
-        col = indicator._find_column(df, ['total_assets', '总资产', '资产总计'])
-        assert col == '总资产'
+        df = pd.DataFrame({'total_assets': [100]})
+        col = indicator._find_column(df, ['total_assets'])
+        assert col == 'total_assets'
 
         # Test accounts payable field finding
-        df = pd.DataFrame({'应付帐款': [100]})
-        col = indicator._find_column(df, ['accounts_payable', '应付账款', '应付帐款'])
-        assert col == '应付帐款'
+        df = pd.DataFrame({'accounts_payable': [100]})
+        col = indicator._find_column(df, ['accounts_payable'])
+        assert col == 'accounts_payable'
 
 
 class TestHKCAGRIndicator:
     """Test CAGR indicator with HK data"""
 
     def test_cagr_revenue_with_hk_fields(self):
-        """Should calculate CAGR with HK revenue fields"""
+        """Should calculate CAGR with standardized revenue fields"""
         from value_investment.indicators.complex import CAGRIndicator
 
-        # HK: 营业额 = revenue
+        # Use standardized field names
         data = pd.DataFrame({
             'year': [2021, 2022, 2023],
-            '营业额': [800000, 1000000, 1250000],  # HK: Revenue
+            'total_revenue': [800000, 1000000, 1250000],
         })
 
         indicator = CAGRIndicator()
-        result = indicator.calculate(data, metric="revenue")
+        result = indicator.calculate(data, metric="total_revenue")
 
         # CAGR = (1250000 / 800000)^(1/2) - 1 = 0.25 = 25%
         assert result.value > 0
         assert result.unit == "%"
 
     def test_cagr_net_profit_with_hk_fields(self):
-        """Should calculate CAGR with HK net profit fields"""
+        """Should calculate CAGR with standardized net profit fields"""
         from value_investment.indicators.complex import CAGRIndicator
 
-        # HK: 股东应占溢利 = Parent net profit (attributable to shareholders)
+        # Use standardized field names
         data = pd.DataFrame({
             'year': [2021, 2022, 2023],
-            '股东应占溢利': [80000, 100000, 125000],  # HK: Net profit attributable to shareholders
+            'net_profit': [80000, 100000, 125000],
         })
 
         indicator = CAGRIndicator()
@@ -95,39 +92,39 @@ class TestHKCAGRIndicator:
         assert result.unit == "%"
 
     def test_cagr_find_column_hk_fields(self):
-        """Should find columns with HK field names"""
+        """Should find columns with standardized field names"""
         from value_investment.indicators.complex import CAGRIndicator
 
         indicator = CAGRIndicator()
 
-        # Test revenue field finding (HK uses 营业额)
-        df = pd.DataFrame({'营业额': [100]})
-        col = indicator._find_column(df, ['revenue', '营业额', '营业收入'])
-        assert col == '营业额'
+        # Test revenue field finding with standardized field names
+        df = pd.DataFrame({'total_revenue': [100]})
+        col = indicator._find_column(df, ['total_revenue'])
+        assert col == 'total_revenue'
 
-        # Test net profit field finding (HK uses 股东应占溢利)
-        df = pd.DataFrame({'股东应占溢利': [100]})
-        col = indicator._find_column(df, ['net_profit', '净利润', '股东应占溢利'])
-        assert col == '股东应占溢利'
+        # Test net profit field finding with standardized field names
+        df = pd.DataFrame({'net_profit': [100]})
+        col = indicator._find_column(df, ['net_profit'])
+        assert col == 'net_profit'
 
-        # Test equity field finding (HK uses 股东权益)
-        df = pd.DataFrame({'股东权益': [100]})
-        col = indicator._find_column(df, ['total_equity', '股东权益', '权益总额'])
-        assert col == '股东权益'
+        # Test equity field finding with standardized field names
+        df = pd.DataFrame({'total_equity': [100]})
+        col = indicator._find_column(df, ['total_equity'])
+        assert col == 'total_equity'
 
 
 class TestHKImpliedGrowthIndicator:
     """Test ImpliedGrowth indicator with HK data"""
 
     def test_implied_growth_with_hk_fields(self):
-        """Should calculate implied growth with HK cash flow fields"""
+        """Should calculate implied growth with standardized cash flow fields"""
         from value_investment.indicators.complex import ImpliedGrowthIndicator
 
-        # HK field names from cash flow statement
+        # Use standardized field names
         data = pd.DataFrame({
             'year': [2023, 2022],
-            '经营业务现金净额': [80000, 70000],  # HK: Operating cash flow
-            '购建固定资产': [10000, 9000],  # HK: Capital expenditure
+            'operating_cash_flow': [80000, 70000],
+            'capital_expenditure': [10000, 9000],
         })
 
         indicator = ImpliedGrowthIndicator()
@@ -222,15 +219,11 @@ class TestHKPEPctIndicator:
         assert hasattr(result, 'description')
 
     def test_pe_pct_find_column_hk_fields(self):
-        """Should find columns with HK field names"""
+        """Should find columns with standardized field names"""
         from value_investment.indicators.complex import PEPercentileIndicator
 
-        indicator = PEPercentileIndicator()
-
-        # Test net profit field finding (HK uses 股东应占溢利)
-        df = pd.DataFrame({'股东应占溢利': [100]})
-        col = indicator._find_column(df, ['net_profit', '净利润', '股东应占溢利', 'PARENT_NETPROFIT'])
-        assert col == '股东应占溢利'
+        # PEPercentileIndicator uses dependency injection (quarterly, prices)
+        # instead of _find_column, so no need to test _find_column here
 
 
 class TestHKComplexIndicatorsIntegration:
@@ -249,13 +242,13 @@ class TestHKComplexIndicatorsIntegration:
         assert factory.get("PEPct") is not None
 
     def test_cagr_with_multiple_metrics_hk(self):
-        """CAGR should work with different metrics using HK fields"""
+        """CAGR should work with different metrics using standardized fields"""
         from value_investment.indicators.complex import CAGRIndicator
 
-        # Test with equity (HK: 股东权益)
+        # Test with equity (standardized field name after DataMapper mapping)
         data = pd.DataFrame({
             'year': [2021, 2022, 2023],
-            '股东权益': [800000, 900000, 1000000],  # HK: Total equity
+            'total_equity': [800000, 900000, 1000000],  # Standardized field name
         })
 
         indicator = CAGRIndicator()

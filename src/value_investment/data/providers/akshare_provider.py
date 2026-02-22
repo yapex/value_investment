@@ -48,6 +48,27 @@ class AkshareProvider:
         self._cache = cache
         self._market = market
 
+    def _normalize_hk_code(self, symbol: str) -> str:
+        """Normalize HK stock code to 5-digit format for akshare API
+
+        Args:
+            symbol: Stock code (e.g., "0700" or "00700")
+
+        Returns:
+            5-digit stock code (e.g., "00700")
+        """
+        if not symbol:
+            return symbol
+
+        # Remove any non-digit characters
+        digits = ''.join(c for c in symbol if c.isdigit())
+
+        # Pad to 5 digits (HK stock codes are 5 digits)
+        if len(digits) < 5:
+            digits = digits.zfill(5)
+
+        return digits
+
     def _detect_market(self, code: str) -> Optional[str]:
         """Detect market from stock code
 
@@ -613,12 +634,14 @@ class AkshareProvider:
 
     def _get_hk_balance_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 港股 balance sheet"""
-        cache_key = f"balance_sheet_hk_{symbol}"
+        # Normalize HK stock code to 5-digit format
+        hk_code = self._normalize_hk_code(symbol)
+        cache_key = f"balance_sheet_hk_{hk_code}"
         ttl = _get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
             df = ak.stock_financial_hk_report_em(
-                stock=symbol, symbol="资产负债表", indicator="年度"
+                stock=hk_code, symbol="资产负债表", indicator="年度"
             )
             return self._transform_hk_financial_data(df)
 
@@ -626,12 +649,14 @@ class AkshareProvider:
 
     def _get_hk_profit_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 港股 profit sheet (income statement)"""
-        cache_key = f"profit_sheet_hk_{symbol}"
+        # Normalize HK stock code to 5-digit format
+        hk_code = self._normalize_hk_code(symbol)
+        cache_key = f"profit_sheet_hk_{hk_code}"
         ttl = _get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
             df = ak.stock_financial_hk_report_em(
-                stock=symbol, symbol="利润表", indicator="年度"
+                stock=hk_code, symbol="利润表", indicator="年度"
             )
             return self._transform_hk_financial_data(df)
 
@@ -639,12 +664,14 @@ class AkshareProvider:
 
     def _get_hk_cashflow_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 港股 cash flow sheet"""
-        cache_key = f"cashflow_sheet_hk_{symbol}"
+        # Normalize HK stock code to 5-digit format
+        hk_code = self._normalize_hk_code(symbol)
+        cache_key = f"cashflow_sheet_hk_{hk_code}"
         ttl = _get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
             df = ak.stock_financial_hk_report_em(
-                stock=symbol, symbol="现金流量表", indicator="年度"
+                stock=hk_code, symbol="现金流量表", indicator="年度"
             )
             return self._transform_hk_financial_data(df)
 
@@ -762,7 +789,9 @@ class AkshareProvider:
 
     def _get_hk_quarterly_indicator(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 港股 quarterly/half-year financial indicators"""
-        cache_key = f"quarterly_hk_{symbol}"
+        # Normalize HK stock code to 5-digit format
+        hk_code = self._normalize_hk_code(symbol)
+        cache_key = f"quarterly_hk_{hk_code}"
 
         # Force refresh: invalidate cache first
         if force_refresh:
@@ -774,7 +803,7 @@ class AkshareProvider:
 
         # 获取港股财务分析指标（包含所有报告类型）
         try:
-            data = ak.stock_hk_financial_analysis_indicator_em(symbol=symbol, indicator="报告期")
+            data = ak.stock_hk_financial_analysis_indicator_em(symbol=hk_code, indicator="报告期")
         except Exception:
             return pd.DataFrame()
 
@@ -805,6 +834,9 @@ class AkshareProvider:
 
         # 计算 PE, PB (使用最新市值)
         data = self._calculate_pe_pb_for_a(data, symbol)
+
+        # Apply DataMapper to standardize fields
+        data = DataMapper.to_standard_format(data)
 
         self._cache.set(cache_key, data, ttl=86400 * 365)
         return data
@@ -946,10 +978,12 @@ class AkshareProvider:
 
     def _get_hk_financial_indicator(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 港股 financial indicators"""
-        cache_key = f"indicator_hk_{symbol}"
+        # Normalize HK stock code to 5-digit format
+        hk_code = self._normalize_hk_code(symbol)
+        cache_key = f"indicator_hk_{hk_code}"
         ttl = _get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
-            return ak.stock_hk_financial_indicator_em(symbol=symbol)
+            return ak.stock_hk_financial_indicator_em(symbol=hk_code)
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)

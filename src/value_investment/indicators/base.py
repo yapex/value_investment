@@ -2,10 +2,29 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, TYPE_CHECKING, Any, Dict, Optional
+from typing import List, TYPE_CHECKING, Any, Dict, Optional, Protocol
 
 if TYPE_CHECKING:
     import pandas as pd
+
+
+class IIndicator(Protocol):
+    """Indicator protocol - defines interface for all indicators"""
+
+    name: str
+
+    def calculate(self, data: "pd.DataFrame", **kwargs) -> "IndicatorResult":
+        """Calculate the indicator"""
+        ...
+
+    def get_required_fields(self) -> list:
+        """Return list of required data fields"""
+        ...
+
+    @property
+    def needs(self) -> list:
+        """Return list of external data dependencies"""
+        return []
 
 
 class IndicatorType(str, Enum):
@@ -57,6 +76,7 @@ class BaseIndicator(ABC):
     name: str = ""
     description: str = ""
     type: IndicatorType = IndicatorType.CALCULATED  # Default to CALCULATED
+    needs: list = []  # External data dependencies (stock_info, prices, quarterly)
 
     @abstractmethod
     def calculate(

@@ -13,16 +13,9 @@ class ROEIndicator(BaseIndicator):
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        # Map column names - akshare uses uppercase with underscores
-        # 港股: 除税后溢利, 股东应占溢利, 总权益, 股东权益
-        net_profit_col = self._find_column(data, [
-            'net_profit', 'NET_PROFIT', '净利润', 'NET_PROFIT_ATTRIBUTABLE',
-            '除税后溢利', '股东应占溢利', '经营溢利'
-        ])
-        equity_col = self._find_column(data, [
-            'total_equity', 'TOTAL_EQUITY', '股东权益', 'HOLDERS_EQUITY',
-            '总权益'
-        ])
+        # Field mapping is done in API._get_financial_data, so we use standardized field names
+        net_profit_col = self._find_column(data, ['net_profit'])
+        equity_col = self._find_column(data, ['total_equity'])
 
         net_profit = data[net_profit_col] if net_profit_col else pd.Series([0], index=data.index)
         equity = data[equity_col] if equity_col else pd.Series([1], index=data.index)
@@ -62,13 +55,9 @@ class ROAIndicator(BaseIndicator):
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        # 港股: 除税后溢利, 股东应占溢利, 总资产
-        net_profit_col = self._find_column(data, [
-            'net_profit', 'NET_PROFIT', '净利润', '除税后溢利', '股东应占溢利', '经营溢利'
-        ])
-        assets_col = self._find_column(data, [
-            'total_assets', 'TOTAL_ASSETS', '资产总计', 'ASSET_BALANCE', '总资产'
-        ])
+        # Field mapping is done in API._get_financial_data, so we use standardized field names
+        net_profit_col = self._find_column(data, ['net_profit'])
+        assets_col = self._find_column(data, ['total_assets'])
 
         net_profit = data[net_profit_col] if net_profit_col else pd.Series([0], index=data.index)
         assets = data[assets_col] if assets_col else pd.Series([1], index=data.index)
@@ -105,15 +94,9 @@ class GrossMarginIndicator(BaseIndicator):
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        # 港股: 营业额, 营运收入, 营运支出
-        revenue_col = self._find_column(data, [
-            'revenue', 'REVENUE', '营业收入', 'OPERATING_REVENUE',
-            '营业额', '营运收入'
-        ])
-        cogs_col = self._find_column(data, [
-            'cost_of_sales', 'COST_OF_SALES', '营业成本', 'OPERATING_COST',
-            '营运支出'
-        ])
+        # Field mapping is done in API._get_financial_data, so we use standardized field names
+        revenue_col = self._find_column(data, ['operating_income', 'total_revenue'])
+        cogs_col = self._find_column(data, ['operating_cost'])
 
         revenue = data[revenue_col] if revenue_col else pd.Series([0], index=data.index)
         cogs = data[cogs_col] if cogs_col else pd.Series([0], index=data.index)
@@ -151,8 +134,9 @@ class NetProfitMarginIndicator(BaseIndicator):
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        net_profit_col = self._find_column(data, ['net_profit', 'NET_PROFIT', '净利润'])
-        revenue_col = self._find_column(data, ['revenue', 'REVENUE', '营业收入'])
+        # Field mapping is done in API._get_financial_data
+        net_profit_col = self._find_column(data, ['net_profit'])
+        revenue_col = self._find_column(data, ['operating_income', 'total_revenue'])
 
         net_profit = data[net_profit_col] if net_profit_col else pd.Series([0], index=data.index)
         revenue = data[revenue_col] if revenue_col else pd.Series([1], index=data.index)
@@ -189,8 +173,9 @@ class CurrentRatioIndicator(BaseIndicator):
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        current_assets_col = self._find_column(data, ['current_assets', 'CURRENT_ASSETS', '流动资产', 'CURRENT_ASSET_BALANCE'])
-        current_liab_col = self._find_column(data, ['current_liabilities', 'CURRENT_LIAB', '流动负债', 'CURRENT_LIAB_BALANCE'])
+        # Field mapping is done in API._get_financial_data
+        current_assets_col = self._find_column(data, ['current_assets'])
+        current_liab_col = self._find_column(data, ['current_liabilities'])
 
         current_assets = data[current_assets_col] if current_assets_col else pd.Series([0], index=data.index)
         current_liab = data[current_liab_col] if current_liab_col else pd.Series([1], index=data.index)
@@ -227,8 +212,9 @@ class AssetTurnoverIndicator(BaseIndicator):
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        income_col = self._find_column(data, ['operating_income', 'OPERATING_INCOME', '营业收入'])
-        assets_col = self._find_column(data, ['total_assets', 'TOTAL_ASSETS', '资产总计', 'ASSET_BALANCE'])
+        # Field mapping is done in API._get_financial_data
+        income_col = self._find_column(data, ['operating_income'])
+        assets_col = self._find_column(data, ['total_assets'])
 
         income = data[income_col] if income_col else pd.Series([0], index=data.index)
         assets = data[assets_col] if assets_col else pd.Series([1], index=data.index)
@@ -265,8 +251,9 @@ class InventoryTurnoverIndicator(BaseIndicator):
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        cost_col = self._find_column(data, ['operating_cost', 'OPERATING_COST', '营业成本'])
-        inv_col = self._find_column(data, ['inventory', 'INVENTORY', '存货'])
+        # Field mapping is done in API._get_financial_data
+        cost_col = self._find_column(data, ['operating_cost'])
+        inv_col = self._find_column(data, ['inventory'])
 
         cost = data[cost_col] if cost_col else pd.Series([0], index=data.index)
         inv = data[inv_col] if inv_col else pd.Series([1], index=data.index)
@@ -303,9 +290,10 @@ class QuickRatioIndicator(BaseIndicator):
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        current_assets_col = self._find_column(data, ['current_assets', 'CURRENT_ASSET_BALANCE', '流动资产'])
-        inventory_col = self._find_column(data, ['inventory', 'INVENTORY', '存货'])
-        current_liab_col = self._find_column(data, ['current_liabilities', 'CURRENT_LIAB_BALANCE', '流动负债'])
+        # Field mapping is done in API._get_financial_data
+        current_assets_col = self._find_column(data, ['current_assets'])
+        inventory_col = self._find_column(data, ['inventory'])
+        current_liab_col = self._find_column(data, ['current_liabilities'])
 
         current_assets = data[current_assets_col] if current_assets_col else pd.Series([0], index=data.index)
         inventory = data[inventory_col] if inventory_col else pd.Series([0], index=data.index)
@@ -344,8 +332,9 @@ class DebtRatioIndicator(BaseIndicator):
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        liab_col = self._find_column(data, ['total_liabilities', 'TOTAL_LIABILITIES', '负债合计', 'LIAB_BALANCE'])
-        assets_col = self._find_column(data, ['total_assets', 'TOTAL_ASSETS', '资产总计', 'ASSET_BALANCE'])
+        # Field mapping is done in API._get_financial_data
+        liab_col = self._find_column(data, ['total_liabilities'])
+        assets_col = self._find_column(data, ['total_assets'])
 
         liabilities = data[liab_col] if liab_col else pd.Series([0], index=data.index)
         assets = data[assets_col] if assets_col else pd.Series([1], index=data.index)
@@ -382,8 +371,9 @@ class ReceivableTurnoverIndicator(BaseIndicator):
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        income_col = self._find_column(data, ['operating_income', 'OPERATING_INCOME', '营业收入'])
-        ar_col = self._find_column(data, ['accounts_receivable', 'ACCOUNTS_RECEIVE', '应收账款'])
+        # Field mapping is done in API._get_financial_data
+        income_col = self._find_column(data, ['operating_income'])
+        ar_col = self._find_column(data, ['accounts_receivable'])
 
         income = data[income_col] if income_col else pd.Series([0], index=data.index)
         ar = data[ar_col] if ar_col else pd.Series([1], index=data.index)
@@ -420,8 +410,9 @@ class PayableTurnoverIndicator(BaseIndicator):
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        cost_col = self._find_column(data, ['operating_cost', 'OPERATING_COST', '营业成本'])
-        ap_col = self._find_column(data, ['accounts_payable', 'ACCOUNTS_PAYABLE', '应付账款'])
+        # Field mapping is done in API._get_financial_data
+        cost_col = self._find_column(data, ['operating_cost'])
+        ap_col = self._find_column(data, ['accounts_payable'])
 
         cost = data[cost_col] if cost_col else pd.Series([0], index=data.index)
         ap = data[ap_col] if ap_col else pd.Series([1], index=data.index)
@@ -458,9 +449,9 @@ class CfoToNetprofitIndicator(BaseIndicator):
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        # HK: 经营业务现金净额, 股东应占溢利
-        cfo_col = self._find_column(data, ['operating_cash_flow', 'OPERATE_NETCASH_BALANCE', '经营活动产生的现金流量净额', '经营业务现金净额'])
-        np_col = self._find_column(data, ['net_profit', 'NET_PROFIT', '净利润', '股东应占溢利'])
+        # Field mapping is done in API._get_financial_data
+        cfo_col = self._find_column(data, ['operating_cash_flow'])
+        np_col = self._find_column(data, ['net_profit'])
 
         cfo = data[cfo_col] if cfo_col else pd.Series([0], index=data.index)
         np = data[np_col] if np_col else pd.Series([1], index=data.index)
@@ -497,8 +488,9 @@ class FcfToRevenueIndicator(BaseIndicator):
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        fcf_col = self._find_column(data, ['free_cash_flow', 'FREE_CASH_FLOW', '自由现金流'])
-        income_col = self._find_column(data, ['operating_income', 'OPERATING_INCOME', '营业收入'])
+        # Field mapping is done in API._get_financial_data
+        fcf_col = self._find_column(data, ['free_cash_flow'])
+        income_col = self._find_column(data, ['operating_income'])
 
         fcf = data[fcf_col] if fcf_col else pd.Series([0], index=data.index)
         income = data[income_col] if income_col else pd.Series([1], index=data.index)
@@ -536,37 +528,62 @@ class LatestMarketCapIndicator(BaseIndicator):
     """
 
     name = "latest_market_cap"
+    needs = ['financial_indicator', 'prices']
     description = "最新市值 (最新收盘价 × 股数)"
     type = IndicatorType.CALCULATED
+    # 港币兑换人民币汇率 (约0.88)
+    HKD_TO_CNY = 0.88
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        provider = kwargs.get('provider')
+        # Use injected dependencies instead of kwargs.get('provider')
+        financial_indicator = kwargs.get('financial_indicator')  # Injected from registry
+        prices = kwargs.get('prices')  # Injected from registry
         stock_code = kwargs.get('stock_code')
 
-        if not provider or not stock_code:
+        # Check if dependencies are valid (use .empty for DataFrame check)
+        if (financial_indicator is None or financial_indicator.empty or
+            prices is None or prices.empty or
+            not stock_code):
             return IndicatorResult(
                 value=0.0,
                 unit="",
-                description="最新市值 (需要provider和stock_code)",
+                description="最新市值 (需要financial_indicator和prices依赖)",
                 years=[],
                 values=[]
             )
 
         try:
+            # 判断市场类型：5位代码=港股，6位代码=A股
+            is_hk = len(stock_code) == 5
+
             # 1. 从财务指标获取市值（优先使用）
-            finind = provider.get_financial_indicator(stock_code)
+            finind = financial_indicator
             if not finind.empty:
-                # 优先使用总市值字段
-                if '总市值(元)' in finind.columns:
-                    market_cap = float(finind['总市值(元)'].iloc[0])
-                    if market_cap and market_cap > 0:
-                        return IndicatorResult(
-                            value=market_cap,
-                            unit="",
-                            description=f"最新市值 (从财务指标获取)",
-                            years=[],
-                            values=[]
-                        )
+                market_cap = None
+
+                if is_hk:
+                    # 港股：优先使用港股市值字段
+                    if '总市值(港元)' in finind.columns:
+                        market_cap_hkd = float(finind['总市值(港元)'].iloc[0])
+                        if market_cap_hkd and market_cap_hkd > 0:
+                            market_cap = market_cap_hkd * self.HKD_TO_CNY
+                    elif '港股市值(港元)' in finind.columns:
+                        market_cap_hkd = float(finind['港股市值(港元)'].iloc[0])
+                        if market_cap_hkd and market_cap_hkd > 0:
+                            market_cap = market_cap_hkd * self.HKD_TO_CNY
+                else:
+                    # A股：使用人民币市值字段
+                    if '总市值(元)' in finind.columns:
+                        market_cap = float(finind['总市值(元)'].iloc[0])
+
+                if market_cap and market_cap > 0:
+                    return IndicatorResult(
+                        value=market_cap,
+                        unit="",
+                        description=f"最新市值 (从财务指标获取, {'港股' if is_hk else 'A股'})",
+                        years=[],
+                        values=[]
+                    )
 
             # 如果没有总市值字段，则尝试计算
             if finind.empty:
@@ -595,10 +612,8 @@ class LatestMarketCapIndicator(BaseIndicator):
                     values=[]
                 )
 
-            # 2. 获取最新收盘价（不复权）
-            from datetime import datetime
-            today = datetime.now().strftime("%Y%m%d")
-            hist = provider.get_historical_data(stock_code, today, adjust="")
+            # 2. 使用注入的价格数据获取最新收盘价
+            hist = prices
 
             if hist.empty:
                 return IndicatorResult(
@@ -664,9 +679,9 @@ class CfoToNetprofitSumIndicator(BaseIndicator):
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        # HK: 经营业务现金净额, 股东应占溢利
-        cfo_col = self._find_column(data, ['NETCASH_OPERATE', 'OPERATE_NETCASH_BALANCE', 'operating_cash_flow', '经营活动产生的现金流量净额', '经营业务现金净额'])
-        np_col = self._find_column(data, ['NETPROFIT', 'PARENT_NETPROFIT', 'net_profit', 'NET_PROFIT', '净利润', '股东应占溢利'])
+        # Field mapping is done in API._get_financial_data
+        cfo_col = self._find_column(data, ['operating_cash_flow'])
+        np_col = self._find_column(data, ['net_profit'])
 
         if cfo_col is None or np_col is None:
             return IndicatorResult(

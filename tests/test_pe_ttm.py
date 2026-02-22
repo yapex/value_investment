@@ -16,7 +16,7 @@ class TestPETTMIndicator:
         result = indicator.calculate(pd.DataFrame())
 
         assert result.value == 0
-        assert "需要stock_code参数" in result.description
+        assert "需要" in result.description and "依赖" in result.description
 
     def test_pe_ttm_requires_provider(self):
         """PE-TTM should require provider parameter"""

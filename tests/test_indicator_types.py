@@ -11,15 +11,10 @@ class TestIndicatorType:
         from value_investment.indicators.base import IndicatorType
         assert hasattr(IndicatorType, "RAW")
 
-    def test_indicator_type_has_simple(self):
-        """Should have SIMPLE type for simple calculated indicators"""
+    def test_indicator_type_has_calculated(self):
+        """Should have CALCULATED type for calculated indicators"""
         from value_investment.indicators.base import IndicatorType
-        assert hasattr(IndicatorType, "SIMPLE")
-
-    def test_indicator_type_has_complex(self):
-        """Should have COMPLEX type for complex calculated indicators"""
-        from value_investment.indicators.base import IndicatorType
-        assert hasattr(IndicatorType, "COMPLEX")
+        assert hasattr(IndicatorType, "CALCULATED")
 
 
 class TestIndicatorMeta:

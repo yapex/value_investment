@@ -14,6 +14,8 @@ from value_investment.indicators.simple import (
     DebtRatioIndicator,
     ReceivableTurnoverIndicator,
     PayableTurnoverIndicator,
+    CfoToNetprofitIndicator,
+    FcfToRevenueIndicator,
     CfoToNetprofitSumIndicator,
     LatestMarketCapIndicator,
 )
@@ -42,7 +44,8 @@ class IndicatorFactory:
             ROEIndicator, ROAIndicator, GrossMarginIndicator, NetProfitMarginIndicator,
             CurrentRatioIndicator, AssetTurnoverIndicator, InventoryTurnoverIndicator,
             QuickRatioIndicator, DebtRatioIndicator, ReceivableTurnoverIndicator,
-            PayableTurnoverIndicator, CfoToNetprofitSumIndicator, LatestMarketCapIndicator,
+            PayableTurnoverIndicator, CfoToNetprofitIndicator, FcfToRevenueIndicator,
+            CfoToNetprofitSumIndicator, LatestMarketCapIndicator,
         )
         from value_investment.indicators.complex import (
             ROICIndicator, CAGRIndicator, ImpliedGrowthIndicator, PEPercentileIndicator,
@@ -60,6 +63,8 @@ class IndicatorFactory:
             DebtRatioIndicator(),
             ReceivableTurnoverIndicator(),
             PayableTurnoverIndicator(),
+            CfoToNetprofitIndicator(),
+            FcfToRevenueIndicator(),
             CfoToNetprofitSumIndicator(),
             LatestMarketCapIndicator(),
             ROICIndicator(),

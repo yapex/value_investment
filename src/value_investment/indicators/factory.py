@@ -2,26 +2,34 @@
 from typing import TYPE_CHECKING, Dict
 
 from value_investment.indicators.base import BaseIndicator
-from value_investment.indicators.simple import (
+from value_investment.indicators.profitability import (
     ROEIndicator,
     ROAIndicator,
     GrossMarginIndicator,
     NetProfitMarginIndicator,
+)
+from value_investment.indicators.solvency import (
     CurrentRatioIndicator,
-    AssetTurnoverIndicator,
-    InventoryTurnoverIndicator,
     QuickRatioIndicator,
     DebtRatioIndicator,
+)
+from value_investment.indicators.efficiency import (
+    AssetTurnoverIndicator,
+    InventoryTurnoverIndicator,
     ReceivableTurnoverIndicator,
     PayableTurnoverIndicator,
+)
+from value_investment.indicators.cashflow import (
     CfoToNetprofitIndicator,
     FcfToRevenueIndicator,
     CfoToNetprofitSumIndicator,
-    LatestMarketCapIndicator,
 )
-from value_investment.indicators.complex import (
+from value_investment.indicators.growth import (
     ROICIndicator,
     CAGRIndicator,
+)
+from value_investment.indicators.valuation import (
+    LatestMarketCapIndicator,
     ImpliedGrowthIndicator,
     PEPercentileIndicator,
 )
@@ -40,15 +48,24 @@ class IndicatorFactory:
 
     def _register_default_indicators(self) -> None:
         """Register all default indicators"""
-        from value_investment.indicators.simple import (
+        from value_investment.indicators.profitability import (
             ROEIndicator, ROAIndicator, GrossMarginIndicator, NetProfitMarginIndicator,
-            CurrentRatioIndicator, AssetTurnoverIndicator, InventoryTurnoverIndicator,
-            QuickRatioIndicator, DebtRatioIndicator, ReceivableTurnoverIndicator,
-            PayableTurnoverIndicator, CfoToNetprofitIndicator, FcfToRevenueIndicator,
-            CfoToNetprofitSumIndicator, LatestMarketCapIndicator,
         )
-        from value_investment.indicators.complex import (
-            ROICIndicator, CAGRIndicator, ImpliedGrowthIndicator, PEPercentileIndicator,
+        from value_investment.indicators.solvency import (
+            CurrentRatioIndicator, QuickRatioIndicator, DebtRatioIndicator,
+        )
+        from value_investment.indicators.efficiency import (
+            AssetTurnoverIndicator, InventoryTurnoverIndicator,
+            ReceivableTurnoverIndicator, PayableTurnoverIndicator,
+        )
+        from value_investment.indicators.cashflow import (
+            CfoToNetprofitIndicator, FcfToRevenueIndicator, CfoToNetprofitSumIndicator,
+        )
+        from value_investment.indicators.growth import (
+            ROICIndicator, CAGRIndicator,
+        )
+        from value_investment.indicators.valuation import (
+            LatestMarketCapIndicator, ImpliedGrowthIndicator, PEPercentileIndicator,
         )
 
         indicators = [

@@ -59,7 +59,7 @@ def test_api_get_financial_data_uses_field_mapping():
 
 def test_indicator_works_with_mapped_fields():
     """Verify that indicators can work with mapped (standardized) field names"""
-    from value_investment.indicators.simple import ROEIndicator
+    from value_investment.indicators.profitability import ROEIndicator
     import pandas as pd
 
     # Create data with standardized field names (after mapping)

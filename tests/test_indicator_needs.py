@@ -1,6 +1,5 @@
 import pytest
-from value_investment.indicators.simple import LatestMarketCapIndicator
-from value_investment.indicators.complex import ImpliedGrowthIndicator, PEPercentileIndicator
+from value_investment.indicators.valuation import LatestMarketCapIndicator, ImpliedGrowthIndicator, PEPercentileIndicator
 
 def test_latest_market_cap_has_needs():
     indicator = LatestMarketCapIndicator()

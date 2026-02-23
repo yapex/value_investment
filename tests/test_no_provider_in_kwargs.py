@@ -3,7 +3,7 @@ import re
 
 def test_latest_market_cap_no_provider_kwarg():
     """LatestMarketCapIndicator should not use kwargs.get('provider') in code"""
-    from value_investment.indicators.simple import LatestMarketCapIndicator
+    from value_investment.indicators.valuation import LatestMarketCapIndicator
     import inspect
 
     indicator = LatestMarketCapIndicator()
@@ -17,7 +17,7 @@ def test_latest_market_cap_no_provider_kwarg():
 
 def test_implied_growth_no_provider_kwarg():
     """ImpliedGrowthIndicator should not use kwargs.get('provider') in code"""
-    from value_investment.indicators.complex import ImpliedGrowthIndicator
+    from value_investment.indicators.valuation import ImpliedGrowthIndicator
     import inspect
 
     indicator = ImpliedGrowthIndicator()
@@ -31,7 +31,7 @@ def test_implied_growth_no_provider_kwarg():
 
 def test_pe_percentile_no_provider_kwarg():
     """PEPercentileIndicator should not use kwargs.get('provider') in code"""
-    from value_investment.indicators.complex import PEPercentileIndicator
+    from value_investment.indicators.valuation import PEPercentileIndicator
     import inspect
 
     indicator = PEPercentileIndicator()

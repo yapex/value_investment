@@ -10,7 +10,7 @@ class TestPETTMIndicator:
 
     def test_pe_ttm_requires_stock_code(self):
         """PE-TTM should require stock_code parameter"""
-        from value_investment.indicators.complex import PEPercentileIndicator
+        from value_investment.indicators.valuation import PEPercentileIndicator
 
         indicator = PEPercentileIndicator()
         result = indicator.calculate(pd.DataFrame())
@@ -20,7 +20,7 @@ class TestPETTMIndicator:
 
     def test_pe_ttm_requires_provider(self):
         """PE-TTM should require provider parameter"""
-        from value_investment.indicators.complex import PEPercentileIndicator
+        from value_investment.indicators.valuation import PEPercentileIndicator
 
         indicator = PEPercentileIndicator()
         result = indicator.calculate(pd.DataFrame(), stock_code="600519")
@@ -30,7 +30,7 @@ class TestPETTMIndicator:
 
     def test_pe_ttm_with_a_stock_quarterly_data(self):
         """Should calculate PE-TTM with A股 quarterly data"""
-        from value_investment.indicators.complex import PEPercentileIndicator
+        from value_investment.indicators.valuation import PEPercentileIndicator
 
         # Create mock provider with quarterly data
         mock_provider = MagicMock()
@@ -80,7 +80,7 @@ class TestPETTMIndicator:
 
     def test_pe_ttm_fallback_to_annual(self):
         """Should fallback to annual PE when quarterly data is insufficient"""
-        from value_investment.indicators.complex import PEPercentileIndicator
+        from value_investment.indicators.valuation import PEPercentileIndicator
 
         # Create mock provider with empty quarterly data
         mock_provider = MagicMock()
@@ -165,7 +165,7 @@ class TestPEPctPercentileCalculation:
 
     def test_percentile_ranking_formula(self):
         """Test percentile calculation uses ranking formula"""
-        from value_investment.indicators.complex import PEPercentileIndicator
+        from value_investment.indicators.valuation import PEPercentileIndicator
 
         # Test with specific PE values
         pe_list = [10, 15, 20, 25, 30, 35, 40, 45, 50]

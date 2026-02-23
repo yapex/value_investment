@@ -99,7 +99,7 @@ class TestHKIndicatorsCalculation:
 
     def test_gross_margin_calculation(self):
         """Should calculate gross margin correctly"""
-        from value_investment.indicators.simple import GrossMarginIndicator
+        from value_investment.indicators.profitability import GrossMarginIndicator
 
         # Create mock data with standardized field names
         data = pd.DataFrame({
@@ -118,7 +118,7 @@ class TestHKIndicatorsCalculation:
 
     def test_current_ratio_calculation(self):
         """Should calculate current ratio correctly"""
-        from value_investment.indicators.simple import CurrentRatioIndicator
+        from value_investment.indicators.solvency import CurrentRatioIndicator
 
         data = pd.DataFrame({
             'year': [2023, 2022],
@@ -135,7 +135,7 @@ class TestHKIndicatorsCalculation:
 
     def test_quick_ratio_calculation(self):
         """Should calculate quick ratio correctly"""
-        from value_investment.indicators.simple import QuickRatioIndicator
+        from value_investment.indicators.solvency import QuickRatioIndicator
 
         data = pd.DataFrame({
             'year': [2023, 2022],
@@ -153,7 +153,7 @@ class TestHKIndicatorsCalculation:
 
     def test_debt_ratio_calculation(self):
         """Should calculate debt ratio correctly"""
-        from value_investment.indicators.simple import DebtRatioIndicator
+        from value_investment.indicators.solvency import DebtRatioIndicator
 
         data = pd.DataFrame({
             'year': [2023, 2022],
@@ -170,7 +170,7 @@ class TestHKIndicatorsCalculation:
 
     def test_inventory_turnover_calculation(self):
         """Should calculate inventory turnover correctly"""
-        from value_investment.indicators.simple import InventoryTurnoverIndicator
+        from value_investment.indicators.efficiency import InventoryTurnoverIndicator
 
         data = pd.DataFrame({
             'year': [2023, 2022],
@@ -187,7 +187,7 @@ class TestHKIndicatorsCalculation:
 
     def test_receivable_turnover_calculation(self):
         """Should calculate receivable turnover correctly"""
-        from value_investment.indicators.simple import ReceivableTurnoverIndicator
+        from value_investment.indicators.efficiency import ReceivableTurnoverIndicator
 
         data = pd.DataFrame({
             'year': [2023, 2022],
@@ -204,7 +204,7 @@ class TestHKIndicatorsCalculation:
 
     def test_asset_turnover_calculation(self):
         """Should calculate asset turnover correctly"""
-        from value_investment.indicators.simple import AssetTurnoverIndicator
+        from value_investment.indicators.efficiency import AssetTurnoverIndicator
 
         data = pd.DataFrame({
             'year': [2023, 2022],

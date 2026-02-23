@@ -1,6 +1,6 @@
 import pytest
 from value_investment.indicators.base import IIndicator
-from value_investment.indicators.simple import ROEIndicator
+from value_investment.indicators.profitability import ROEIndicator
 
 def test_indicator_implements_protocol():
     """ROEIndicator should satisfy IIndicator Protocol"""

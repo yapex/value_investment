@@ -1,217 +1,158 @@
-"""Complex financial indicators: ROIC, DCF, CAGR."""
+"""Valuation indicators: Latest Market Cap, Implied Growth, PE Percentile."""
 from typing import List
 import pandas as pd
 
 from value_investment.indicators.base import BaseIndicator, IndicatorResult, IndicatorType
 
 
-class ROICIndicator(BaseIndicator):
+class LatestMarketCapIndicator(BaseIndicator):
     """
-    Return on Invested Capital = NOPAT / Invested Capital
+    最新市值指标
 
-    Invested Capital = Shareholders' Equity + Interest-bearing Debt - Cash and Deposits
-
-    This is the classic ROIC definition that reflects capital actually used in operations.
-    Cash and deposits are subtracted because they don't generate operating returns.
-
-    NOPAT = Net Operating Profit After Tax = Operating Income * (1 - Tax Rate)
+    通过最新收盘价（不复权）* 股数计算当前市值。
+    用于 ImpliedGrowth 等需要最新市值的指标。
     """
 
-    name = "ROIC"
-    description = "Return on Invested Capital (NOPAT / Invested Capital)"
+    name = "latest_market_cap"
+    needs = ['financial_indicator', 'prices']
+    description = "最新市值 (最新收盘价 × 股数)"
     type = IndicatorType.CALCULATED
+    # 港币兑换人民币汇率 (约0.88)
+    HKD_TO_CNY = 0.88
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        # Get parameters
-        tax_rate = kwargs.get("tax_rate", None)  # Default: auto-detect from data
-        use_avg_invested = kwargs.get("use_avg_invested", True)  # Use 2-year average by default
+        # Use injected dependencies instead of kwargs.get('provider')
+        financial_indicator = kwargs.get('financial_indicator')  # Injected from registry
+        prices = kwargs.get('prices')  # Injected from registry
+        stock_code = kwargs.get('stock_code')
 
-        # Field mapping is done in API._get_financial_data, so we use standardized field names
-        operating_income_col = self._find_column(data, ['operating_profit'])
-        operating_income = data[operating_income_col] if operating_income_col else pd.Series([0], index=data.index)
-
-        # Try to get actual tax rate from data if not provided
-        if tax_rate is None:
-            tax_expense_col = self._find_column(data, ['income_tax'])
-            pretax_income_col = self._find_column(data, ['total_profit'])
-
-            if tax_expense_col and pretax_income_col:
-                # Calculate actual tax rate row by row for each year
-                tax_rates = data[tax_expense_col] / data[pretax_income_col]
-                tax_rates = tax_rates.fillna(0.25)
-                # Replace invalid values (inf, negative, >50%)
-                tax_rates = tax_rates.replace([float('inf'), -float('inf')], 0.25)
-                tax_rates = tax_rates.apply(lambda x: x if 0 < x < 0.5 else 0.25)
-                # Use per-year tax rates for NOPAT calculation
-                tax_rate_series = tax_rates
-            else:
-                tax_rate_series = pd.Series([0.25] * len(data), index=data.index)
-        else:
-            tax_rate_series = pd.Series([float(tax_rate)] * len(data), index=data.index)
-
-        # NOPAT = Operating Income * (1 - Tax Rate) - use per-year tax rates
-        nopat = operating_income * (1 - tax_rate_series)
-
-        # === Classic ROIC Method ===
-        # Invested Capital = Shareholders' Equity + Interest-bearing Debt - Cash and Deposits
-
-        # 1. Get Total Equity
-        equity_col = self._find_column(data, ['total_equity'])
-        total_equity = data[equity_col].fillna(0) if equity_col is not None else pd.Series([0], index=data.index)
-
-        # 2. Get Interest-bearing Debt
-        debt = pd.Series(0, index=data.index)
-
-        # Short-term debt
-        short_debt_col = self._find_column(data, ['short_term_debt'])
-        if short_debt_col is not None:
-            debt = debt + data[short_debt_col].fillna(0)
-
-        # Long-term debt
-        long_debt_col = self._find_column(data, ['long_term_debt'])
-        if long_debt_col is not None:
-            debt = debt + data[long_debt_col].fillna(0)
-
-        # Bonds payable
-        bonds_col = self._find_column(data, ['bonds_payable'])
-        if bonds_col is not None:
-            debt = debt + data[bonds_col].fillna(0)
-
-        # 3. Get Cash and Deposits
-        cash = pd.Series(0, index=data.index)
-
-        # Cash and cash equivalents
-        cash_col = self._find_column(data, ['cash_and_equivalents'])
-        if cash_col is not None:
-            cash = cash + data[cash_col].fillna(0)
-
-        # Note: 受限制存款及现金 (restricted cash) is intentionally NOT included
-        # as it's not available for general business use and shouldn't be
-        # subtracted from invested capital for ROIC calculation
-
-        # Calculate Invested Capital
-        invested_capital = total_equity + debt - cash
-
-        # Use average invested capital if requested (2-year average)
-        if use_avg_invested and len(invested_capital) >= 2:
-            # Data is sorted descending by year (2024, 2023, ...)
-            # Calculate 2-year average: (current + previous) / 2
-            # For 2024: (2024 + 2023) / 2
-            # For 2023: (2023 + 2022) / 2
-            # Use bfill to handle first row: it will pair with the next available year
-            invested_capital_shifted = invested_capital.shift(1)
-            invested_capital_shifted.iloc[0] = invested_capital.iloc[1]  # Use 2023 for 2024
-            invested_capital_avg = (invested_capital + invested_capital_shifted) / 2
-            invested_capital = invested_capital_avg
-
-        # ROIC = NOPAT / Invested Capital
-        # Handle NaN values: convert to 0, then replace 0 with NA to drop invalid rows
-        invested_capital_clean = invested_capital.fillna(0).replace(0, pd.NA)
-        roic = nopat / invested_capital_clean * 100
-        roic = roic.dropna()
-
-        return IndicatorResult(
-            value=float(roic.mean()) if len(roic) > 0 else 0.0,
-            unit="%",
-            description="Return on Invested Capital (NOPAT / Invested Capital)",
-            years=data['year'].tolist() if 'year' in data.columns else [],
-            values=roic.tolist() if len(roic) > 0 else []
-        )
-
-    def get_required_fields(self) -> List[str]:
-        return ['operating_profit', 'total_assets', 'accounts_payable', 'advance_receivables', 'TAX_PAYABLE', 'OTHER_PAYABLE']
-
-    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
-        """Find first matching column from candidates"""
-        for col in candidates:
-            if col in df.columns:
-                return col
-        # Try case-insensitive search
-        for col in df.columns:
-            for cand in candidates:
-                if cand.lower() in col.lower():
-                    return col
-        return None
-
-
-class CAGRIndicator(BaseIndicator):
-    """
-    Compound Annual Growth Rate = (End Value / Start Value)^(1/years) - 1
-
-    Can calculate for revenue, earnings, or any metric.
-    """
-
-    name = "CAGR"
-    description = "Compound Annual Growth Rate"
-    type = IndicatorType.CALCULATED
-
-    def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        metric = kwargs.get("metric", "revenue")
-
-        # Define column mappings for each metric (standardized field names after mapping)
-        metric_columns = {
-            "revenue": ['operating_income', 'total_revenue'],
-            "net_profit": ['net_profit', 'parent_net_profit'],
-            "total_assets": ['total_assets'],
-            "total_equity": ['total_equity']
-        }
-
-        # Get candidates for the specific metric
-        candidates = metric_columns.get(metric, [metric])
-
-        # Find the metric column
-        metric_col = self._find_column(data, candidates)
-
-        if not metric_col:
+        # Check if dependencies are valid (use .empty for DataFrame check)
+        if (financial_indicator is None or financial_indicator.empty or
+            prices is None or prices.empty or
+            not stock_code):
             return IndicatorResult(
                 value=0.0,
-                unit="%",
-                description=f"CAGR for {metric}",
+                unit="",
+                description="最新市值 (需要financial_indicator和prices依赖)",
                 years=[],
                 values=[]
             )
 
-        values = data[metric_col]
+        try:
+            # 判断市场类型：5位代码=港股，6位代码=A股
+            is_hk = len(stock_code) == 5
 
-        # Need at least 2 data points
-        if len(values) < 2:
+            # 1. 从财务指标获取市值（优先使用）
+            finind = financial_indicator
+            if not finind.empty:
+                market_cap = None
+
+                if is_hk:
+                    # 港股：优先使用内部标准字段 (hk_market_cap)
+                    if 'hk_market_cap' in finind.columns:
+                        market_cap_hkd = float(finind['hk_market_cap'].iloc[0])
+                        if market_cap_hkd and market_cap_hkd > 0:
+                            market_cap = market_cap_hkd * self.HKD_TO_CNY
+                    elif 'market_cap_hkd' in finind.columns:
+                        market_cap_hkd = float(finind['market_cap_hkd'].iloc[0])
+                        if market_cap_hkd and market_cap_hkd > 0:
+                            market_cap = market_cap_hkd * self.HKD_TO_CNY
+                    elif '总市值(港元)' in finind.columns:
+                        market_cap_hkd = float(finind['总市值(港元)'].iloc[0])
+                        if market_cap_hkd and market_cap_hkd > 0:
+                            market_cap = market_cap_hkd * self.HKD_TO_CNY
+                else:
+                    # A股：优先使用内部标准字段 (a_market_cap)
+                    if 'a_market_cap' in finind.columns:
+                        market_cap = float(finind['a_market_cap'].iloc[0])
+                    elif 'market_cap_cny' in finind.columns:
+                        market_cap = float(finind['market_cap_cny'].iloc[0])
+                    elif '总市值(元)' in finind.columns:
+                        market_cap = float(finind['总市值(元)'].iloc[0])
+
+                if market_cap and market_cap > 0:
+                    return IndicatorResult(
+                        value=market_cap,
+                        unit="",
+                        description=f"最新市值 (从财务指标获取, {'港股' if is_hk else 'A股'})",
+                        years=[],
+                        values=[]
+                    )
+
+            # 如果没有总市值字段，则尝试计算
+            if finind.empty:
+                return IndicatorResult(
+                    value=0.0,
+                    unit="",
+                    description="最新市值 (无法获取财务指标)",
+                    years=[],
+                    values=[]
+                )
+
+            # 获取股本 - 支持多市场字段
+            total_shares = None
+            shares_cols = ['已发行股本(股)', 'total_shares', '总股本']
+            for col in shares_cols:
+                if col in finind.columns:
+                    total_shares = float(finind[col].iloc[0])
+                    break
+
+            if not total_shares or total_shares <= 0:
+                return IndicatorResult(
+                    value=0.0,
+                    unit="",
+                    description="最新市值 (无法获取股本)",
+                    years=[],
+                    values=[]
+                )
+
+            # 2. 使用注入的价格数据获取最新收盘价
+            hist = prices
+
+            if hist.empty:
+                return IndicatorResult(
+                    value=0.0,
+                    unit="",
+                    description="最新市值 (无法获取历史数据)",
+                    years=[],
+                    values=[]
+                )
+
+            # 获取最新收盘价
+            close_col = '收盘' if '收盘' in hist.columns else 'close'
+            latest_price = float(hist[close_col].iloc[-1])
+
+            if latest_price <= 0:
+                return IndicatorResult(
+                    value=0.0,
+                    unit="",
+                    description="最新市值 (股价无效)",
+                    years=[],
+                    values=[]
+                )
+
+            # 3. 计算市值
+            market_cap = latest_price * total_shares
+
             return IndicatorResult(
-                value=0.0,
-                unit="%",
-                description=f"CAGR for {metric}",
+                value=market_cap,
+                unit="",
+                description=f"最新市值 (股价={latest_price:.2f}, 股本={total_shares/1e8:.2f}亿)",
                 years=[],
                 values=[]
             )
 
-        # Sort by year to ensure correct order (ascending)
-        if 'year' in data.columns:
-            sorted_idx = data['year'].argsort()
-            values = values.iloc[sorted_idx]
-
-        start_value = values.iloc[0]  # Earliest year
-        end_value = values.iloc[-1]   # Latest year
-        years = len(values) - 1  # Period is (n-1) years for n data points
-
-        if start_value <= 0 or end_value <= 0:
-            cagr = 0.0
-        else:
-            cagr = ((end_value / start_value) ** (1 / years) - 1) * 100
-
-        # Build years list - use actual years from data if available
-        years_list = data['year'].tolist() if 'year' in data.columns else []
-        if not years_list:
-            years_list = list(range(len(values)))
-
-        return IndicatorResult(
-            value=cagr,
-            unit="%",
-            description=f"Compound Annual Growth Rate for {metric}",
-            years=years_list,
-            values=[]  # CAGR is a period metric, show only value not per-year
-        )
+        except Exception as e:
+            return IndicatorResult(
+                value=0.0,
+                unit="",
+                description=f"最新市值 (计算错误: {str(e)})",
+                years=[],
+                values=[]
+            )
 
     def get_required_fields(self) -> List[str]:
-        return ['revenue']
+        return []
 
     def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
         for col in candidates:
@@ -261,7 +202,7 @@ class ImpliedGrowthIndicator(BaseIndicator):
             if finind_valid and prices_valid and stock_code:
                 try:
                     # 使用 LatestMarketCapIndicator 获取市值
-                    from value_investment.indicators.simple import LatestMarketCapIndicator
+                    from value_investment.indicators.valuation import LatestMarketCapIndicator
                     mc_indicator = LatestMarketCapIndicator()
                     mc_result = mc_indicator.calculate(pd.DataFrame(), financial_indicator=financial_indicator, prices=prices, stock_code=stock_code)
                     if mc_result and mc_result.value > 0:
@@ -383,8 +324,6 @@ class ImpliedGrowthIndicator(BaseIndicator):
         return None
 
 
-
-
 class PEPercentileIndicator(BaseIndicator):
     """
     PE历史百分位
@@ -447,15 +386,16 @@ class PEPercentileIndicator(BaseIndicator):
         if quarterly_data.empty or prices_data.empty:
             return None
 
-        # 检测是否为港股（港股有 DATE_TYPE_CODE 字段）
-        is_hk = 'DATE_TYPE_CODE' in quarterly_data.columns
+        # 检测是否为港股（港股有 date_type_code 字段）
+        is_hk = 'date_type_code' in quarterly_data.columns
 
         if is_hk:
             return self._calculate_hk_pe_ttm_percentile_with_data(quarterly_data, prices_data, stock_code, years)
 
         # A股处理逻辑 - 提取净利润列
+        # 优先使用内部标准字段名，其次兼容原始字段名
         net_profit_col = None
-        for col in ['净利润', 'NETPROFIT']:
+        for col in ['net_profit']:
             if col in quarterly_data.columns:
                 net_profit_col = col
                 break
@@ -464,11 +404,17 @@ class PEPercentileIndicator(BaseIndicator):
             return None
 
         # 提取报告期和净利润
-        if '报告期' not in quarterly_data.columns:
+        report_col = None
+        for col in ['report_date']:
+            if col in quarterly_data.columns:
+                report_col = col
+                break
+
+        if not report_col:
             return None
 
         data = quarterly_data.copy()
-        data['_quarter_date'] = pd.to_datetime(data['报告期'], errors='coerce')
+        data['_quarter_date'] = pd.to_datetime(data[report_col], errors='coerce')
         data = data.dropna(subset=['_quarter_date', net_profit_col])
         data = data.sort_values('_quarter_date')
 
@@ -610,15 +556,15 @@ class PEPercentileIndicator(BaseIndicator):
             return None
 
         # 检测是否为港股（港股有 DATE_TYPE_CODE 字段）
-        is_hk = 'DATE_TYPE_CODE' in quarterly_data.columns
+        is_hk = 'date_type_code' in quarterly_data.columns
 
         if is_hk:
             return self._calculate_hk_pe_ttm_percentile(quarterly_data, provider, stock_code, years)
 
         # A股处理逻辑
-        # 检查是否有净利润字段
+        # 检查是否有净利润字段（优先使用内部标准字段）
         net_profit_col = None
-        for col in ['净利润', 'NETPROFIT']:
+        for col in ['net_profit']:
             if col in quarterly_data.columns:
                 net_profit_col = col
                 break
@@ -627,11 +573,17 @@ class PEPercentileIndicator(BaseIndicator):
             return None
 
         # 2. 提取报告期和净利润
-        if '报告期' not in quarterly_data.columns:
+        report_col = None
+        for col in ['report_date']:
+            if col in quarterly_data.columns:
+                report_col = col
+                break
+
+        if not report_col:
             return None
 
         quarterly_data = quarterly_data.copy()
-        quarterly_data['_quarter_date'] = pd.to_datetime(quarterly_data['报告期'], errors='coerce')
+        quarterly_data['_quarter_date'] = pd.to_datetime(quarterly_data[report_col], errors='coerce')
         quarterly_data = quarterly_data.dropna(subset=['_quarter_date', net_profit_col])
         quarterly_data = quarterly_data.sort_values('_quarter_date')
 
@@ -673,7 +625,7 @@ class PEPercentileIndicator(BaseIndicator):
         total_shares = None
 
         # 优先从财务指标获取股本
-        for col in ['已发行股本(股)', 'total_shares', '总股本']:
+        for col in ['total_shares']:
             if col in finind.columns:
                 total_shares = float(finind[col].iloc[0])
                 break
@@ -744,7 +696,7 @@ class PEPercentileIndicator(BaseIndicator):
 
         if not current_pe or current_pe <= 0:
             # 使用最新市值计算当前PE-TTM
-            from value_investment.indicators.simple import LatestMarketCapIndicator
+            from value_investment.indicators.valuation import LatestMarketCapIndicator
             mc_indicator = LatestMarketCapIndicator()
             mc_result = mc_indicator.calculate(pd.DataFrame(), provider=provider, stock_code=stock_code)
             if mc_result and mc_result.value > 0:
@@ -781,14 +733,19 @@ class PEPercentileIndicator(BaseIndicator):
         if quarterly_data.empty or prices_data.empty:
             return None
 
-        # 港股字段映射
-        net_profit_col = 'HOLDER_PROFIT'  # 股东应占溢利
-        if net_profit_col not in quarterly_data.columns:
+        # 港股字段映射 - 优先使用内部标准字段
+        net_profit_col = None
+        for col in ['parent_net_profit']:
+            if col in quarterly_data.columns:
+                net_profit_col = col
+                break
+        if not net_profit_col:
             return None
 
-        # 处理数据
+        # 处理数据 - 优先使用内部标准字段
         data = quarterly_data.copy()
-        data['_report_date'] = pd.to_datetime(data['REPORT_DATE'], errors='coerce')
+        report_col = 'report_date' if 'report_date' in data.columns else 'REPORT_DATE'
+        data['_report_date'] = pd.to_datetime(data[report_col], errors='coerce')
         data = data.dropna(subset=['_report_date', net_profit_col])
         data = data.sort_values('_report_date')
 
@@ -865,14 +822,19 @@ class PEPercentileIndicator(BaseIndicator):
         from datetime import datetime
         import pandas as pd
 
-        # 港股字段映射
-        net_profit_col = 'HOLDER_PROFIT'  # 股东应占溢利
-        if net_profit_col not in quarterly_data.columns:
+        # 港股字段映射 - 优先使用内部标准字段
+        net_profit_col = None
+        for col in ['parent_net_profit']:
+            if col in quarterly_data.columns:
+                net_profit_col = col
+                break
+        if not net_profit_col:
             return None
 
-        # 处理数据
+        # 处理数据 - 优先使用内部标准字段
         data = quarterly_data.copy()
-        data['_report_date'] = pd.to_datetime(data['REPORT_DATE'], errors='coerce')
+        report_col = 'report_date' if 'report_date' in data.columns else 'REPORT_DATE'
+        data['_report_date'] = pd.to_datetime(data[report_col], errors='coerce')
         data = data.dropna(subset=['_report_date', net_profit_col])
         data = data.sort_values('_report_date')
 
@@ -1004,7 +966,7 @@ class PEPercentileIndicator(BaseIndicator):
 
         if not current_pe or current_pe <= 0:
             # 使用最新市值和最新TTM计算
-            from value_investment.indicators.simple import LatestMarketCapIndicator
+            from value_investment.indicators.valuation import LatestMarketCapIndicator
             mc_indicator = LatestMarketCapIndicator()
             mc_result = mc_indicator.calculate(pd.DataFrame(), provider=provider, stock_code=stock_code)
             if mc_result and mc_result.value > 0 and ttm_list:
@@ -1035,7 +997,7 @@ class PEPercentileIndicator(BaseIndicator):
     def _calculate_annual_pe_percentile(self, provider, stock_code: str, years: int):
         """使用年度PE计算百分位（原有逻辑）"""
         # 1. 获取最新市值（用于当前PE计算）
-        from value_investment.indicators.simple import LatestMarketCapIndicator
+        from value_investment.indicators.valuation import LatestMarketCapIndicator
         mc_indicator = LatestMarketCapIndicator()
         mc_result = mc_indicator.calculate(pd.DataFrame(), provider=provider, stock_code=stock_code)
 
@@ -1083,15 +1045,15 @@ class PEPercentileIndicator(BaseIndicator):
         total_shares = None
         current_market_cap_field = None
 
-        # 优先使用总市值字段（A股用元，港股用港元）
-        for cap_col in ['总市值(元)', '总市值(港元)']:
+        # 优先使用内部标准市值字段 (带市场前缀)
+        for cap_col in ['a_market_cap', 'hk_market_cap', 'us_market_cap', 'market_cap_cny', 'market_cap_hkd', '总市值(元)', '总市值(港元)']:
             if cap_col in finind.columns:
                 current_market_cap_field = float(finind[cap_col].iloc[0])
                 if current_market_cap_field and current_market_cap_field > 0:
                     break
 
         # 尝试获取股本（优先从财务指标，A股和港股都可能有）
-        for col in ['已发行股本(股)', 'total_shares', '总股本']:
+        for col in ['total_shares', '已发行股本(股)', '总股本']:
             if col in finind.columns:
                 total_shares = float(finind[col].iloc[0])
                 if total_shares and total_shares > 0:
@@ -1138,9 +1100,9 @@ class PEPercentileIndicator(BaseIndicator):
                 values=[]
             )
 
-        # 提取净利润列 - 优先使用股东应占溢利/除税后溢利
+        # 提取净利润列 - 优先使用内部标准字段
         net_profit_col = None
-        priority_cols = ['股东应占溢利', '除税后溢利', '净利润', 'NETPROFIT', 'net_profit']
+        priority_cols = ['parent_net_profit', 'profit_after_tax', 'net_profit', '股东应占溢利', '除税后溢利', '净利润', 'NETPROFIT']
         for col in profit_sheet.columns:
             if col in priority_cols:
                 net_profit_col = col

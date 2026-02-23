@@ -9,7 +9,7 @@ class TestHKROICIndicator:
 
     def test_roic_with_hk_field_names(self):
         """Should calculate ROIC with standardized field names"""
-        from value_investment.indicators.complex import ROICIndicator
+        from value_investment.indicators.growth import ROICIndicator
 
         # Use standardized field names
         data = pd.DataFrame({
@@ -35,7 +35,7 @@ class TestHKROICIndicator:
 
     def test_roic_find_column_hk_fields(self):
         """Should find columns with standardized field names"""
-        from value_investment.indicators.complex import ROICIndicator
+        from value_investment.indicators.growth import ROICIndicator
 
         indicator = ROICIndicator()
 
@@ -60,7 +60,7 @@ class TestHKCAGRIndicator:
 
     def test_cagr_revenue_with_hk_fields(self):
         """Should calculate CAGR with standardized revenue fields"""
-        from value_investment.indicators.complex import CAGRIndicator
+        from value_investment.indicators.growth import CAGRIndicator
 
         # Use standardized field names
         data = pd.DataFrame({
@@ -77,7 +77,7 @@ class TestHKCAGRIndicator:
 
     def test_cagr_net_profit_with_hk_fields(self):
         """Should calculate CAGR with standardized net profit fields"""
-        from value_investment.indicators.complex import CAGRIndicator
+        from value_investment.indicators.growth import CAGRIndicator
 
         # Use standardized field names
         data = pd.DataFrame({
@@ -93,7 +93,7 @@ class TestHKCAGRIndicator:
 
     def test_cagr_find_column_hk_fields(self):
         """Should find columns with standardized field names"""
-        from value_investment.indicators.complex import CAGRIndicator
+        from value_investment.indicators.growth import CAGRIndicator
 
         indicator = CAGRIndicator()
 
@@ -118,7 +118,7 @@ class TestHKImpliedGrowthIndicator:
 
     def test_implied_growth_with_hk_fields(self):
         """Should calculate implied growth with standardized cash flow fields"""
-        from value_investment.indicators.complex import ImpliedGrowthIndicator
+        from value_investment.indicators.valuation import ImpliedGrowthIndicator
 
         # Use standardized field names
         data = pd.DataFrame({
@@ -137,7 +137,7 @@ class TestHKImpliedGrowthIndicator:
 
     def test_implied_growth_find_column_hk_fields(self):
         """Should find columns with HK field names"""
-        from value_investment.indicators.complex import ImpliedGrowthIndicator
+        from value_investment.indicators.valuation import ImpliedGrowthIndicator
 
         indicator = ImpliedGrowthIndicator()
 
@@ -157,7 +157,7 @@ class TestHKPEPctIndicator:
 
     def test_pe_pct_requires_provider(self):
         """PEPct should require provider for HK stocks"""
-        from value_investment.indicators.complex import PEPercentileIndicator
+        from value_investment.indicators.valuation import PEPercentileIndicator
 
         data = pd.DataFrame({
             'year': [2023, 2022, 2021],
@@ -172,7 +172,7 @@ class TestHKPEPctIndicator:
 
     def test_pe_pct_with_mock_hk_provider(self):
         """Should calculate PE percentile with HK mock data"""
-        from value_investment.indicators.complex import PEPercentileIndicator
+        from value_investment.indicators.valuation import PEPercentileIndicator
 
         # Create mock provider
         mock_provider = MagicMock()
@@ -220,7 +220,7 @@ class TestHKPEPctIndicator:
 
     def test_pe_pct_find_column_hk_fields(self):
         """Should find columns with standardized field names"""
-        from value_investment.indicators.complex import PEPercentileIndicator
+        from value_investment.indicators.valuation import PEPercentileIndicator
 
         # PEPercentileIndicator uses dependency injection (quarterly, prices)
         # instead of _find_column, so no need to test _find_column here
@@ -243,7 +243,7 @@ class TestHKComplexIndicatorsIntegration:
 
     def test_cagr_with_multiple_metrics_hk(self):
         """CAGR should work with different metrics using standardized fields"""
-        from value_investment.indicators.complex import CAGRIndicator
+        from value_investment.indicators.growth import CAGRIndicator
 
         # Test with equity (standardized field name after DataMapper mapping)
         data = pd.DataFrame({

@@ -11,25 +11,31 @@ class TestHKROICIndicator:
         """Should calculate ROIC with standardized field names"""
         from value_investment.indicators.growth import ROICIndicator
 
-        # Use standardized field names
+        # Use standardized field names (Method 3)
+        # NOPAT = net_profit + interest_expense * (1 - tax_rate)
+        # Invested Capital = total_equity + interest-bearing debt (no cash subtraction)
         data = pd.DataFrame({
             'year': [2023, 2022],
-            'operating_profit': [50000, 45000],
+            'net_profit': [40000, 36000],
+            'interest_expense': [1000, 900],
+            'total_profit': [50000, 45000],
+            'income_tax': [12500, 11250],
             'total_equity': [1000000, 900000],
             'short_term_debt': [50000, 40000],
             'long_term_debt': [100000, 90000],
-            'cash_and_equivalents': [80000, 70000],
+            'lease_liability': [5000, 4500],
+            'noncurrent_liability_due_1y': [3000, 2700],
         })
 
         indicator = ROICIndicator()
         result = indicator.calculate(data, tax_rate=0.25)
 
         # 2023:
-        # NOPAT = 50000 * (1 - 0.25) = 37500
-        # Debt = 50000 + 100000 = 150000
-        # Cash = 80000 + 30000 + 10000 = 120000
-        # Invested Capital = 1000000 + 150000 - 120000 = 1030000
-        # ROIC = 37500 / 1030000 * 100 = 3.64%
+        # NOPAT = 40000 + 1000 * (1 - 0.25) = 40000 + 750 = 40750
+        # Debt = 50000 + 100000 + 5000 + 3000 = 158000
+        # Invested Capital = 1000000 + 158000 = 1158000
+        # 2-year avg = (1158000 + (900000 + 136200)) / 2 = 1146600
+        # ROIC = 40750 / 1146600 * 100 = 3.55%
         assert result.value > 0
         assert result.unit == "%"
 

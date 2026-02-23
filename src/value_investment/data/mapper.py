@@ -1,7 +1,114 @@
 """Data mapper for converting A股 fields to IFRS standard fields"""
 import pandas as pd
 import numpy as np
-from typing import Optional
+from typing import Optional, Dict, Any
+
+
+# ============================================================================
+# 财务指标映射 (Financial Indicator Mapping)
+# 分层结构: IFRS标准字段 (通用) + Custom字段 (按市场)
+#
+# 命名规范:
+# - IFRS标准字段: 纯英文 (如 net_profit, total_revenue)
+# - 市场特有字段: 带市场前缀 (如 a_market_cap, hk_market_cap, us_market_cap)
+# ============================================================================
+
+FINANCIAL_INDICATOR_MAPPING = {
+    # ----- IFRS标准字段 (通用) -----
+    # 利润表
+    '净利润': 'net_profit',
+    'NETPROFIT': 'net_profit',
+    '扣非净利润': 'deducted_net_profit',
+    '营业总收入': 'total_revenue',
+    'TOTAL_OPERATE_INCOME': 'total_revenue',
+    '经营溢利': 'operating_profit',  # 港股
+    '毛利': 'gross_profit',  # 港股
+    '除税前溢利': 'profit_before_tax',  # 港股
+    '除税后溢利': 'profit_after_tax',  # 港股
+    '股东应占溢利': 'parent_net_profit',  # 港股
+    '期内溢利': 'net_profit',  # 港股
+
+    # 现金流量
+    '经营业务现金净额': 'operating_cash_flow',  # 港股
+    'NETCASH_OPERATE': 'operating_cash_flow',
+
+    # 每股指标
+    '基本每股收益': 'basic_eps',
+    'BASIC_EPS': 'basic_eps',
+    '基本每股收益(元)': 'basic_eps',  # 港股
+    '每股净资产': 'book_value_per_share',
+    '每股经营现金流': 'operating_cash_flow_per_share',
+    '每股经营现金流(元)': 'operating_cash_flow_per_share',  # 港股
+    '每股股息TTM(港元)': 'hk_dividend_per_share',  # 港股
+
+    # 比率指标
+    '净资产收益率': 'roe',
+    '净资产收益率-摊薄': 'roe_diluted',
+    'WEIGHTED_AVG_ROE': 'roe',
+    '股东权益回报率(%)': 'roe',  # 港股
+    '销售净利率': 'net_profit_margin',
+    '销售净利率(%)': 'net_profit_margin',  # 港股
+    '销售毛利率': 'gross_profit_margin',
+    '总资产回报率(%)': 'roa',  # 港股
+
+    # 股本指标
+    '已发行股本(股)': 'total_shares',
+    '法定股本(股)': 'hk_legal_shares',  # 港股
+
+    # 估值指标
+    '市盈率': 'pe_ratio',
+    '市净率': 'pb_ratio',
+
+    # 港股特有扩展字段 (带 hk_ 前缀)
+    # 注意：市值字段只在 Custom 部分映射，避免重复
+    '营业总收入滚动环比增长(%)': 'hk_total_revenue_growth_qoq',
+    '净利润滚动环比增长(%)': 'hk_net_profit_growth_qoq',
+    '派息比率(%)': 'hk_dividend_payout_ratio',
+    '股息率TTM(%)': 'hk_dividend_yield_ttm',
+
+    # ----- Custom字段 (按市场, 带市场前缀) -----
+    'A': {
+        '总市值(元)': 'a_market_cap',
+        '总市值(人民币)': 'a_market_cap',
+    },
+    'HK': {
+        '总市值(港元)': 'hk_market_cap',
+        '港股市值(港元)': 'hk_market_cap',
+    },
+    'US': {
+        '总市值(美元)': 'us_market_cap',
+    }
+}
+
+
+# ============================================================================
+# 季度指标映射 (Quarterly Mapping)
+# ============================================================================
+
+QUARTERLY_MAPPING = {
+    # ----- IFRS标准字段 (通用) -----
+    '报告期': 'report_date',
+    '净利润': 'net_profit',
+    'NETPROFIT': 'net_profit',
+    '扣非净利润': 'deducted_net_profit',
+    '营业总收入': 'total_revenue',
+    'TOTAL_OPERATE_INCOME': 'total_revenue',
+    '经营溢利': 'operating_profit',
+    '毛利': 'gross_profit',
+    '股东应占溢利': 'parent_net_profit',
+    '除税后溢利': 'profit_after_tax',
+    '基本每股收益': 'basic_eps',
+    'BASIC_EPS': 'basic_eps',
+    '每股净资产': 'book_value_per_share',
+    '净资产收益率': 'roe',
+    '净资产收益率-摊薄': 'roe_diluted',
+    '销售净利率': 'net_profit_margin',
+    '销售毛利率': 'gross_profit_margin',
+
+    # 港股特有
+    'DATE_TYPE_CODE': 'date_type_code',
+    '股东应占溢利': 'parent_net_profit',
+}
 
 
 class DataMapper:
@@ -32,6 +139,8 @@ class DataMapper:
         "SHORT_LOAN": "short_term_debt",
         "LONG_LOAN": "long_term_debt",
         "BOND_PAYABLE": "bonds_payable",
+        "LEASE_LIAB": "lease_liability",
+        "NONCURRENT_LIAB_1YEAR": "noncurrent_liability_due_1y",
         "ADVANCE_RECEIPTS": "advance_receipts",
         "OTHER_CURRENT_LIAB": "other_current_liabilities",
         "DEFERRED_TAX_LIAB": "deferred_tax_liabilities",
@@ -77,6 +186,7 @@ class DataMapper:
         "NETPROFIT": "net_profit",
         "PARENT_NETPROFIT": "parent_net_profit",
         "INCOME_TAX": "income_tax",
+        "INTEREST_EXPENSE": "interest_expense",
         "NON_OPERATE_INCOME": "non_operating_income",
         "NON_OPERATE_COST": "non_operating_cost",
         "INVEST_INCOME": "investment_income",
@@ -331,3 +441,125 @@ class DataMapper:
         calculated_cols = ["gross_profit", "ebit", "free_cash_flow"]
 
         return base_cols + balance_cols + income_cols + cashflow_cols + calculated_cols
+
+    # =========================================================================
+    # 分层映射方法 (Financial Indicator & Quarterly)
+    # =========================================================================
+
+    @classmethod
+    def apply_hierarchical_mapping(
+        cls,
+        df,
+        mapping: Dict[str, Any],
+        market: str = 'A',
+        keep_original: bool = False
+    ):
+        """
+        Apply hierarchical mapping: IFRS standard + Market-specific Custom
+
+        Args:
+            df: Source DataFrame with provider fields
+            mapping: The mapping dictionary (FINANCIAL_INDICATOR_MAPPING or QUARTERLY_MAPPING)
+            market: Market code ('A', 'HK', 'US')
+            keep_original: Whether to preserve original fields (default False - strict mode)
+
+        Returns:
+            DataFrame with mapped internal standard fields only
+        """
+        # Handle non-DataFrame inputs (e.g., mock returns string)
+        if df is None:
+            return df
+        if hasattr(df, 'empty'):
+            if df.empty:
+                return df
+        else:
+            # Not a DataFrame, return as-is
+            return df
+
+        result = df.copy()
+        rename_map = {}
+
+        # Step 1: Build rename map, avoiding conflicts
+        # Track which target fields are already mapped
+        mapped_targets = set()
+
+        # First pass: Apply IFRS standard fields (not market-specific)
+        for old_field, new_field in mapping.items():
+            if isinstance(old_field, str) and isinstance(new_field, str):
+                if old_field in result.columns and new_field not in mapped_targets:
+                    rename_map[old_field] = new_field
+                    mapped_targets.add(new_field)
+
+        # Second pass: Apply market-specific Custom fields (only if not already mapped)
+        custom_mapping = mapping.get(market, {})
+        if custom_mapping:
+            for old_field, new_field in custom_mapping.items():
+                if old_field in result.columns and new_field not in mapped_targets:
+                    rename_map[old_field] = new_field
+                    mapped_targets.add(new_field)
+
+        # Apply renaming
+        if rename_map:
+            result = result.rename(columns=rename_map)
+
+        # Step 3: Filter out unmapped fields (strict mode)
+        # Collect all mapped target field names (including custom market mappings)
+        mapped_field_values = set()
+
+        # Standard fields
+        for old_field, new_field in mapping.items():
+            if isinstance(old_field, str) and isinstance(new_field, str):
+                mapped_field_values.add(new_field)
+
+        # Custom market fields (A, HK, US)
+        for market_code in ['A', 'HK', 'US']:
+            custom_mapping = mapping.get(market_code, {})
+            for old_field, new_field in custom_mapping.items():
+                if isinstance(new_field, str):
+                    mapped_field_values.add(new_field)
+
+        # Keep only mapped columns
+        cols_to_keep = [col for col in result.columns if col in mapped_field_values]
+        result = result[cols_to_keep]
+
+        return result
+
+    @classmethod
+    def map_financial_indicator(
+        cls,
+        df: pd.DataFrame,
+        market: str = 'A'
+    ) -> pd.DataFrame:
+        """
+        Map financial_indicator fields to internal standard fields
+
+        Args:
+            df: Raw financial indicator DataFrame from provider
+            market: Market code ('A', 'HK', 'US')
+
+        Returns:
+            DataFrame with internal standard fields only
+        """
+        return cls.apply_hierarchical_mapping(
+            df, FINANCIAL_INDICATOR_MAPPING, market, keep_original=False
+        )
+
+    @classmethod
+    def map_quarterly(
+        cls,
+        df: pd.DataFrame,
+        market: str = 'A'
+    ) -> pd.DataFrame:
+        """
+        Map quarterly fields to internal standard fields
+
+        Args:
+            df: Raw quarterly DataFrame from provider
+            market: Market code ('A', 'HK', 'US')
+
+        Returns:
+            DataFrame with internal standard fields only
+        """
+        return cls.apply_hierarchical_mapping(
+            df, QUARTERLY_MAPPING, market, keep_original=False
+        )

@@ -61,6 +61,9 @@ uv run --directory . python -m value_investment.cli cashflow 600519 --fields "NE
 | 单个指标 | `cli indicator ROIC -s 00700 -m HK` |
 | PE百分位 | `cli indicator PEPct -s 600519 -m A -y 10` |
 | 完整分析 | `cli analyze 600519` |
+| 美股财务指标 | `cli finind AAPL -m US` |
+| 美股历史股价 | `cli hist AAPL -m US --end 20241231` |
+| 美股完整分析 | `cli analyze AAPL -m US` |
 
 **字段筛选**（用于三表命令）：
 - 先查 `src/value_investment/data/mapper.py` 确认字段名，或用无效字段触发错误查看可用字段
@@ -73,6 +76,12 @@ cli cashflow 600519 --fields "NETCASH_OPERATE"
 ```
 
 **市场代码**：A股 `600519` | 港股 `00700` | 美股 `AAPL`
+
+> 美股自动检测：纯字母股票代码自动识别为美股（如 `AAPL`、`TSLA`）
+
+**美股字段说明**：
+- 财务指标字段映射见 `src/value_investment/data/mapper.py` 中的 `FINANCIAL_INDICATOR_MAPPING`
+- 美股特有字段：`total_revenue`, `net_profit`, `roe`, `roa`, `debt_ratio` 等
 
 ## 参考文档
 

@@ -79,10 +79,25 @@ def balance(
     end_year: int = typer.Option(2024, "--end", "-e", help="End year"),
     market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
     refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
+    fields: Optional[str] = typer.Option(None, "--fields", "-f", help="Comma-separated fields to return"),
 ):
     """Get balance sheet"""
     vi = ValueInvestment(market=_get_market(market, symbol))
     df = vi.get_balance_sheet(symbol, end_year, force_refresh=refresh)
+
+    # 字段筛选逻辑
+    if fields:
+        field_list = [f.strip() for f in fields.split(",")]
+        # 验证字段存在
+        available_cols = set(df.columns)
+        invalid_fields = [f for f in field_list if f not in available_cols]
+        if invalid_fields:
+            typer.echo(f"Error: Invalid fields: {invalid_fields}", err=True)
+            typer.echo(f"Available fields: {sorted(available_cols)}", err=True)
+            raise typer.Exit(code=1)
+        # 筛选列
+        df = df[field_list]
+
     print(df.to_markdown(index=False))
 
 
@@ -92,10 +107,25 @@ def income(
     end_year: int = typer.Option(2024, "--end", "-e", help="End year"),
     market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
     refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
+    fields: Optional[str] = typer.Option(None, "--fields", "-f", help="Comma-separated fields to return"),
 ):
     """Get profit sheet (income statement)"""
     vi = ValueInvestment(market=_get_market(market, symbol))
     df = vi.get_profit_sheet(symbol, end_year, force_refresh=refresh)
+
+    # 字段筛选逻辑
+    if fields:
+        field_list = [f.strip() for f in fields.split(",")]
+        # 验证字段存在
+        available_cols = set(df.columns)
+        invalid_fields = [f for f in field_list if f not in available_cols]
+        if invalid_fields:
+            typer.echo(f"Error: Invalid fields: {invalid_fields}", err=True)
+            typer.echo(f"Available fields: {sorted(available_cols)}", err=True)
+            raise typer.Exit(code=1)
+        # 筛选列
+        df = df[field_list]
+
     print(df.to_markdown(index=False))
 
 
@@ -105,10 +135,25 @@ def cashflow(
     end_year: int = typer.Option(2024, "--end", "-e", help="End year"),
     market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
     refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
+    fields: Optional[str] = typer.Option(None, "--fields", "-f", help="Comma-separated fields to return"),
 ):
     """Get cash flow sheet"""
     vi = ValueInvestment(market=_get_market(market, symbol))
     df = vi.get_cashflow_sheet(symbol, end_year, force_refresh=refresh)
+
+    # 字段筛选逻辑
+    if fields:
+        field_list = [f.strip() for f in fields.split(",")]
+        # 验证字段存在
+        available_cols = set(df.columns)
+        invalid_fields = [f for f in field_list if f not in available_cols]
+        if invalid_fields:
+            typer.echo(f"Error: Invalid fields: {invalid_fields}", err=True)
+            typer.echo(f"Available fields: {sorted(available_cols)}", err=True)
+            raise typer.Exit(code=1)
+        # 筛选列
+        df = df[field_list]
+
     print(df.to_markdown(index=False))
 
 

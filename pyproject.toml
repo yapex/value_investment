@@ -26,6 +26,7 @@ packages = ["src/value_investment"]
 dev = [
     "pytest>=9.0.2",
     "poethepoet>=0.30.0",
+    "pytest-cov>=7.0.0",
 ]
 
 [tool.pytest.ini_options]

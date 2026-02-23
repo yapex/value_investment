@@ -34,8 +34,8 @@ class ROICIndicator(BaseIndicator):
         net_profit_col = self._find_column(data, ['net_profit', 'parent_net_profit'])
         net_profit = data[net_profit_col].fillna(0) if net_profit_col else pd.Series([0], index=data.index)
 
-        # Get Interest Expense
-        interest_expense_col = self._find_column(data, ['interest_expense'])
+        # Get Interest Expense (supports: interest_expense for A-share, finance_cost for HK)
+        interest_expense_col = self._find_column(data, ['interest_expense', 'finance_cost'])
         interest_expense = data[interest_expense_col].fillna(0) if interest_expense_col else pd.Series([0], index=data.index)
 
         # Get tax rate

@@ -2,11 +2,15 @@ from dataclasses import dataclass
 from typing import Any
 from datetime import datetime
 
+from value_investment.data.mapper import DataMapper
+
+
 class DataProvider:
     """Lightweight dependency provider - fetches data by stock_code"""
 
-    def __init__(self, stock_provider):
+    def __init__(self, stock_provider, market: str = 'A'):
         self._provider = stock_provider
+        self._market = market
 
     def get(self, data_type: str, stock_code: str, **kwargs) -> Any:
         # Set default end_date if not provided
@@ -14,14 +18,30 @@ class DataProvider:
             kwargs['end_date'] = datetime.now().strftime('%Y%m%d')
 
         fetchers = {
-            'quarterly': lambda: self._provider.get_quarterly_indicator(stock_code),
+            'quarterly': lambda: self._map_quarterly(
+                self._provider.get_quarterly_indicator(stock_code)
+            ),
             'prices': lambda: self._provider.get_historical_data(stock_code, **kwargs),
             'stock_info': lambda: self._provider.get_stock_info(stock_code),
-            'financial_indicator': lambda: self._provider.get_financial_indicator(stock_code),
+            'financial_indicator': lambda: self._map_financial_indicator(
+                self._provider.get_financial_indicator(stock_code)
+            ),
         }
         if data_type not in fetchers:
             raise ValueError(f"Unknown data type: {data_type}")
         return fetchers[data_type]()
+
+    def _map_financial_indicator(self, df):
+        """Apply field mapping to financial_indicator data"""
+        if df is None or (hasattr(df, 'empty') and df.empty):
+            return df
+        return DataMapper.map_financial_indicator(df, market=self._market)
+
+    def _map_quarterly(self, df):
+        """Apply field mapping to quarterly data"""
+        if df is None or (hasattr(df, 'empty') and df.empty):
+            return df
+        return DataMapper.map_quarterly(df, market=self._market)
 
 class DependencyRegistry:
     """Dependency registry - maps declarations to fetchers"""

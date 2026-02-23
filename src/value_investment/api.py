@@ -34,7 +34,7 @@ class ValueInvestment:
         self._provider = AkshareProvider(cache=self._cache, market=market)
         self._factory = IndicatorFactory(provider=self._provider)
         # Add dependency injection
-        self._data_provider = DataProvider(self._provider)
+        self._data_provider = DataProvider(self._provider, market=market)
         self._registry = DependencyRegistry(self._data_provider)
         # Initialize indicator registry with defaults
         register_defaults()

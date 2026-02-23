@@ -45,7 +45,7 @@ uv run --directory . python -m value_investment.cli cashflow 600519 --fields "NE
 ```
 
 **查询字段名**：
-1. 查看 `references/profit.md`（利润表）、`references/balance.md`（资产负债表）、`references/cashflow.md`（现金流量表）
+1. 查看 `src/value_investment/data/mapper.py` 中的 `INCOME_MAPPING`（利润表）、`BALANCE_MAPPING`（资产负债表）、`CASHFLOW_MAPPING`（现金流量表）
 2. 或使用无效字段查询，会报错显示所有可用字段
 
 ## Quick Reference
@@ -63,7 +63,7 @@ uv run --directory . python -m value_investment.cli cashflow 600519 --fields "NE
 | 完整分析 | `cli analyze 600519` |
 
 **字段筛选**（用于三表命令）：
-- 先查 `references/` 确认字段名，或用无效字段触发错误查看可用字段
+- 先查 `src/value_investment/data/mapper.py` 确认字段名，或用无效字段触发错误查看可用字段
 
 ```bash
 # 只返回指定字段
@@ -77,7 +77,7 @@ cli cashflow 600519 --fields "NETCASH_OPERATE"
 ## 参考文档
 
 - 指标体系: `references/indicators.md`
-- 财务报表字段: `references/profit.md` / `references/balance.md`
+- 财务报表字段: `src/value_investment/data/mapper.py` (INCOME_MAPPING / BALANCE_MAPPING / CASHFLOW_MAPPING)
 - ROIC计算: `references/roic.md`
 
 ---

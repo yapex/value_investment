@@ -17,7 +17,7 @@ class CurrentRatioIndicator(BaseIndicator):
         current_assets_col = self._find_column(data, ['current_assets'])
         current_liab_col = self._find_column(data, ['current_liabilities'])
 
-        current_assets = data[current_assets_col] if current_assets_col else pd.Series([0], index=data.index)
+        current_assets = data[current_assets_col] if current_assets_col else pd.Series(0, index=data.index)
         current_liab = data[current_liab_col] if current_liab_col else pd.Series([1], index=data.index)
 
         cr = current_assets / current_liab.replace(0, 1)
@@ -57,8 +57,8 @@ class QuickRatioIndicator(BaseIndicator):
         inventory_col = self._find_column(data, ['inventory'])
         current_liab_col = self._find_column(data, ['current_liabilities'])
 
-        current_assets = data[current_assets_col] if current_assets_col else pd.Series([0], index=data.index)
-        inventory = data[inventory_col] if inventory_col else pd.Series([0], index=data.index)
+        current_assets = data[current_assets_col] if current_assets_col else pd.Series(0, index=data.index)
+        inventory = data[inventory_col] if inventory_col else pd.Series(0, index=data.index)
         current_liab = data[current_liab_col] if current_liab_col else pd.Series([1], index=data.index)
 
         quick_assets = current_assets - inventory
@@ -98,7 +98,7 @@ class DebtRatioIndicator(BaseIndicator):
         liab_col = self._find_column(data, ['total_liabilities'])
         assets_col = self._find_column(data, ['total_assets'])
 
-        liabilities = data[liab_col] if liab_col else pd.Series([0], index=data.index)
+        liabilities = data[liab_col] if liab_col else pd.Series(0, index=data.index)
         assets = data[assets_col] if assets_col else pd.Series([1], index=data.index)
 
         dr = (liabilities / assets.replace(0, 1)) * 100

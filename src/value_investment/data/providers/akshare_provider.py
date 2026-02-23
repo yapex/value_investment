@@ -593,13 +593,13 @@ class AkshareProvider:
 
     def _transform_hk_financial_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Transform 港股 financial data from long format to wide format.
+        Transform 港股/美股 financial data from long format to wide format.
 
-        Akshare returns data in long format with STD_ITEM_NAME and AMOUNT columns.
+        Akshare returns data in long format with STD_ITEM_NAME (HK) or ITEM_NAME (US) and AMOUNT columns.
         This converts it to wide format where each item becomes a column.
 
         Args:
-            df: DataFrame with columns REPORT_DATE, STD_ITEM_NAME, AMOUNT
+            df: DataFrame with columns REPORT_DATE, STD_ITEM_NAME/ITEM_NAME, AMOUNT
 
         Returns:
             DataFrame in wide format with year as index and items as columns
@@ -607,19 +607,26 @@ class AkshareProvider:
         if df.empty:
             return df
 
-        # Check if data is in long format (has STD_ITEM_NAME column)
-        if 'STD_ITEM_NAME' not in df.columns or 'AMOUNT' not in df.columns:
+        # Determine which column to use for item names (STD_ITEM_NAME for HK, ITEM_NAME for US)
+        item_col = None
+        if 'STD_ITEM_NAME' in df.columns:
+            item_col = 'STD_ITEM_NAME'
+        elif 'ITEM_NAME' in df.columns:
+            item_col = 'ITEM_NAME'
+
+        # Check if data is in long format
+        if item_col is None or 'AMOUNT' not in df.columns:
             return df
 
         # Extract year from REPORT_DATE (format: '2024-12-31 00:00:00')
         if 'REPORT_DATE' in df.columns:
             df['year'] = pd.to_datetime(df['REPORT_DATE']).dt.year
 
-        # Pivot: make each STD_ITEM_NAME a column, AMOUNT as values, year as index
+        # Pivot: make each item a column, AMOUNT as values, year as index
         try:
             wide_df = df.pivot_table(
                 index='year',
-                columns='STD_ITEM_NAME',
+                columns=item_col,
                 values='AMOUNT',
                 aggfunc='first'  # In case of duplicates
             )
@@ -683,9 +690,10 @@ class AkshareProvider:
         ttl = _get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
-            return ak.stock_financial_us_report_em(
+            df = ak.stock_financial_us_report_em(
                 stock=symbol, symbol="资产负债表", indicator="年报"
             )
+            return self._transform_hk_financial_data(df)
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
@@ -695,9 +703,10 @@ class AkshareProvider:
         ttl = _get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
-            return ak.stock_financial_us_report_em(
+            df = ak.stock_financial_us_report_em(
                 stock=symbol, symbol="综合损益表", indicator="年报"
             )
+            return self._transform_hk_financial_data(df)
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
@@ -707,9 +716,10 @@ class AkshareProvider:
         ttl = _get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
-            return ak.stock_financial_us_report_em(
+            df = ak.stock_financial_us_report_em(
                 stock=symbol, symbol="现金流量表", indicator="年报"
             )
+            return self._transform_hk_financial_data(df)
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
@@ -763,7 +773,7 @@ class AkshareProvider:
         elif self._market == "HK":
             return self._get_hk_financial_indicator(symbol, force_refresh=force_refresh)
         elif self._market == "US":
-            raise NotImplementedError(f"Financial indicators for {self._market} not implemented")
+            return self._get_us_financial_indicator(symbol, force_refresh=force_refresh)
         else:
             raise NotImplementedError(f"Financial indicators for {self._market} not implemented")
 
@@ -987,3 +997,33 @@ class AkshareProvider:
             return ak.stock_hk_financial_indicator_em(symbol=hk_code)
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
+
+    def _get_us_financial_indicator(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
+        """Get US stock financial indicators"""
+        cache_key = f"indicator_us_{symbol}"
+        # US financial data is published annually, so use same TTL as A-share
+        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+
+        # Force refresh: invalidate cache first
+        if force_refresh:
+            self._cache.invalidate(cache_key)
+
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        # Fetch from akshare
+        data = ak.stock_financial_us_analysis_indicator_em(
+            symbol=symbol,
+            indicator="年报"
+        )
+
+        if data is None or (hasattr(data, 'empty') and data.empty):
+            return pd.DataFrame()
+
+        # Apply DataMapper to standardize fields (including US-specific mappings)
+        data = DataMapper.map_financial_indicator(data, market="US")
+
+        # Cache 1 year
+        self._cache.set(cache_key, data, ttl=86400 * 365)
+        return data

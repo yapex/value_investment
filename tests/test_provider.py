@@ -760,3 +760,123 @@ class TestAkshareProviderFinancial:
         assert len(result_2022) == 3
         # Both queries should use the same cache
         assert "balance_sheet_a_600519" in cache.list_keys()
+
+
+class TestAkshareProviderUSFinancialIndicator:
+    """Test US financial indicator fetching"""
+
+    @pytest.fixture
+    def temp_cache_dir(self):
+        """Create a temporary cache directory"""
+        tmp = tempfile.mkdtemp()
+        yield tmp
+        shutil.rmtree(tmp)
+
+    def test_get_us_financial_indicator(self, temp_cache_dir):
+        """Should get US stock financial indicator with standardized fields"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="US")
+
+        # Mock返回美股财务指标数据
+        mock_data = pd.DataFrame({
+            "SECURITY_CODE": ["AAPL", "AAPL"],
+            "SECURITY_NAME_ABBR": ["苹果", "苹果"],
+            "REPORT_DATE": ["2024-12-31", "2023-12-31"],
+            "TOTAL_INCOME": [394328000000, 383290000000],
+            "TOTAL_INCOME_YOY": [2.88, -2.80],
+            "PARENT_HOLDER_NETPROFIT": [93736000000, 97015000000],
+            "PARENT_HOLDER_NETPROFIT_YOY": [-3.38, -2.81],
+            "BASIC_EPS_CS": [6.13, 6.11],
+            "ROE": [147.78, 156.63],
+            "ROA": [24.47, 24.14],
+            "DEBT_RATIO": [82.15, 78.57],
+        })
+
+        with patch("akshare.stock_financial_us_analysis_indicator_em", return_value=mock_data):
+            result = provider.get_financial_indicator("AAPL")
+
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 2
+        # Should be mapped to standardized field names
+        assert "total_revenue" in result.columns
+        assert "net_profit" in result.columns
+        assert "basic_eps" in result.columns
+        assert "roe" in result.columns
+
+    def test_get_us_financial_indicator_uses_cache(self, temp_cache_dir):
+        """US财务指标应使用缓存"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="US")
+
+        mock_data = pd.DataFrame({
+            "SECURITY_CODE": ["AAPL"],
+            "REPORT_DATE": ["2024-12-31"],
+            "TOTAL_INCOME": [394328000000],
+            "PARENT_HOLDER_NETPROFIT": [93736000000],
+            "ROE": [147.78],
+        })
+
+        # First call - should call akshare
+        with patch("akshare.stock_financial_us_analysis_indicator_em", return_value=mock_data) as mock_ak:
+            result1 = provider.get_financial_indicator("AAPL")
+
+        mock_ak.assert_called_once()
+        assert "indicator_us_AAPL" in cache.list_keys()
+
+        # Second call - should use cache
+        with patch("akshare.stock_financial_us_analysis_indicator_em") as mock_ak2:
+            result2 = provider.get_financial_indicator("AAPL")
+
+        mock_ak2.assert_not_called()
+        assert result1.equals(result2)
+
+    def test_get_us_financial_indicator_force_refresh(self, temp_cache_dir):
+        """US财务指标force_refresh应强制刷新缓存"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="US")
+
+        mock_data1 = pd.DataFrame({
+            "SECURITY_CODE": ["AAPL"],
+            "REPORT_DATE": ["2024-12-31"],
+            "TOTAL_INCOME": [394328000000],
+        })
+        mock_data2 = pd.DataFrame({
+            "SECURITY_CODE": ["AAPL"],
+            "REPORT_DATE": ["2024-12-31"],
+            "TOTAL_INCOME": [400000000000],  # Different value
+        })
+
+        # First call - populate cache
+        with patch("akshare.stock_financial_us_analysis_indicator_em", return_value=mock_data1):
+            result1 = provider.get_financial_indicator("AAPL")
+
+        # Second call with force_refresh - should re-fetch
+        with patch("akshare.stock_financial_us_analysis_indicator_em", return_value=mock_data2) as mock_ak2:
+            result2 = provider.get_financial_indicator("AAPL", force_refresh=True)
+
+        mock_ak2.assert_called_once()
+        # Should be mapped to standardized field name
+        assert result2["total_revenue"].iloc[0] == 400000000000
+
+    def test_get_us_financial_indicator_empty_response(self, temp_cache_dir):
+        """US财务指标空响应应返回空DataFrame"""
+        from value_investment.data.cache import SmartCache
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+
+        cache = SmartCache(cache_dir=temp_cache_dir)
+        provider = AkshareProvider(cache=cache, market="US")
+
+        with patch("akshare.stock_financial_us_analysis_indicator_em", return_value=pd.DataFrame()):
+            result = provider.get_financial_indicator("INVALID_STOCK")
+
+        assert isinstance(result, pd.DataFrame)
+        assert result.empty

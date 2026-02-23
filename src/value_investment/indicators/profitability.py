@@ -17,7 +17,7 @@ class ROEIndicator(BaseIndicator):
         net_profit_col = self._find_column(data, ['net_profit'])
         equity_col = self._find_column(data, ['total_equity'])
 
-        net_profit = data[net_profit_col] if net_profit_col else pd.Series([0], index=data.index)
+        net_profit = data[net_profit_col] if net_profit_col else pd.Series(0, index=data.index)
         equity = data[equity_col] if equity_col else pd.Series([1], index=data.index)
 
         # Avoid division by zero
@@ -54,7 +54,7 @@ class ROAIndicator(BaseIndicator):
         net_profit_col = self._find_column(data, ['net_profit'])
         assets_col = self._find_column(data, ['total_assets'])
 
-        net_profit = data[net_profit_col] if net_profit_col else pd.Series([0], index=data.index)
+        net_profit = data[net_profit_col] if net_profit_col else pd.Series(0, index=data.index)
         assets = data[assets_col] if assets_col else pd.Series([1], index=data.index)
 
         roa = (net_profit / assets.replace(0, 1)) * 100
@@ -93,8 +93,8 @@ class GrossMarginIndicator(BaseIndicator):
         revenue_col = self._find_column(data, ['operating_income', 'total_revenue'])
         cogs_col = self._find_column(data, ['operating_cost'])
 
-        revenue = data[revenue_col] if revenue_col else pd.Series([0], index=data.index)
-        cogs = data[cogs_col] if cogs_col else pd.Series([0], index=data.index)
+        revenue = data[revenue_col] if revenue_col else pd.Series(0, index=data.index)
+        cogs = data[cogs_col] if cogs_col else pd.Series(0, index=data.index)
 
         gross_profit = revenue - cogs
         gross_margin = (gross_profit / revenue.replace(0, 1)) * 100
@@ -133,7 +133,7 @@ class NetProfitMarginIndicator(BaseIndicator):
         net_profit_col = self._find_column(data, ['net_profit'])
         revenue_col = self._find_column(data, ['operating_income', 'total_revenue'])
 
-        net_profit = data[net_profit_col] if net_profit_col else pd.Series([0], index=data.index)
+        net_profit = data[net_profit_col] if net_profit_col else pd.Series(0, index=data.index)
         revenue = data[revenue_col] if revenue_col else pd.Series([1], index=data.index)
 
         npm = (net_profit / revenue.replace(0, 1)) * 100

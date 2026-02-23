@@ -17,7 +17,7 @@ class AssetTurnoverIndicator(BaseIndicator):
         income_col = self._find_column(data, ['operating_income'])
         assets_col = self._find_column(data, ['total_assets'])
 
-        income = data[income_col] if income_col else pd.Series([0], index=data.index)
+        income = data[income_col] if income_col else pd.Series(0, index=data.index)
         assets = data[assets_col] if assets_col else pd.Series([1], index=data.index)
 
         turnover = income / assets.replace(0, 1)
@@ -56,7 +56,7 @@ class InventoryTurnoverIndicator(BaseIndicator):
         cost_col = self._find_column(data, ['operating_cost'])
         inv_col = self._find_column(data, ['inventory'])
 
-        cost = data[cost_col] if cost_col else pd.Series([0], index=data.index)
+        cost = data[cost_col] if cost_col else pd.Series(0, index=data.index)
         inv = data[inv_col] if inv_col else pd.Series([1], index=data.index)
 
         turnover = cost / inv.replace(0, 1)
@@ -95,7 +95,7 @@ class ReceivableTurnoverIndicator(BaseIndicator):
         income_col = self._find_column(data, ['operating_income'])
         ar_col = self._find_column(data, ['accounts_receivable'])
 
-        income = data[income_col] if income_col else pd.Series([0], index=data.index)
+        income = data[income_col] if income_col else pd.Series(0, index=data.index)
         ar = data[ar_col] if ar_col else pd.Series([1], index=data.index)
 
         turnover = income / ar.replace(0, 1)
@@ -134,7 +134,7 @@ class PayableTurnoverIndicator(BaseIndicator):
         cost_col = self._find_column(data, ['operating_cost'])
         ap_col = self._find_column(data, ['accounts_payable'])
 
-        cost = data[cost_col] if cost_col else pd.Series([0], index=data.index)
+        cost = data[cost_col] if cost_col else pd.Series(0, index=data.index)
         ap = data[ap_col] if ap_col else pd.Series([1], index=data.index)
 
         turnover = cost / ap.replace(0, 1)

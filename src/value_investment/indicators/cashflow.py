@@ -17,7 +17,7 @@ class CfoToNetprofitIndicator(BaseIndicator):
         cfo_col = self._find_column(data, ['operating_cash_flow'])
         np_col = self._find_column(data, ['net_profit'])
 
-        cfo = data[cfo_col] if cfo_col else pd.Series([0], index=data.index)
+        cfo = data[cfo_col] if cfo_col else pd.Series(0, index=data.index)
         np = data[np_col] if np_col else pd.Series([1], index=data.index)
 
         ratio = (cfo / np.replace(0, 1)) * 100
@@ -56,7 +56,7 @@ class FcfToRevenueIndicator(BaseIndicator):
         fcf_col = self._find_column(data, ['free_cash_flow'])
         income_col = self._find_column(data, ['operating_income'])
 
-        fcf = data[fcf_col] if fcf_col else pd.Series([0], index=data.index)
+        fcf = data[fcf_col] if fcf_col else pd.Series(0, index=data.index)
         income = data[income_col] if income_col else pd.Series([1], index=data.index)
 
         ratio = (fcf / income.replace(0, 1)) * 100

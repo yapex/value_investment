@@ -77,7 +77,28 @@ FINANCIAL_INDICATOR_MAPPING = {
     },
     'US': {
         '总市值(美元)': 'us_market_cap',
-    }
+    },
+
+    # ----- 美股特有字段 -----
+    # 利润表字段 (stock_financial_us_analysis_indicator_em 返回)
+    'TOTAL_INCOME': 'total_revenue',
+    'PARENT_HOLDER_NETPROFIT': 'net_profit',
+    'PARENT_HOLDER_NETPROFIT_YOY': 'net_profit_yoy',
+    'BASIC_EPS_CS': 'basic_eps',
+    'BASIC_EPS_CS_YOY': 'basic_eps_yoy',
+    'DILUTED_EPS_CS': 'diluted_eps',
+
+    # 比率指标
+    'ROE': 'roe',
+    'ROE_YOY': 'roe_yoy',
+    'ROA': 'roa',
+    'ROA_YOY': 'roa_yoy',
+    'DEBT_RATIO': 'debt_ratio',
+    'DEBT_RATIO_YOY': 'debt_ratio_yoy',
+    'EQUITY_RATIO': 'equity_ratio',
+
+    # 营收相关
+    'TOTAL_INCOME_YOY': 'total_revenue_yoy',
 }
 
 
@@ -168,6 +189,51 @@ class DataMapper:
         "在建工程": "construction_in_progress",
         "联营公司权益": "investment_in_associates",
         "合营公司权益": "investment_in_joint_ventures",
+        # 美股字段 (stock_financial_us_report_em 返回)
+        "总资产": "total_assets",
+        "总负债": "total_liabilities",
+        "流动资产合计": "current_assets",
+        "非流动资产合计": "non_current_assets",
+        "流动负债合计": "current_liabilities",
+        "非流动负债合计": "non_current_liabilities",
+        "现金及现金等价物": "cash_and_equivalents",
+        "应收账款": "accounts_receivable",
+        "应收税项": "tax_receivable",
+        "存货": "inventory",
+        "预付款项(流动)": "prepaid_expenses",
+        "其他流动资产": "other_current_assets",
+        "有价证券投资(流动)": "marketable_securities_current",
+        "物业、厂房及设备": "fixed_assets",
+        "无形资产": "intangible_assets",
+        "商誉": "goodwill",
+        "递延所得税资产(流动)": "deferred_tax_assets_current",
+        "递延所得税资产(非流动)": "deferred_tax_assets_non_current",
+        "其他投资": "other_investments",
+        "有价证券投资(非流动)": "marketable_securities_non_current",
+        "预付款项(非流动)": "prepaid_expenses_non_current",
+        "其他非流动资产": "other_non_current_assets",
+        "应付账款": "accounts_payable",
+        "应付税项(流动)": "tax_payable_current",
+        "预收及预提费用": "accrued_expenses",
+        "其他应付款及应计费用": "other_payable_accrued",
+        "短期债务": "short_term_debt",
+        "递延收入(流动)": "deferred_revenue_current",
+        "应付薪酬和福利": "accrued_payroll",
+        "资本租赁债务(流动)": "capital_lease_liability_current",
+        "递延所得税负债(非流动)": "deferred_tax_liabilities_non_current",
+        "递延收入(非流动)": "deferred_revenue_non_current",
+        "应付税项(非流动)": "tax_payable_non_current",
+        "长期负债": "long_term_debt",
+        "其他非流动负债": "other_non_current_liabilities",
+        "资本租赁债务(非流动)": "capital_lease_liability_non_current",
+        "普通股": "common_stock",
+        "优先股": "preferred_stock",
+        "留存收益": "retained_earnings",
+        "股本溢价": "share_premium",
+        "其他综合收益": "other_comprehensive_income",
+        "归属于母公司股东权益": "parent_equity",
+        "股东权益合计": "total_equity",
+        "负债及股东权益合计": "total_liabilities_and_equity",
     }
 
     # 利润表映射 (A股字段 -> 标准字段, 港股字段 -> 标准字段)
@@ -210,6 +276,21 @@ class DataMapper:
         "行政开支": "administrative_expenses",
         "销售及分销费用": "selling_distribution_expenses",
         "折旧及摊销": "depreciation_amortization",
+        # 美股字段 (stock_financial_us_report_em 综合损益表)
+        "主营收入": "total_revenue",
+        "主营成本": "cost_of_revenue",
+        "毛利润": "gross_profit",
+        "净利润": "net_profit",
+        "归属于普通股股东净利润": "parent_net_profit",
+        "已终止或非持续经营净利润": "discontinued_operations_profit",
+        "利息收入": "interest_income",
+        "利息费用": "interest_expense",
+        "一般及行政费用": "general_administrative_expenses",
+        "其他收入(支出)": "other_income_expense",
+        "其他营业费用": "other_operating_expenses",
+        "全面收益总额": "total_comprehensive_income",
+        "其他全面收益合计项": "other_comprehensive_income_total",
+        "其他全面收益其他项目": "other_comprehensive_income_other",
     }
 
     # 现金流量表映射 (A股字段 -> 标准字段, 港股字段 -> 标准字段)
@@ -246,6 +327,34 @@ class DataMapper:
         "现金净额": "net_cash_change",
         "经营产生现金": "cash_generated_from_operations",
         "营运资金变动前经营溢利": "operating_profit_before_working_capital",
+        # 美股字段 (stock_financial_us_report_em 现金流量表)
+        "经营活动产生的现金流量净额": "operating_cash_flow",
+        "投资活动产生的现金流量净额": "investing_cash_flow",
+        "筹资活动产生的现金流量净额": "financing_cash_flow",
+        "净利润": "net_profit",
+        "折旧及摊销": "depreciation_amortization",
+        "基于股票的补偿费": "stock_based_compensation",
+        "递延所得税": "deferred_tax",
+        "资产处置损益": "gain_loss_on_asset_disposal",
+        "投资损益": "investment_income_loss",
+        "权益性投资损益": "equity_investment_income_loss",
+        "应收账款及票据": "accounts_receivable_notes",
+        "待摊费用及其他资产": "prepaid_expenses_other_assets",
+        "应付账款及票据": "accounts_payable_notes",
+        "递延收入": "deferred_revenue",
+        "应付税项": "taxes_payable",
+        "预提费用及其他负债": "accrued_expenses_other_liabilities",
+        "购买固定资产": "capital_expenditure",
+        "处置固定资产": "disposal_of_fixed_assets",
+        "购建无形资产及其他资产": "capital_expenditure_intangible",
+        "投资支付现金": "cash_investments",
+        "发行股份": "stock_issuance",
+        "回购股份": "stock_repurchase",
+        "发行债券": "bond_issuance",
+        "赎回债券": "bond_redemption",
+        "股息支付": "dividend_paid",
+        "行使股票期权所得": "stock_option_exercise_proceeds",
+        "偿还借款": "debt_repayment",
     }
 
     # 基础字段（不映射）

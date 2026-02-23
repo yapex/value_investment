@@ -87,7 +87,7 @@ def balance(
 
 
 @app.command()
-def profit(
+def income(
     symbol: str = typer.Argument(..., help="Stock code"),
     end_year: int = typer.Option(2024, "--end", "-e", help="End year"),
     market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),

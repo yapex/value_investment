@@ -28,9 +28,10 @@ class ValueInvestment:
 
         Args:
             cache_dir: Cache directory path
-            market: Market type - "A" (A股), "HK" (港股), "US" (美股)
+            market: Market type - "A" (A股), "HK" (港股), "US" (美股). Can be auto-detected from symbol.
         """
         self._cache = SmartCache(cache_dir=cache_dir or "./.cache")
+        self._market = market
         self._provider = AkshareProvider(cache=self._cache, market=market)
         self._factory = IndicatorFactory(provider=self._provider)
         # Add dependency injection
@@ -38,6 +39,52 @@ class ValueInvestment:
         self._registry = DependencyRegistry(self._data_provider)
         # Initialize indicator registry with defaults
         register_defaults()
+
+    @staticmethod
+    def detect_market(code: str) -> str:
+        """Detect market from stock code
+
+        Args:
+            code: Stock code
+
+        Returns:
+            Market code: "A", "HK", or "US"
+        """
+        if not code:
+            return "A"
+
+        code = code.strip()
+
+        # A股: 6-digit codes starting with 0, 3, 6
+        if code.isdigit() and len(code) == 6:
+            if code[0] in ("0", "3", "6"):
+                return "A"
+
+        # 港股: 5-digit codes
+        if code.isdigit() and len(code) == 5:
+            return "HK"
+
+        # 美股: alphabetic ticker symbols
+        if code.isalpha():
+            return "US"
+
+        # Default to A股
+        return "A"
+
+    def get_market(self, symbol: Optional[str] = None) -> str:
+        """Get market, auto-detect from symbol if not specified
+
+        Args:
+            symbol: Stock code (optional)
+
+        Returns:
+            Market code
+        """
+        if self._market:
+            return self._market
+        if symbol:
+            return self.detect_market(symbol)
+        return "A"
 
     def get_stock_info(self, symbol: str, force_refresh: bool = False):
         """
@@ -80,6 +127,7 @@ class ValueInvestment:
         symbol: str,
         end_year: int | None = None,
         force_refresh: bool = False,
+        fields: list[str] | None = None,
     ):
         """
         Get balance sheet
@@ -88,17 +136,21 @@ class ValueInvestment:
             symbol: Stock code
             end_year: End year (optional, defaults to current year)
             force_refresh: If True, force refresh from data source
+            fields: List of fields to return (optional). If not provided, returns all fields.
+                   REPORT_DATE is always included if fields is provided.
 
         Returns:
             DataFrame with balance sheet data
         """
-        return self._provider.get_balance_sheet(symbol, end_year, force_refresh=force_refresh)
+        df = self._provider.get_balance_sheet(symbol, end_year, force_refresh=force_refresh)
+        return self._filter_fields(df, fields)
 
     def get_profit_sheet(
         self,
         symbol: str,
         end_year: int | None = None,
         force_refresh: bool = False,
+        fields: list[str] | None = None,
     ):
         """
         Get profit sheet (income statement)
@@ -107,17 +159,21 @@ class ValueInvestment:
             symbol: Stock code
             end_year: End year (optional, defaults to current year)
             force_refresh: If True, force refresh from data source
+            fields: List of fields to return (optional). If not provided, returns all fields.
+                   REPORT_DATE is always included if fields is provided.
 
         Returns:
             DataFrame with profit sheet data
         """
-        return self._provider.get_profit_sheet(symbol, end_year, force_refresh=force_refresh)
+        df = self._provider.get_profit_sheet(symbol, end_year, force_refresh=force_refresh)
+        return self._filter_fields(df, fields)
 
     def get_cashflow_sheet(
         self,
         symbol: str,
         end_year: int | None = None,
         force_refresh: bool = False,
+        fields: list[str] | None = None,
     ):
         """
         Get cash flow sheet
@@ -126,11 +182,14 @@ class ValueInvestment:
             symbol: Stock code
             end_year: End year (optional, defaults to current year)
             force_refresh: If True, force refresh from data source
+            fields: List of fields to return (optional). If not provided, returns all fields.
+                   REPORT_DATE is always included if fields is provided.
 
         Returns:
             DataFrame with cash flow sheet data
         """
-        return self._provider.get_cashflow_sheet(symbol, end_year, force_refresh=force_refresh)
+        df = self._provider.get_cashflow_sheet(symbol, end_year, force_refresh=force_refresh)
+        return self._filter_fields(df, fields)
 
     def get_financial_indicator(self, symbol: str, force_refresh: bool = False):
         """
@@ -236,6 +295,41 @@ class ValueInvestment:
 
         return financial_data, market_cap
 
+    def _filter_fields(self, df: pd.DataFrame, fields: list[str] | None = None) -> pd.DataFrame:
+        """
+        Filter DataFrame columns and format dates.
+
+        Args:
+            df: Input DataFrame
+            fields: List of fields to return. If None, returns all columns.
+                   REPORT_DATE is always included if fields is provided.
+
+        Returns:
+            DataFrame with filtered columns and formatted dates
+        """
+        if not fields:
+            return df
+
+        field_list = list(fields)
+        # 强制包含 REPORT_DATE
+        if "REPORT_DATE" not in field_list:
+            field_list.insert(0, "REPORT_DATE")
+
+        # 验证字段存在
+        available_cols = set(df.columns)
+        invalid_fields = [f for f in field_list if f not in available_cols]
+        if invalid_fields:
+            raise ValueError(f"Invalid fields: {invalid_fields}. Available fields: {sorted(available_cols)}")
+
+        # 筛选列
+        result = df[field_list].copy()
+
+        # 格式化日期为 YYYY-MM-DD
+        if "REPORT_DATE" in result.columns:
+            result["REPORT_DATE"] = pd.to_datetime(result["REPORT_DATE"]).dt.strftime("%Y-%m-%d")
+
+        return result
+
     def _get_financial_data(
         self,
         symbol: str,
@@ -301,8 +395,25 @@ class ValueInvestment:
             **kwargs: Additional parameters for indicators
 
         Returns:
-            Dictionary with all indicator results
+            Dictionary with:
+                - name: Stock name with code
+                - year_range: Year range string
+                - table: DataFrame with yearly indicators
+                - summary: List of summary metrics with labels
         """
+        # Get stock name
+        name = stock_code
+        try:
+            info = self._provider.get_stock_info(stock_code)
+            if 'item' in info.columns:
+                for _, row in info.iterrows():
+                    item = str(row['item'])
+                    if '简称' in item or '名称' in item:
+                        name = f"{row['value']} ({stock_code})"
+                        break
+        except Exception:
+            pass
+
         # Use shared method to prepare data
         financial_data, market_cap = self._prepare_data(stock_code, years, market_cap)
 
@@ -312,13 +423,13 @@ class ValueInvestment:
 
         # Calculate all indicators
         results = {}
-        for name in self._factory.list_indicators():
+        for ind_name in self._factory.list_indicators():
             try:
-                indicator = self._factory.get(name)
+                indicator = self._factory.get(ind_name)
                 result = indicator.calculate(financial_data, **kwargs)
-                results[name] = result
+                results[ind_name] = result
             except Exception as e:
-                results[name] = {"error": str(e)}
+                results[ind_name] = {"error": str(e)}
 
         # Calculate additional CAGR metrics if specified
         if cagr_metrics:
@@ -332,7 +443,142 @@ class ValueInvestment:
                     except Exception as e:
                         results[cagr_name] = {"error": str(e)}
 
-        return results
+        # Format results
+        return self._format_analyze_results(name, results, years)
+
+    def _format_analyze_results(self, name: str, results: dict, years: int) -> dict:
+        """Format analyze results for display."""
+        import math
+        import pandas as pd
+
+        # Chinese labels for indicators
+        label_map = {
+            "ROE": "ROE",
+            "ROA": "ROA",
+            "gross_margin": "毛利率",
+            "net_profit_margin": "净利率",
+            "current_ratio": "流动比率",
+            "ROIC": "ROIC",
+            "CAGR": "营收CAGR",
+            "CAGR_revenue": "营收CAGR",
+            "CAGR_net_profit": "净利润CAGR",
+            "ImpliedGrowth": "市场隐含增长率",
+            "asset_turnover": "资产周转率",
+            "inventory_turnover": "存货周转率",
+            "quick_ratio": "速动比率",
+            "debt_ratio": "资产负债率",
+            "receivable_turnover": "应收账款周转率",
+            "payable_turnover": "应付账款周转率",
+            "cfo_to_netprofit_sum": "盈利质量(CFO/净利)",
+        }
+
+        # Collect all years from results
+        all_years = set()
+        for name_result in results.values():
+            if hasattr(name_result, 'years') and name_result.years:
+                for y in name_result.years:
+                    if y > 100:
+                        all_years.add(y)
+
+        if not all_years:
+            return {
+                "name": name,
+                "year_range": "",
+                "table": pd.DataFrame(),
+                "summary": []
+            }
+
+        sorted_years = sorted(all_years, reverse=True)
+        year_range = f"{min(sorted_years)}-{max(sorted_years)}"
+
+        # Build DataFrame
+        data = []
+        for year in sorted_years:
+            row = {"年份": year}
+            for ind_name, result in results.items():
+                label = label_map.get(ind_name, ind_name)
+                if hasattr(result, 'values') and result.values and hasattr(result, 'years') and result.years:
+                    if year in result.years:
+                        idx = result.years.index(year)
+                        if idx < len(result.values):
+                            value = result.values[idx]
+                            if math.isnan(value):
+                                value = 0
+                            if result.unit == "%":
+                                row[label] = f"{value:.1f}%"
+                            elif result.unit == "ratio":
+                                row[label] = f"{value:.2f}"
+                            elif result.unit == "CNY":
+                                if abs(value) > 1e9:
+                                    row[label] = f"{value/1e9:.2f}十亿"
+                                else:
+                                    row[label] = f"{value:.2f}"
+                                continue
+                            else:
+                                row[label] = value
+            data.append(row)
+
+        df = pd.DataFrame(data)
+
+        # Reorder columns
+        column_order = [
+            "年份",
+            "ROIC", "ROE", "ROA", "毛利率", "净利率",
+            "流动比率", "速动比率", "资产负债率",
+            "资产周转率", "存货周转率", "应收账款周转率", "应付账款周转率",
+        ]
+        existing_cols = [c for c in column_order if c in df.columns]
+        df = df[existing_cols]
+
+        # Summary metrics
+        summary = []
+        for ind_name, result in results.items():
+            if hasattr(result, 'values') and not result.values and hasattr(result, 'value') and result.value:
+                if ind_name == "CAGR":
+                    continue
+                label = label_map.get(ind_name, ind_name)
+                if result.unit == "%":
+                    summary.append({"label": label, "value": f"{result.value:.1f}%"})
+                elif result.unit == "CNY":
+                    if abs(result.value) > 1e9:
+                        summary.append({"label": label, "value": f"{result.value/1e9:.2f}十亿"})
+                    else:
+                        summary.append({"label": label, "value": f"{result.value:.2f}"})
+                else:
+                    summary.append({"label": label, "value": str(result.value)})
+
+        return {
+            "name": name,
+            "year_range": year_range,
+            "table": df,
+            "summary": summary
+        }
+
+    def get_cache_stats(self) -> dict:
+        """Get cache statistics."""
+        cache = self._cache
+        stats = {
+            "memory_size": len(cache._memory_cache) if hasattr(cache, '_memory_cache') else 0,
+        }
+        if hasattr(cache, '_disk_cache'):
+            stats["disk_cache_size"] = len(cache._disk_cache)
+        else:
+            stats["disk_cache_size"] = 0
+        return stats
+
+    def list_cache_keys(self, symbol: str | None = None, limit: int = 20) -> list[str]:
+        """List cache keys."""
+        cache = self._cache
+        keys = []
+        if hasattr(cache, '_disk_cache'):
+            keys = list(cache._disk_cache.keys())
+        elif hasattr(cache, '_memory_cache'):
+            keys = list(cache._memory_cache.keys())
+
+        if symbol:
+            keys = [k for k in keys if symbol in k]
+
+        return keys[:limit]
 
     def get_indicator(self, name: str) -> Optional[IndicatorMeta]:
         """

@@ -31,6 +31,23 @@ uv run --directory . python -m value_investment.cli info 600519
 uv run --directory . python -m value_investment.cli info 600519 --refresh
 ```
 
+**字段筛选使用 `--fields` / `-f`（三表命令）：**
+
+```bash
+# 利润表筛选字段
+uv run --directory . python -m value_investment.cli income 600519 --fields "REPORT_DATE,NETPROFIT"
+
+# 资产负债表筛选字段
+uv run --directory . python -m value_investment.cli balance 600519 --fields "TOTAL_ASSETS,TOTAL_LIABILITIES"
+
+# 现金流量表筛选字段
+uv run --directory . python -m value_investment.cli cashflow 600519 --fields "NETCASH_OPERATE,NETCASH_INVEST"
+```
+
+**查询字段名**：
+1. 查看 `references/profit.md`（利润表）、`references/balance.md`（资产负债表）、`references/cashflow.md`（现金流量表）
+2. 或使用无效字段查询，会报错显示所有可用字段
+
 ## Quick Reference
 
 | 需求 | 命令 |
@@ -39,10 +56,21 @@ uv run --directory . python -m value_investment.cli info 600519 --refresh
 | 历史股价 | `cli hist 600519 --end 20241231` |
 | 利润表 | `cli income 600519` |
 | 资产负债表 | `cli balance 600519` |
+| 现金流量表 | `cli cashflow 600519` |
 | 财务指标 | `cli finind 600519 -m A` |
 | 单个指标 | `cli indicator ROIC -s 00700 -m HK` |
 | PE百分位 | `cli indicator PEPct -s 600519 -m A -y 10` |
 | 完整分析 | `cli analyze 600519` |
+
+**字段筛选**（用于三表命令）：
+- 先查 `references/` 确认字段名，或用无效字段触发错误查看可用字段
+
+```bash
+# 只返回指定字段
+cli income 600519 --fields "NETPROFIT"
+cli balance 600519 --fields "TOTAL_ASSETS,REPORT_DATE"
+cli cashflow 600519 --fields "NETCASH_OPERATE"
+```
 
 **市场代码**：A股 `600519` | 港股 `00700` | 美股 `AAPL`
 

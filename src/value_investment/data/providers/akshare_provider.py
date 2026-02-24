@@ -397,19 +397,18 @@ class AkshareProvider:
 
         def fetch_full_data() -> pd.DataFrame:
             """Fetch full historical data from akshare"""
-            # Convert dates to akshare format (YYYYMMDD)
-            end_date_ak = end_date.replace("-", "") if isinstance(end_date, str) else end_date
-            # Use a reasonable start date for historical data
-            start_date_ak = "19700101"
+            # Use stock_us_daily (sina) instead of stock_us_hist (eastmoney)
+            # stock_us_daily is more stable
+            # 美股默认不复权：美股拆股时会直接调整价格，不复权更能反映实际收益
+            # A股默认后复权(hfq)，美股默认不复权("")，逻辑一致
+            data = ak.stock_us_daily(symbol=symbol, adjust="")
 
-            data = ak.stock_us_hist(
-                symbol=symbol,
-                period="daily",
-                start_date=start_date_ak,
-                end_date=end_date_ak,
-                adjust="",  # 不复权，与A股默认hfq不同
-            )
+            if data is None or (hasattr(data, 'empty') and data.empty):
+                return pd.DataFrame()
+
             # Convert date column to string for consistent format
+            # column name is 'date' not '日期'
+            data = data.rename(columns={'date': '日期'})
             data["日期"] = pd.to_datetime(data["日期"]).dt.strftime("%Y-%m-%d")
             return data
 
@@ -793,7 +792,7 @@ class AkshareProvider:
         elif self._market == "HK":
             return self._get_hk_quarterly_indicator(symbol, force_refresh=force_refresh)
         elif self._market == "US":
-            raise NotImplementedError(f"Quarterly indicators for {self._market} not implemented")
+            return self._get_us_quarterly_indicator(symbol, force_refresh=force_refresh)
         else:
             raise NotImplementedError(f"Quarterly indicators for {self._market} not implemented")
 
@@ -1023,6 +1022,39 @@ class AkshareProvider:
 
         # Apply DataMapper to standardize fields (including US-specific mappings)
         data = DataMapper.map_financial_indicator(data, market="US")
+
+        # Cache 1 year
+        self._cache.set(cache_key, data, ttl=86400 * 365)
+        return data
+
+    def _get_us_quarterly_indicator(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
+        """Get US stock quarterly financial indicators (单季度数据)"""
+        cache_key = f"quarterly_us_{symbol}"
+        # US quarterly data is published quarterly, so use same TTL as A-share
+        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+
+        # Force refresh: invalidate cache first
+        if force_refresh:
+            self._cache.invalidate(cache_key)
+
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        # Fetch quarterly data from akshare
+        try:
+            data = ak.stock_financial_us_analysis_indicator_em(
+                symbol=symbol,
+                indicator="单季报"
+            )
+        except Exception:
+            return pd.DataFrame()
+
+        if data is None or (hasattr(data, 'empty') and data.empty):
+            return pd.DataFrame()
+
+        # Apply DataMapper to standardize fields (using QUARTERLY_MAPPING for US)
+        data = DataMapper.map_quarterly(data, market="US")
 
         # Cache 1 year
         self._cache.set(cache_key, data, ttl=86400 * 365)

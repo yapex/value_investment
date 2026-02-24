@@ -62,7 +62,7 @@ uv run --directory . python -m value_investment.cli cashflow 600519 --fields "NE
 | PE百分位 | `cli indicator PEPct -s 600519 -m A -y 10` |
 | 完整分析 | `cli analyze 600519` |
 | 美股财务指标 | `cli finind AAPL -m US` |
-| 美股历史股价 | `cli hist AAPL -m US --end 20241231` |
+| 美股历史股价 | `cli hist AAPL -m US --end 20241231 --start 20150101` |
 | 美股完整分析 | `cli analyze AAPL -m US` |
 
 **字段筛选**（用于三表命令）：

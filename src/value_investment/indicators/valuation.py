@@ -39,8 +39,9 @@ class LatestMarketCapIndicator(BaseIndicator):
             )
 
         try:
-            # 判断市场类型：5位代码=港股，6位代码=A股
+            # 判断市场类型：5位代码=港股，6位代码=A股，美股=字母
             is_hk = len(stock_code) == 5
+            is_us = stock_code.isalpha()  # 美股代码是纯字母
 
             # 1. 从财务指标获取市值（优先使用）
             finind = financial_indicator
@@ -61,6 +62,14 @@ class LatestMarketCapIndicator(BaseIndicator):
                         market_cap_hkd = float(finind['总市值(港元)'].iloc[0])
                         if market_cap_hkd and market_cap_hkd > 0:
                             market_cap = market_cap_hkd * self.HKD_TO_CNY
+                elif is_us:
+                    # 美股：优先使用内部标准字段 (us_market_cap)
+                    if 'us_market_cap' in finind.columns:
+                        market_cap = float(finind['us_market_cap'].iloc[0])
+                    elif 'market_cap_usd' in finind.columns:
+                        market_cap = float(finind['market_cap_usd'].iloc[0])
+                    elif '总市值(美元)' in finind.columns:
+                        market_cap = float(finind['总市值(美元)'].iloc[0])
                 else:
                     # A股：优先使用内部标准字段 (a_market_cap)
                     if 'a_market_cap' in finind.columns:
@@ -96,6 +105,21 @@ class LatestMarketCapIndicator(BaseIndicator):
                 if col in finind.columns:
                     total_shares = float(finind[col].iloc[0])
                     break
+
+            # 如果财务指标中没有股本，尝试从 stock_info 获取（美股）
+            if (not total_shares or total_shares <= 0) and is_us:
+                # 美股：使用 actual_issue_total_shares_num * 10000 转换为股
+                try:
+                    from value_investment.api import ValueInvestment
+                    vi = ValueInvestment(market='US')
+                    info = vi.get_stock_info(stock_code)
+                    if info is not None and not info.empty:
+                        for item, value in zip(info['item'], info['value']):
+                            if 'actual_issue_total_shares_num' in item:
+                                total_shares = float(value) * 10000  # 转换为股
+                                break
+                except Exception:
+                    pass
 
             if not total_shares or total_shares <= 0:
                 return IndicatorResult(
@@ -386,16 +410,22 @@ class PEPercentileIndicator(BaseIndicator):
         if quarterly_data.empty or prices_data.empty:
             return None
 
-        # 检测是否为港股（港股有 date_type_code 字段）
-        is_hk = 'date_type_code' in quarterly_data.columns
+        # 检测是否为港股（港股有 date_type_code 字段，且没有 operating_income 字段）
+        # 美股有 date_type_code 和 operating_income 字段
+        # A股没有 date_type_code 字段
+        has_date_type_code = 'date_type_code' in quarterly_data.columns
+        has_operating_income = 'operating_income' in quarterly_data.columns
+
+        is_hk = has_date_type_code and not has_operating_income
 
         if is_hk:
             return self._calculate_hk_pe_ttm_percentile_with_data(quarterly_data, prices_data, stock_code, years)
 
-        # A股处理逻辑 - 提取净利润列
+        # A股或美股处理逻辑 - 提取净利润列
         # 优先使用内部标准字段名，其次兼容原始字段名
+        # 美股使用 parent_net_profit
         net_profit_col = None
-        for col in ['net_profit']:
+        for col in ['net_profit', 'parent_net_profit']:
             if col in quarterly_data.columns:
                 net_profit_col = col
                 break
@@ -457,8 +487,15 @@ class PEPercentileIndicator(BaseIndicator):
                     if item_col in stock_info.columns:
                         for _, row in stock_info.iterrows():
                             item = str(row.get(item_col, ''))
+                            value = row.get('value', 0)
+                            # A股: 总股本
                             if '总股本' in item:
-                                total_shares = float(row.get('value', 0))
+                                total_shares = float(value)
+                                break
+                            # 美股: actual_issue_total_shares_num (实际发行股本数)
+                            # 苹果的 actual_issue_total_shares_num = 4600000 表示约 46 亿股
+                            if 'actual_issue_total_shares_num' in item:
+                                total_shares = float(value) * 10000  # 转换为股
                                 break
             except Exception:
                 pass
@@ -555,13 +592,18 @@ class PEPercentileIndicator(BaseIndicator):
         if quarterly_data.empty:
             return None
 
-        # 检测是否为港股（港股有 DATE_TYPE_CODE 字段）
-        is_hk = 'date_type_code' in quarterly_data.columns
+        # 检测是否为港股（港股有 date_type_code 字段，且没有 operating_income 字段）
+        # 美股有 date_type_code 和 operating_income 字段
+        # A股没有 date_type_code 字段
+        has_date_type_code = 'date_type_code' in quarterly_data.columns
+        has_operating_income = 'operating_income' in quarterly_data.columns
+
+        is_hk = has_date_type_code and not has_operating_income
 
         if is_hk:
             return self._calculate_hk_pe_ttm_percentile(quarterly_data, provider, stock_code, years)
 
-        # A股处理逻辑
+        # A股或美股处理逻辑（两者都使用标准字段）
         # 检查是否有净利润字段（优先使用内部标准字段）
         net_profit_col = None
         for col in ['net_profit']:

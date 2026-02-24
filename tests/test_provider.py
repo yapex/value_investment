@@ -439,7 +439,7 @@ class TestAkshareProviderHistoricalUS:
             "成交量": [1000000, 1100000, 1200000]
         })
 
-        with patch("akshare.stock_us_hist", return_value=mock_data):
+        with patch("akshare.stock_us_daily", return_value=mock_data):
             result = provider.get_historical_data(
                 "AAPL",
                 end_date="2024-01-31",
@@ -466,7 +466,7 @@ class TestAkshareProviderHistoricalUS:
             "收盘": [155.0, 165.0, 175.0, 185.0]
         })
 
-        with patch("akshare.stock_us_hist", return_value=mock_data) as mock_ak:
+        with patch("akshare.stock_us_daily", return_value=mock_data) as mock_ak:
             result = provider.get_historical_data(
                 "AAPL",
                 end_date="20241231"
@@ -474,11 +474,11 @@ class TestAkshareProviderHistoricalUS:
 
         assert isinstance(result, pd.DataFrame)
         assert len(result) == 4
-        # 验证调用akshare时使用19700101作为start_date
+        # 验证调用akshare（stock_us_daily不需要日期参数）
         mock_ak.assert_called_once()
         call_kwargs = mock_ak.call_args.kwargs
-        assert call_kwargs["start_date"] == "19700101"
-        assert call_kwargs["end_date"] == "20241231"
+        assert call_kwargs["symbol"] == "AAPL"
+        assert call_kwargs["adjust"] == ""  # 默认不复权
 
     def test_us_historical_data_uses_cache(self, temp_cache_dir):
         """US历史行情应使用缓存"""
@@ -496,14 +496,14 @@ class TestAkshareProviderHistoricalUS:
         })
 
         # First call - should call akshare
-        with patch("akshare.stock_us_hist", return_value=mock_data) as mock_ak:
+        with patch("akshare.stock_us_daily", return_value=mock_data) as mock_ak:
             result1 = provider.get_historical_data("AAPL", end_date="20241231")
 
         mock_ak.assert_called_once()
         assert "hist_us_AAPL" in cache.list_keys()
 
         # Second call - should use cache
-        with patch("akshare.stock_us_hist") as mock_ak2:
+        with patch("akshare.stock_us_daily") as mock_ak2:
             result2 = provider.get_historical_data("AAPL", end_date="20241231")
 
         mock_ak2.assert_not_called()
@@ -525,7 +525,7 @@ class TestAkshareProviderHistoricalUS:
             "收盘": [155.0, 165.0, 175.0, 185.0]
         })
 
-        with patch("akshare.stock_us_hist", return_value=mock_full_data):
+        with patch("akshare.stock_us_daily", return_value=mock_full_data):
             # 首次调用获取全量
             result1 = provider.get_historical_data("AAPL", end_date="20241231")
             # 再次调用带 start_date 过滤

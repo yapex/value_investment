@@ -90,6 +90,7 @@ FINANCIAL_INDICATOR_MAPPING = {
 
     # 比率指标
     'ROE': 'roe',
+    'ROE_AVG': 'roe',  # 美股年报使用 ROE_AVG 字段
     'ROE_YOY': 'roe_yoy',
     'ROA': 'roa',
     'ROA_YOY': 'roa_yoy',
@@ -129,6 +130,39 @@ QUARTERLY_MAPPING = {
     # 港股特有
     'DATE_TYPE_CODE': 'date_type_code',
     '股东应占溢利': 'parent_net_profit',
+
+    # ----- 美股季度数据字段 -----
+    # stock_financial_us_analysis_indicator_em 单季度报
+    'OPERATE_INCOME': 'operating_income',
+    'OPERATE_INCOME_YOY': 'operating_income_yoy',
+    'GROSS_PROFIT': 'gross_profit',
+    'GROSS_PROFIT_YOY': 'gross_profit_yoy',
+    'PARENT_HOLDER_NETPROFIT': 'parent_net_profit',
+    'PARENT_HOLDER_NETPROFIT_YOY': 'parent_net_profit_yoy',
+    'BASIC_EPS': 'basic_eps',
+    'DILUTED_EPS': 'diluted_eps',
+    'GROSS_PROFIT_RATIO': 'gross_profit_margin',
+    'NET_PROFIT_RATIO': 'net_profit_margin',
+    'ROE_AVG': 'roe',
+    'ROA': 'roa',
+    'CURRENT_RATIO': 'current_ratio',
+    'SPEED_RATIO': 'quick_ratio',
+    'OCF_LIQDEBT': 'ocf_to_debt',
+    'DEBT_ASSET_RATIO': 'debt_ratio',
+    'EQUITY_RATIO': 'equity_ratio',
+    'BASIC_EPS_YOY': 'basic_eps_yoy',
+    'GROSS_PROFIT_RATIO_YOY': 'gross_profit_margin_yoy',
+    'NET_PROFIT_RATIO_YOY': 'net_profit_margin_yoy',
+    'ROE_AVG_YOY': 'roe_yoy',
+    'ROA_YOY': 'roa_yoy',
+    'DEBT_ASSET_RATIO_YOY': 'debt_ratio_yoy',
+    'CURRENT_RATIO_YOY': 'current_ratio_yoy',
+    'SPEED_RATIO_YOY': 'quick_ratio_yoy',
+    'REPORT_DATE': 'report_date',
+    'DATE_TYPE': 'date_type',
+    'DATE_TYPE_CODE': 'date_type_code',
+    # 美股特有 - 保留原始字段以便 PEPct 指标使用
+    'DATE_TYPE_CODE_original': 'DATE_TYPE_CODE',
 }
 
 
@@ -474,6 +508,11 @@ class DataMapper:
     @classmethod
     def _calculate_income_derived_fields(cls, df: pd.DataFrame) -> pd.DataFrame:
         """计算利润表衍生字段"""
+        # 如果 operating_income 不存在但 total_revenue 存在，使用 total_revenue 作为 operating_income
+        # 这对港股和美股特别重要，因为它们的利润表没有单独的 operating_income 字段
+        if "operating_income" not in df.columns and "total_revenue" in df.columns:
+            df["operating_income"] = df["total_revenue"]
+
         # 毛利润 = 营业收入 - 营业成本
         if "operating_income" in df.columns and "operating_cost" in df.columns:
             df["gross_profit"] = df["operating_income"] - df["operating_cost"]

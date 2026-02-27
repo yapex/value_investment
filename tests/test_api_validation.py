@@ -6,6 +6,7 @@ import pandas as pd
 class TestAkshareAPIs:
     """Test akshare API responses to understand actual field names"""
 
+    @pytest.mark.skip(reason="Phase 0 探索测试，API 字段已确认")
     def test_stock_individual_info_em_fields(self):
         """验证个股信息接口返回字段"""
         import akshare as ak
@@ -19,6 +20,7 @@ class TestAkshareAPIs:
         print(f"Columns: {list(df.columns)}")
         print(df.head())
 
+    @pytest.mark.skip(reason="Phase 0 探索测试，API 字段已确认")
     def test_stock_zh_a_hist_fields(self):
         """验证历史行情接口返回字段"""
         import akshare as ak

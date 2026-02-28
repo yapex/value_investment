@@ -18,6 +18,9 @@ from value_investment.indicators.efficiency import (
     InventoryTurnoverIndicator,
     ReceivableTurnoverIndicator,
     PayableTurnoverIndicator,
+    ExpenseRatioIndicator,
+    FeeRateIndicator,
+    FixedAssetTurnoverIndicator,
 )
 from value_investment.indicators.cashflow import (
     CfoToNetprofitIndicator,
@@ -58,6 +61,7 @@ class IndicatorFactory:
         from value_investment.indicators.efficiency import (
             AssetTurnoverIndicator, InventoryTurnoverIndicator,
             ReceivableTurnoverIndicator, PayableTurnoverIndicator,
+            ExpenseRatioIndicator, FeeRateIndicator, FixedAssetTurnoverIndicator,
         )
         from value_investment.indicators.cashflow import (
             CfoToNetprofitIndicator, FcfToRevenueIndicator, CfoToNetprofitSumIndicator,
@@ -82,6 +86,9 @@ class IndicatorFactory:
             DebtRatioIndicator(),
             ReceivableTurnoverIndicator(),
             PayableTurnoverIndicator(),
+            ExpenseRatioIndicator(),
+            FeeRateIndicator(),
+            FixedAssetTurnoverIndicator(),
             CfoToNetprofitIndicator(),
             FcfToRevenueIndicator(),
             CfoToNetprofitSumIndicator(),

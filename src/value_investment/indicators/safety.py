@@ -9,7 +9,7 @@ class CashToDebtIndicator(BaseIndicator):
     """Cash to Debt Ratio = Cash and Equivalents / Interest-bearing Debt"""
 
     name = "cash_to_debt"
-    description = "Cash to Debt Ratio (Cash and Equivalents / Interest-bearing Debt)"
+    description = "Cash to Debt (货币资金/有息负债)"
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
@@ -53,14 +53,13 @@ class CashToDebtIndicator(BaseIndicator):
         return IndicatorResult(
             value=float(ratio.mean()) if len(ratio) > 0 else 0.0,
             unit="ratio",
-            description="Cash to Debt Ratio",
+            description="Cash to Debt (货币资金/有息负债)",
             years=data['year'].tolist() if 'year' in data.columns else [],
             values=ratio.tolist() if len(ratio) > 0 else []
         )
 
     def get_required_fields(self) -> List[str]:
-        return ['cash_and_equivalents', 'short_term_debt', 'long_term_debt', 
-                'bonds_payable', 'lease_liability', 'noncurrent_liability_due_1y']
+        return ['MONETARYFUNDS', 'SHORT_LOAN', 'LONG_LOAN', 'BOND_PAYABLE']
 
     def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
         for col in candidates:
@@ -77,7 +76,7 @@ class DebtRatioTotalIndicator(BaseIndicator):
     """Debt Ratio (Total) = Interest-bearing Debt / Total Assets"""
 
     name = "debt_ratio_total"
-    description = "Debt Ratio (Interest-bearing Debt / Total Assets)"
+    description = "Debt Ratio Total (有息负债/总资产)"
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
@@ -121,14 +120,13 @@ class DebtRatioTotalIndicator(BaseIndicator):
         return IndicatorResult(
             value=float(ratio.mean()) if len(ratio) > 0 else 0.0,
             unit="%",
-            description="Debt Ratio (Interest-bearing Debt / Total Assets)",
+            description="Debt Ratio Total (有息负债/总资产)",
             years=data['year'].tolist() if 'year' in data.columns else [],
             values=ratio.tolist() if len(ratio) > 0 else []
         )
 
     def get_required_fields(self) -> List[str]:
-        return ['total_assets', 'short_term_debt', 'long_term_debt',
-                'bonds_payable', 'lease_liability', 'noncurrent_liability_due_1y']
+        return ['TOTAL_ASSETS', 'SHORT_LOAN', 'LONG_LOAN', 'BOND_PAYABLE']
 
     def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
         for col in candidates:

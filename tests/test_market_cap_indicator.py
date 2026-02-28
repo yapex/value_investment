@@ -78,3 +78,14 @@ def test_us_market_cap_from_financial_indicator():
     
     assert result.value == 3000000000000.0
     assert '美元' in result.description or '美股' in result.description
+
+
+def test_market_cap_registered_in_factory():
+    """market_cap should be available via factory"""
+    from value_investment.indicators.factory import IndicatorFactory
+    
+    factory = IndicatorFactory()
+    indicator = factory.get('market_cap')
+    
+    assert indicator is not None
+    assert indicator.name == 'market_cap'

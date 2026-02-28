@@ -33,6 +33,7 @@ from value_investment.indicators.valuation import (
     ImpliedGrowthIndicator,
     PEPercentileIndicator,
 )
+from value_investment.indicators.market_cap import MarketCapIndicator
 
 if TYPE_CHECKING:
     from value_investment.data.providers.akshare_provider import AkshareProvider
@@ -67,6 +68,7 @@ class IndicatorFactory:
         from value_investment.indicators.valuation import (
             LatestMarketCapIndicator, ImpliedGrowthIndicator, PEPercentileIndicator,
         )
+        from value_investment.indicators.market_cap import MarketCapIndicator
 
         indicators = [
             ROEIndicator(),
@@ -84,6 +86,7 @@ class IndicatorFactory:
             FcfToRevenueIndicator(),
             CfoToNetprofitSumIndicator(),
             LatestMarketCapIndicator(),
+            MarketCapIndicator(),
             ROICIndicator(),
             CAGRIndicator(),
             ImpliedGrowthIndicator(),

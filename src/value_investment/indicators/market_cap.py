@@ -52,11 +52,21 @@ class MarketCapIndicator(BaseIndicator):
             market_name = "港股"
             unit = "港元"
         elif is_us:
-            # 美股：待实现
-            pass
+            # 美股：优先使用内部标准字段
+            for col in ['us_market_cap', 'market_cap_usd', '总市值(美元)']:
+                if col in finind.columns:
+                    market_cap = float(finind[col].iloc[0])
+                    break
+            market_name = "美股"
+            unit = "美元"
         else:
-            # A股：待实现
-            pass
+            # A股：优先使用内部标准字段
+            for col in ['a_market_cap', 'market_cap_cny', '总市值(元)', '总市值(人民币)']:
+                if col in finind.columns:
+                    market_cap = float(finind[col].iloc[0])
+                    break
+            market_name = "A股"
+            unit = "人民币"
         
         if market_cap and market_cap > 0:
             return IndicatorResult(

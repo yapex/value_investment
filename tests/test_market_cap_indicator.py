@@ -36,3 +36,45 @@ def test_hk_market_cap_from_financial_indicator():
     
     assert result.value == 4151041376020.0
     assert '港元' in result.description or 'HK' in result.description or '港股' in result.description
+
+
+def test_a_market_cap_from_financial_indicator():
+    """Should get market cap for A-shares"""
+    import pandas as pd
+    from value_investment.indicators.market_cap import MarketCapIndicator
+    
+    indicator = MarketCapIndicator()
+    
+    finind = pd.DataFrame({
+        'a_market_cap': [2000000000000.0],  # 茅台市值
+    })
+    
+    result = indicator.calculate(
+        pd.DataFrame(),
+        financial_indicator=finind,
+        stock_code='600519'
+    )
+    
+    assert result.value == 2000000000000.0
+    assert '人民币' in result.description or 'A股' in result.description
+
+
+def test_us_market_cap_from_financial_indicator():
+    """Should get market cap for US stocks"""
+    import pandas as pd
+    from value_investment.indicators.market_cap import MarketCapIndicator
+    
+    indicator = MarketCapIndicator()
+    
+    finind = pd.DataFrame({
+        'us_market_cap': [3000000000000.0],  # 苹果市值
+    })
+    
+    result = indicator.calculate(
+        pd.DataFrame(),
+        financial_indicator=finind,
+        stock_code='AAPL'
+    )
+    
+    assert result.value == 3000000000000.0
+    assert '美元' in result.description or '美股' in result.description

@@ -1,4 +1,4 @@
-"""Analysis module for value investment"""
-from value_investment.analysis.detector import detect_warnings
+"""Analysis package - reporting and analysis tools"""
+from value_investment.analysis.reporter import generate_report
 
-__all__ = ["detect_warnings"]
+__all__ = ["generate_report"]

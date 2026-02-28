@@ -19,6 +19,9 @@ from value_investment.indicators.efficiency import (
     InventoryTurnoverIndicator,
     ReceivableTurnoverIndicator,
     PayableTurnoverIndicator,
+    ExpenseRatioIndicator,
+    FeeRateIndicator,
+    FixedAssetTurnoverIndicator,
 )
 from value_investment.indicators.cashflow import (
     CfoToNetprofitIndicator,
@@ -28,6 +31,10 @@ from value_investment.indicators.cashflow import (
 from value_investment.indicators.growth import (
     ROICIndicator,
     CAGRIndicator,
+)
+from value_investment.indicators.safety import (
+    CashToDebtIndicator,
+    DebtRatioTotalIndicator,
 )
 from value_investment.indicators.valuation import (
     LatestMarketCapIndicator,
@@ -62,10 +69,9 @@ class IndicatorFactory:
             DebtRatioIndicator,
         )
         from value_investment.indicators.efficiency import (
-            AssetTurnoverIndicator,
-            InventoryTurnoverIndicator,
-            ReceivableTurnoverIndicator,
-            PayableTurnoverIndicator,
+            AssetTurnoverIndicator, InventoryTurnoverIndicator,
+            ReceivableTurnoverIndicator, PayableTurnoverIndicator,
+            ExpenseRatioIndicator, FeeRateIndicator, FixedAssetTurnoverIndicator,
         )
         from value_investment.indicators.cashflow import (
             CfoToNetprofitIndicator,
@@ -81,6 +87,11 @@ class IndicatorFactory:
             ImpliedGrowthIndicator,
             PEPercentileIndicator,
         )
+        from value_investment.indicators.market_cap import MarketCapIndicator
+        from value_investment.indicators.safety import (
+            CashToDebtIndicator,
+            DebtRatioTotalIndicator,
+        )
 
         indicators = [
             ROEIndicator(),
@@ -94,6 +105,9 @@ class IndicatorFactory:
             DebtRatioIndicator(),
             ReceivableTurnoverIndicator(),
             PayableTurnoverIndicator(),
+            ExpenseRatioIndicator(),
+            FeeRateIndicator(),
+            FixedAssetTurnoverIndicator(),
             CfoToNetprofitIndicator(),
             FcfToRevenueIndicator(),
             CfoToNetprofitSumIndicator(),
@@ -102,6 +116,8 @@ class IndicatorFactory:
             ROICIndicator(),
             CAGRIndicator(),
             ImpliedGrowthIndicator(),
+            CashToDebtIndicator(),
+            DebtRatioTotalIndicator(),
             PEPercentileIndicator(),
         ]
         for indicator in indicators:

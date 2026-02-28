@@ -1,4 +1,5 @@
 """Indicator factory module"""
+
 from typing import TYPE_CHECKING, Dict
 
 from value_investment.indicators.base import BaseIndicator
@@ -42,7 +43,7 @@ if TYPE_CHECKING:
 class IndicatorFactory:
     """Factory for creating and managing indicators"""
 
-    def __init__(self, provider: "AkshareProvider" = None):
+    def __init__(self, provider: "AkshareProvider | None" = None):
         self._provider = provider
         self._indicators: Dict[str, BaseIndicator] = {}
         self._register_default_indicators()
@@ -50,25 +51,36 @@ class IndicatorFactory:
     def _register_default_indicators(self) -> None:
         """Register all default indicators"""
         from value_investment.indicators.profitability import (
-            ROEIndicator, ROAIndicator, GrossMarginIndicator, NetProfitMarginIndicator,
+            ROEIndicator,
+            ROAIndicator,
+            GrossMarginIndicator,
+            NetProfitMarginIndicator,
         )
         from value_investment.indicators.solvency import (
-            CurrentRatioIndicator, QuickRatioIndicator, DebtRatioIndicator,
+            CurrentRatioIndicator,
+            QuickRatioIndicator,
+            DebtRatioIndicator,
         )
         from value_investment.indicators.efficiency import (
-            AssetTurnoverIndicator, InventoryTurnoverIndicator,
-            ReceivableTurnoverIndicator, PayableTurnoverIndicator,
+            AssetTurnoverIndicator,
+            InventoryTurnoverIndicator,
+            ReceivableTurnoverIndicator,
+            PayableTurnoverIndicator,
         )
         from value_investment.indicators.cashflow import (
-            CfoToNetprofitIndicator, FcfToRevenueIndicator, CfoToNetprofitSumIndicator,
+            CfoToNetprofitIndicator,
+            FcfToRevenueIndicator,
+            CfoToNetprofitSumIndicator,
         )
         from value_investment.indicators.growth import (
-            ROICIndicator, CAGRIndicator,
+            ROICIndicator,
+            CAGRIndicator,
         )
         from value_investment.indicators.valuation import (
-            LatestMarketCapIndicator, ImpliedGrowthIndicator, PEPercentileIndicator,
+            LatestMarketCapIndicator,
+            ImpliedGrowthIndicator,
+            PEPercentileIndicator,
         )
-        from value_investment.indicators.market_cap import MarketCapIndicator
 
         indicators = [
             ROEIndicator(),

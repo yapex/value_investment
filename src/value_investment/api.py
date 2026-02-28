@@ -382,6 +382,7 @@ class ValueInvestment:
         years: int = 10,
         cagr_metrics: list = None,
         market_cap: float = None,
+        report: bool = False,
         **kwargs,
     ) -> dict:
         """
@@ -392,6 +393,7 @@ class ValueInvestment:
             years: Number of years for analysis
             cagr_metrics: List of metrics for CAGR calculation, e.g. ["revenue", "net_profit"]
             market_cap: Market capitalization (if not provided, will try to fetch from stock info)
+            report: If True, generate analysis report with warnings and notes
             **kwargs: Additional parameters for indicators
 
         Returns:
@@ -400,6 +402,9 @@ class ValueInvestment:
                 - year_range: Year range string
                 - table: DataFrame with yearly indicators
                 - summary: List of summary metrics with labels
+                - warnings: List of warning messages (if report=True)
+                - notes: List of note messages (if report=True)
+                - report: Markdown formatted report (if report=True)
         """
         # Get stock name
         name = stock_code
@@ -444,7 +449,39 @@ class ValueInvestment:
                         results[cagr_name] = {"error": str(e)}
 
         # Format results
-        return self._format_analyze_results(name, results, years)
+        result_dict = self._format_analyze_results(name, results, years)
+
+        # If report=True, add warnings, notes, and generate Markdown report
+        if report:
+            # Import detector and generate warnings
+            from value_investment.analysis.detector import detect_warnings
+            from value_investment.indicators.base import IndicatorResult
+
+            # Extract indicator values for detector
+            indicator_values = {}
+            for ind_name, ind_result in results.items():
+                # Skip error results
+                if isinstance(ind_result, dict) and "error" in ind_result:
+                    continue
+                # Handle IndicatorResult objects
+                if isinstance(ind_result, IndicatorResult):
+                    if ind_result.value is not None:
+                        indicator_values[ind_name] = ind_result.value
+                    elif ind_result.values:
+                        # Use latest value
+                        indicator_values[ind_name] = ind_result.values[0]
+
+            warnings, notes = detect_warnings(indicator_values)
+
+            # Add warnings and notes to result
+            result_dict["warnings"] = warnings
+            result_dict["notes"] = notes
+
+            # Generate Markdown report
+            from value_investment.analysis.reporter import generate_report
+            result_dict["report"] = generate_report(result_dict, stock_code)
+
+        return result_dict
 
     def _format_analyze_results(self, name: str, results: dict, years: int) -> dict:
         """Format analyze results for display."""

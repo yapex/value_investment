@@ -31,6 +31,10 @@ from value_investment.indicators.growth import (
     ROICIndicator,
     CAGRIndicator,
 )
+from value_investment.indicators.safety import (
+    CashToDebtIndicator,
+    DebtRatioTotalIndicator,
+)
 from value_investment.indicators.valuation import (
     LatestMarketCapIndicator,
     ImpliedGrowthIndicator,
@@ -73,6 +77,10 @@ class IndicatorFactory:
             LatestMarketCapIndicator, ImpliedGrowthIndicator, PEPercentileIndicator,
         )
         from value_investment.indicators.market_cap import MarketCapIndicator
+        from value_investment.indicators.safety import (
+            CashToDebtIndicator,
+            DebtRatioTotalIndicator,
+        )
 
         indicators = [
             ROEIndicator(),
@@ -97,6 +105,8 @@ class IndicatorFactory:
             ROICIndicator(),
             CAGRIndicator(),
             ImpliedGrowthIndicator(),
+            CashToDebtIndicator(),
+            DebtRatioTotalIndicator(),
             PEPercentileIndicator(),
         ]
         for indicator in indicators:

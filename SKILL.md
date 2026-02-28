@@ -53,6 +53,7 @@ uv run --directory . python -m value_investment.cli cashflow 600519 --fields "NE
 | 需求 | 命令 |
 |------|------|
 | 基本信息 | `cli info 600519` |
+| **市值（港股）** | `cli indicator latest_market_cap -s 00700 -m HK` |
 | 历史股价 | `cli hist 600519 --end 20241231` |
 | 利润表 | `cli income 600519` |
 | 资产负债表 | `cli balance 600519` |
@@ -78,6 +79,20 @@ cli cashflow 600519 --fields "NETCASH_OPERATE"
 **市场代码**：A股 `600519` | 港股 `00700` | 美股 `AAPL`
 
 > 美股自动检测：纯字母股票代码自动识别为美股（如 `AAPL`、`TSLA`）
+
+## 市值查询
+
+**注意：** `list-indicators` 显示 `market_cap`，但实际应使用 `latest_market_cap`：
+
+```bash
+# 港股市值
+cli indicator latest_market_cap -s 00700 -m HK
+
+# A股市值（通过 finind 获取）
+cli finind 600519 -m A
+```
+
+**市值单位：** 港股市值为港元，A股市值为人民币
 
 **美股字段说明**：
 - 财务指标字段映射见 `src/value_investment/data/mapper.py` 中的 `FINANCIAL_INDICATOR_MAPPING`

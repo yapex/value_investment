@@ -21,11 +21,56 @@ class MarketCapIndicator(BaseIndicator):
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        # TODO: 实现计算逻辑
+        financial_indicator = kwargs.get('financial_indicator')
+        stock_code = kwargs.get('stock_code', '')
+        
+        if financial_indicator is None or financial_indicator.empty:
+            return IndicatorResult(
+                value=0.0,
+                unit="",
+                description="总市值 (无财务指标数据)",
+                years=[],
+                values=[]
+            )
+        
+        finind = financial_indicator
+        
+        # 检测市场类型
+        is_hk = len(stock_code) == 5 and stock_code.isdigit()
+        is_us = stock_code.isalpha()
+        
+        market_cap = None
+        market_name = ""
+        unit = ""
+        
+        if is_hk:
+            # 港股：优先使用内部标准字段
+            for col in ['hk_market_cap', 'market_cap_hkd', '港股市值(港元)', '总市值(港元)']:
+                if col in finind.columns:
+                    market_cap = float(finind[col].iloc[0])
+                    break
+            market_name = "港股"
+            unit = "港元"
+        elif is_us:
+            # 美股：待实现
+            pass
+        else:
+            # A股：待实现
+            pass
+        
+        if market_cap and market_cap > 0:
+            return IndicatorResult(
+                value=market_cap,
+                unit=unit,
+                description=f"总市值 ({market_name}, {unit})",
+                years=[],
+                values=[]
+            )
+        
         return IndicatorResult(
             value=0.0,
             unit="",
-            description="总市值",
+            description="总市值 (无法获取)",
             years=[],
             values=[]
         )

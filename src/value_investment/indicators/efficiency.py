@@ -300,3 +300,291 @@ class FixedAssetTurnoverIndicator(BaseIndicator):
                 if cand.lower() in col.lower():
                     return col
         return None
+
+
+class FeeToGrossProfitRatioIndicator(BaseIndicator):
+    """Fee to Gross Profit Ratio = 三费 / 毛利润
+
+    Formula: (sales_expense + management_expense + financial_expense) / (operating_income - operating_cost)
+    Thresholds: <50%优秀, >70%无关注价值
+
+    From 手把手教你读财报: 如果费用占毛利润比例在50%以内，算是优秀的公司；
+    如果在30%-70%区域，但仍是有一定优势的公司；如果超过70%，通常关注的价值不大
+    """
+
+    name = "fee_to_gross_profit_ratio"
+    description = "Fee to Gross Profit Ratio (三费/毛利润)"
+    type = IndicatorType.CALCULATED
+
+    def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
+        # Get expense columns
+        sales_exp_col = self._find_column(data, ['sales_expense'])
+        mgmt_exp_col = self._find_column(data, ['management_expense'])
+        fin_exp_col = self._find_column(data, ['financial_expense'])
+
+        # Get income and cost columns
+        income_col = self._find_column(data, ['operating_income', 'total_revenue'])
+        cost_col = self._find_column(data, ['operating_cost'])
+
+        # Get expenses (default to 0 if not available)
+        sales_expense = data[sales_exp_col] if sales_exp_col else pd.Series(0, index=data.index)
+        mgmt_expense = data[mgmt_exp_col] if mgmt_exp_col else pd.Series(0, index=data.index)
+        fin_expense = data[fin_exp_col] if fin_exp_col else pd.Series(0, index=data.index)
+
+        # Total three fees (三费)
+        total_fee = sales_expense + mgmt_expense + fin_expense
+
+        # Get income and cost
+        income = data[income_col] if income_col else pd.Series(0, index=data.index)
+        cost = data[cost_col] if cost_col else pd.Series(0, index=data.index)
+
+        # Calculate gross profit (毛利润)
+        gross_profit = income - cost
+
+        # Calculate ratio (as percentage), handle division by zero
+        # If gross profit is 0 or negative, return 0
+        ratio = pd.Series(0.0, index=data.index)
+        valid_mask = gross_profit > 0
+        ratio[valid_mask] = (total_fee[valid_mask] / gross_profit[valid_mask]) * 100
+
+        return IndicatorResult(
+            value=float(ratio.mean()) if len(ratio) > 0 else 0.0,
+            unit="%",
+            description="Fee to Gross Profit Ratio (费用占毛利润比)",
+            years=data['year'].tolist() if 'year' in data.columns else [],
+            values=ratio.tolist() if len(ratio) > 0 else []
+        )
+
+    def get_required_fields(self) -> List[str]:
+        return ['operating_income', 'operating_cost', 'sales_expense', 'management_expense', 'financial_expense']
+
+    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+        for col in candidates:
+            if col in df.columns:
+                return col
+        for col in df.columns:
+            for cand in candidates:
+                if cand.lower() in col.lower():
+                    return col
+        return None
+
+
+class AccountsReceivableRatioIndicator(BaseIndicator):
+    """Accounts Receivable to Revenue Ratio = 应收账款 / 营业收入
+
+    Formula: accounts_receivable / operating_income
+    Threshold: >30%需警惕
+
+    From 手把手教你读财报: 应收账款占营业收入的比例较大，且有大部分（如超过三成）是一年以上的应收款，需警惕
+    """
+
+    name = "accounts_receivable_ratio"
+    description = "Accounts Receivable to Revenue Ratio (应收账款/营业收入)"
+    type = IndicatorType.CALCULATED
+
+    def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
+        # Get columns
+        ar_col = self._find_column(data, ['accounts_receivable'])
+        income_col = self._find_column(data, ['operating_income', 'total_revenue'])
+
+        # Get accounts receivable and revenue
+        accounts_receivable = data[ar_col] if ar_col else pd.Series(0, index=data.index)
+        income = data[income_col] if income_col else pd.Series([1], index=data.index)
+
+        # Calculate ratio (as percentage), handle division by zero
+        ratio = pd.Series(0.0, index=data.index)
+        valid_mask = income != 0
+        ratio[valid_mask] = (accounts_receivable[valid_mask] / income[valid_mask].abs()) * 100
+
+        return IndicatorResult(
+            value=float(ratio.mean()) if len(ratio) > 0 else 0.0,
+            unit="%",
+            description="Accounts Receivable to Revenue Ratio (应收账款占比)",
+            years=data['year'].tolist() if 'year' in data.columns else [],
+            values=ratio.tolist() if len(ratio) > 0 else []
+        )
+
+    def get_required_fields(self) -> List[str]:
+        return ['accounts_receivable', 'operating_income']
+
+    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+        for col in candidates:
+            if col in df.columns:
+                return col
+        for col in df.columns:
+            for cand in candidates:
+                if cand.lower() in col.lower():
+                    return col
+        return None
+
+
+class ProductionAssetRatioIndicator(BaseIndicator):
+    """Production Asset Ratio = 生产资产 / 总资产
+
+    Formula: (fixed_assets + construction_in_progress + project_materials) / total_assets
+    Note: In strict definition, land (part of intangible assets) should be included,
+    but typically not separated in financial data.
+
+    From 手把手教你读财报: 生产资产占总资产的比例，占比大称为"重资产公司"，占比小称为"轻资产公司"
+    """
+
+    name = "production_asset_ratio"
+    description = "Production Asset Ratio (生产资产/总资产)"
+    type = IndicatorType.CALCULATED
+
+    def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
+        # Get columns
+        fixed_col = self._find_column(data, ['fixed_assets'])
+        cip_col = self._find_column(data, ['construction_in_progress'])
+        material_col = self._find_column(data, ['project_materials'])
+        total_col = self._find_column(data, ['total_assets'])
+
+        # Get values (default to 0 if not available)
+        fixed_assets = data[fixed_col] if fixed_col else pd.Series(0, index=data.index)
+        construction = data[cip_col] if cip_col else pd.Series(0, index=data.index)
+        materials = data[material_col] if material_col else pd.Series(0, index=data.index)
+        total_assets = data[total_col] if total_col else pd.Series([1], index=data.index)
+
+        # Calculate production assets
+        production_assets = fixed_assets + construction + materials
+
+        # Calculate ratio (as percentage), handle division by zero
+        ratio = pd.Series(0.0, index=data.index)
+        valid_mask = total_assets != 0
+        ratio[valid_mask] = (production_assets[valid_mask] / total_assets[valid_mask].abs()) * 100
+
+        return IndicatorResult(
+            value=float(ratio.mean()) if len(ratio) > 0 else 0.0,
+            unit="%",
+            description="Production Asset Ratio (生产资产占比)",
+            years=data['year'].tolist() if 'year' in data.columns else [],
+            values=ratio.tolist() if len(ratio) > 0 else []
+        )
+
+    def get_required_fields(self) -> List[str]:
+        return ['fixed_assets', 'construction_in_progress', 'project_materials', 'total_assets']
+
+    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+        for col in candidates:
+            if col in df.columns:
+                return col
+        for col in df.columns:
+            for cand in candidates:
+                if cand.lower() in col.lower():
+                    return col
+        return None
+
+
+class ReturnOnProductionAssetsIndicator(BaseIndicator):
+    """Return on Production Assets = 税前利润 / 生产资产
+
+    Formula: total_profit / (fixed_assets + construction_in_progress + project_materials)
+
+    From 手把手教你读财报: 用"税前利润总额÷生产资产"，得出的比值如果显著高于
+    社会平均资本回报率（银行借款标准利率的两倍左右），则属于优秀公司，是其竞争力的体现
+    """
+
+    name = "return_on_production_assets"
+    description = "Return on Production Assets (税前利润/生产资产)"
+    type = IndicatorType.CALCULATED
+
+    def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
+        # Get profit column
+        profit_col = self._find_column(data, ['total_profit', 'profit_before_tax'])
+
+        # Get production asset columns
+        fixed_col = self._find_column(data, ['fixed_assets'])
+        cip_col = self._find_column(data, ['construction_in_progress'])
+        material_col = self._find_column(data, ['project_materials'])
+
+        # Get values (default to 0 if not available)
+        total_profit = data[profit_col] if profit_col else pd.Series(0, index=data.index)
+        fixed_assets = data[fixed_col] if fixed_col else pd.Series(0, index=data.index)
+        construction = data[cip_col] if cip_col else pd.Series(0, index=data.index)
+        materials = data[material_col] if material_col else pd.Series(0, index=data.index)
+
+        # Calculate production assets
+        production_assets = fixed_assets + construction + materials
+
+        # Calculate return (as percentage), handle division by zero
+        ratio = pd.Series(0.0, index=data.index)
+        valid_mask = production_assets > 0
+        ratio[valid_mask] = (total_profit[valid_mask] / production_assets[valid_mask]) * 100
+
+        return IndicatorResult(
+            value=float(ratio.mean()) if len(ratio) > 0 else 0.0,
+            unit="%",
+            description="Return on Production Assets (税前利润/生产资产)",
+            years=data['year'].tolist() if 'year' in data.columns else [],
+            values=ratio.tolist() if len(ratio) > 0 else []
+        )
+
+    def get_required_fields(self) -> List[str]:
+        return ['total_profit', 'fixed_assets', 'construction_in_progress', 'project_materials']
+
+    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+        for col in candidates:
+            if col in df.columns:
+                return col
+        for col in df.columns:
+            for cand in candidates:
+                if cand.lower() in col.lower():
+                    return col
+        return None
+
+
+class ReceivablesToAssetsRatioIndicator(BaseIndicator):
+    """Receivables to Total Assets Ratio = 应收类科目 / 总资产
+
+    Formula: (accounts_receivable + notes_receivable + other_receivables) / total_assets
+    Note: Bank acceptances (银票) typically not available separately in financial data
+
+    From 手把手教你读财报: 所有带"应收"两个字的科目总和，减去银票金额，
+    看其占总资产比例是否过大，一般超过三成已经算严重，过半显然有问题
+    """
+
+    name = "receivables_to_assets_ratio"
+    description = "Receivables to Total Assets Ratio (应收类科目/总资产)"
+    type = IndicatorType.CALCULATED
+
+    def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
+        # Get receivable columns
+        ar_col = self._find_column(data, ['accounts_receivable'])
+        notes_col = self._find_column(data, ['notes_receivable'])
+        other_col = self._find_column(data, ['other_receivables', 'other_receivable'])
+        total_col = self._find_column(data, ['total_assets'])
+
+        # Get values (default to 0 if not available)
+        accounts_receivable = data[ar_col] if ar_col else pd.Series(0, index=data.index)
+        notes_receivable = data[notes_col] if notes_col else pd.Series(0, index=data.index)
+        other_receivables = data[other_col] if other_col else pd.Series(0, index=data.index)
+        total_assets = data[total_col] if total_col else pd.Series([1], index=data.index)
+
+        # Calculate total receivables (应收类科目)
+        total_receivables = accounts_receivable + notes_receivable + other_receivables
+
+        # Calculate ratio (as percentage), handle division by zero
+        ratio = pd.Series(0.0, index=data.index)
+        valid_mask = total_assets != 0
+        ratio[valid_mask] = (total_receivables[valid_mask] / total_assets[valid_mask].abs()) * 100
+
+        return IndicatorResult(
+            value=float(ratio.mean()) if len(ratio) > 0 else 0.0,
+            unit="%",
+            description="Receivables to Total Assets Ratio (应收类科目占比)",
+            years=data['year'].tolist() if 'year' in data.columns else [],
+            values=ratio.tolist() if len(ratio) > 0 else []
+        )
+
+    def get_required_fields(self) -> List[str]:
+        return ['accounts_receivable', 'notes_receivable', 'other_receivables', 'total_assets']
+
+    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+        for col in candidates:
+            if col in df.columns:
+                return col
+        for col in df.columns:
+            for cand in candidates:
+                if cand.lower() in col.lower():
+                    return col
+        return None

@@ -8,6 +8,7 @@ from value_investment.indicators.profitability import (
     ROAIndicator,
     GrossMarginIndicator,
     NetProfitMarginIndicator,
+    OperatingProfitMarginIndicator,
 )
 from value_investment.indicators.solvency import (
     CurrentRatioIndicator,
@@ -31,6 +32,10 @@ from value_investment.indicators.cashflow import (
 from value_investment.indicators.growth import (
     ROICIndicator,
     CAGRIndicator,
+    RevenueGrowthIndicator,
+    OperatingProfitGrowthIndicator,
+    NetAssetGrowthIndicator,
+    TotalAssetGrowthIndicator,
 )
 from value_investment.indicators.safety import (
     CashToDebtIndicator,
@@ -62,6 +67,7 @@ class IndicatorFactory:
             ROAIndicator,
             GrossMarginIndicator,
             NetProfitMarginIndicator,
+            OperatingProfitMarginIndicator,
         )
         from value_investment.indicators.solvency import (
             CurrentRatioIndicator,
@@ -81,6 +87,10 @@ class IndicatorFactory:
         from value_investment.indicators.growth import (
             ROICIndicator,
             CAGRIndicator,
+            RevenueGrowthIndicator,
+            OperatingProfitGrowthIndicator,
+            NetAssetGrowthIndicator,
+            TotalAssetGrowthIndicator,
         )
         from value_investment.indicators.valuation import (
             LatestMarketCapIndicator,
@@ -98,6 +108,7 @@ class IndicatorFactory:
             ROAIndicator(),
             GrossMarginIndicator(),
             NetProfitMarginIndicator(),
+            OperatingProfitMarginIndicator(),
             CurrentRatioIndicator(),
             AssetTurnoverIndicator(),
             InventoryTurnoverIndicator(),
@@ -115,6 +126,10 @@ class IndicatorFactory:
             MarketCapIndicator(),
             ROICIndicator(),
             CAGRIndicator(),
+            RevenueGrowthIndicator(),
+            OperatingProfitGrowthIndicator(),
+            NetAssetGrowthIndicator(),
+            TotalAssetGrowthIndicator(),
             ImpliedGrowthIndicator(),
             CashToDebtIndicator(),
             DebtRatioTotalIndicator(),

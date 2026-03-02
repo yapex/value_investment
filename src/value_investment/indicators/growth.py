@@ -1,4 +1,4 @@
-"""Growth indicators: ROIC, CAGR."""
+"""Growth indicators: ROIC, CAGR, Revenue Growth, Operating Profit Growth, Net Asset Growth, Total Asset Growth."""
 from typing import List
 import pandas as pd
 
@@ -205,6 +205,263 @@ class CAGRIndicator(BaseIndicator):
 
     def get_required_fields(self) -> List[str]:
         return ['revenue']
+
+    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+        for col in candidates:
+            if col in df.columns:
+                return col
+        for col in df.columns:
+            for cand in candidates:
+                if cand.lower() in col.lower():
+                    return col
+        return None
+
+
+class RevenueGrowthIndicator(BaseIndicator):
+    """Revenue Growth Rate = (Current Revenue - Previous Revenue) / Previous Revenue * 100"""
+
+    name = "revenue_growth"
+    description = "Revenue Growth Rate (营业收入增长率)"
+    type = IndicatorType.CALCULATED
+
+    def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
+        # Find revenue column
+        revenue_col = self._find_column(data, ['operating_income', 'total_revenue', 'revenue'])
+        
+        if not revenue_col:
+            return IndicatorResult(
+                value=0.0,
+                unit="%",
+                description="Revenue Growth Rate",
+                years=data['year'].tolist() if 'year' in data.columns else [],
+                values=[]
+            )
+        
+        # Sort by year ascending to ensure correct order
+        if 'year' in data.columns:
+            data = data.sort_values('year').reset_index(drop=True)
+        
+        revenue = data[revenue_col].fillna(0)
+        
+        # Single year: no growth can be calculated
+        if len(revenue) < 2:
+            return IndicatorResult(
+                value=0.0,
+                unit="%",
+                description="Revenue Growth Rate",
+                years=[],
+                values=[]
+            )
+        
+        # Calculate year-over-year growth
+        revenue_prev = revenue.shift(1)
+        # Skip when previous is zero (division by zero)
+        growth = ((revenue - revenue_prev) / revenue_prev.replace(0, pd.NA)) * 100
+        growth = growth.dropna()
+        
+        years_list = data['year'].tolist()
+        # First year has no growth (no previous year)
+        growth_years = years_list[1:] if len(years_list) > 1 else []
+        
+        return IndicatorResult(
+            value=float(growth.mean()) if len(growth) > 0 else 0.0,
+            unit="%",
+            description="Revenue Growth Rate (营业收入增长率)",
+            years=growth_years,
+            values=growth.tolist() if len(growth) > 0 else []
+        )
+
+    def get_required_fields(self) -> List[str]:
+        return ['operating_income']
+
+    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+        for col in candidates:
+            if col in df.columns:
+                return col
+        for col in df.columns:
+            for cand in candidates:
+                if cand.lower() in col.lower():
+                    return col
+        return None
+
+
+class OperatingProfitGrowthIndicator(BaseIndicator):
+    """Operating Profit Growth Rate = (Current - Previous) / Previous * 100"""
+
+    name = "operating_profit_growth"
+    description = "Operating Profit Growth Rate (营业利润增长率)"
+    type = IndicatorType.CALCULATED
+
+    def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
+        op_col = self._find_column(data, ['operating_profit', 'OPERATE_PROFIT'])
+        
+        if not op_col:
+            return IndicatorResult(
+                value=0.0,
+                unit="%",
+                description="Operating Profit Growth Rate",
+                years=data['year'].tolist() if 'year' in data.columns else [],
+                values=[]
+            )
+        
+        # Sort by year ascending
+        if 'year' in data.columns:
+            data = data.sort_values('year').reset_index(drop=True)
+        
+        operating_profit = data[op_col].fillna(0)
+        
+        if len(operating_profit) < 2:
+            return IndicatorResult(
+                value=0.0,
+                unit="%",
+                description="Operating Profit Growth Rate",
+                years=[],
+                values=[]
+            )
+        
+        op_prev = operating_profit.shift(1)
+        growth = ((operating_profit - op_prev) / op_prev.replace(0, pd.NA)) * 100
+        growth = growth.dropna()
+        
+        years_list = data['year'].tolist()
+        growth_years = years_list[1:] if len(years_list) > 1 else []
+        
+        return IndicatorResult(
+            value=float(growth.mean()) if len(growth) > 0 else 0.0,
+            unit="%",
+            description="Operating Profit Growth Rate (营业利润增长率)",
+            years=growth_years,
+            values=growth.tolist() if len(growth) > 0 else []
+        )
+
+    def get_required_fields(self) -> List[str]:
+        return ['operating_profit']
+
+    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+        for col in candidates:
+            if col in df.columns:
+                return col
+        for col in df.columns:
+            for cand in candidates:
+                if cand.lower() in col.lower():
+                    return col
+        return None
+
+
+class TotalAssetGrowthIndicator(BaseIndicator):
+    """Total Asset Growth Rate = (Current - Previous) / Previous * 100"""
+
+    name = "total_asset_growth"
+    description = "Total Asset Growth Rate (总资产增长率)"
+    type = IndicatorType.CALCULATED
+
+    def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
+        assets_col = self._find_column(data, ['total_assets', 'TOTAL_ASSETS'])
+        
+        if not assets_col:
+            return IndicatorResult(
+                value=0.0,
+                unit="%",
+                description="Total Asset Growth Rate",
+                years=data['year'].tolist() if 'year' in data.columns else [],
+                values=[]
+            )
+        
+        # Sort by year ascending
+        if 'year' in data.columns:
+            data = data.sort_values('year').reset_index(drop=True)
+        
+        assets = data[assets_col].fillna(0)
+        
+        if len(assets) < 2:
+            return IndicatorResult(
+                value=0.0,
+                unit="%",
+                description="Total Asset Growth Rate",
+                years=[],
+                values=[]
+            )
+        
+        assets_prev = assets.shift(1)
+        growth = ((assets - assets_prev) / assets_prev.replace(0, pd.NA)) * 100
+        growth = growth.dropna()
+        
+        years_list = data['year'].tolist()
+        growth_years = years_list[1:] if len(years_list) > 1 else []
+        
+        return IndicatorResult(
+            value=float(growth.mean()) if len(growth) > 0 else 0.0,
+            unit="%",
+            description="Total Asset Growth Rate (总资产增长率)",
+            years=growth_years,
+            values=growth.tolist() if len(growth) > 0 else []
+        )
+
+    def get_required_fields(self) -> List[str]:
+        return ['total_assets']
+
+    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+        for col in candidates:
+            if col in df.columns:
+                return col
+        for col in df.columns:
+            for cand in candidates:
+                if cand.lower() in col.lower():
+                    return col
+        return None
+
+
+class NetAssetGrowthIndicator(BaseIndicator):
+    """Net Asset (Equity) Growth Rate = (Current - Previous) / Previous * 100"""
+
+    name = "net_asset_growth"
+    description = "Net Asset Growth Rate (净资产增长率)"
+    type = IndicatorType.CALCULATED
+
+    def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
+        equity_col = self._find_column(data, ['total_equity', 'TOTAL_EQUITY', 'net_assets'])
+        
+        if not equity_col:
+            return IndicatorResult(
+                value=0.0,
+                unit="%",
+                description="Net Asset Growth Rate",
+                years=data['year'].tolist() if 'year' in data.columns else [],
+                values=[]
+            )
+        
+        # Sort by year ascending
+        if 'year' in data.columns:
+            data = data.sort_values('year').reset_index(drop=True)
+        
+        equity = data[equity_col].fillna(0)
+        
+        if len(equity) < 2:
+            return IndicatorResult(
+                value=0.0,
+                unit="%",
+                description="Net Asset Growth Rate",
+                years=[],
+                values=[]
+            )
+        
+        equity_prev = equity.shift(1)
+        growth = ((equity - equity_prev) / equity_prev.replace(0, pd.NA)) * 100
+        growth = growth.dropna()
+        
+        years_list = data['year'].tolist()
+        growth_years = years_list[1:] if len(years_list) > 1 else []
+        
+        return IndicatorResult(
+            value=float(growth.mean()) if len(growth) > 0 else 0.0,
+            unit="%",
+            description="Net Asset Growth Rate (净资产增长率)",
+            years=growth_years,
+            values=growth.tolist() if len(growth) > 0 else []
+        )
+
+    def get_required_fields(self) -> List[str]:
+        return ['total_equity']
 
     def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
         for col in candidates:

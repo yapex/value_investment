@@ -64,30 +64,30 @@ uv run --directory . python -m value_investment.cli fields US income
 
 | 需求 | 命令 |
 |------|------|
-| 基本信息 | `cli info 600519` |
-| **市值（港股）** | `cli indicator latest_market_cap -s 00700 -m HK` |
-| 历史股价 | `cli hist 600519 --end 20241231` |
-| 利润表 | `cli income 600519` |
-| 资产负债表 | `cli balance 600519` |
-| 现金流量表 | `cli cashflow 600519` |
-| 财务指标 | `cli finind 600519 -m A` |
-| 单个指标 | `cli indicator ROIC -s 00700 -m HK` |
-| PE百分位 | `cli indicator PEPct -s 600519 -m A -y 10` |
-| 完整分析 | `cli analyze 600519` |
-| **查看可用字段** | `cli fields A balance` |
-| **查看可用指标** | `cli indicators` |
-| 美股财务指标 | `cli finind AAPL -m US` |
-| 美股历史股价 | `cli hist AAPL -m US --end 20241231 --start 20150101` |
-| 美股完整分析 | `cli analyze AAPL -m US` |
+| 基本信息 | `v-invest info 600519` |
+| **市值（港股）** | `v-invest indicator latest_market_cap -s 00700 -m HK` |
+| 历史股价 | `v-invest hist 600519 --end 20241231` |
+| 利润表 | `v-invest income 600519` |
+| 资产负债表 | `v-invest balance 600519` |
+| 现金流量表 | `v-invest cashflow 600519` |
+| 财务指标 | `v-invest finind 600519 -m A` |
+| 单个指标 | `v-invest indicator ROIC -s 00700 -m HK` |
+| PE百分位 | `v-invest indicator PEPct -s 600519 -m A -y 10` |
+| 完整分析 | `v-invest analyze 600519` |
+| **查看可用字段** | `v-invest fields A balance` |
+| **查看可用指标** | `v-invest indicators` |
+| 美股财务指标 | `v-invest finind AAPL -m US` |
+| 美股历史股价 | `v-invest hist AAPL -m US --end 20241231 --start 20150101` |
+| 美股完整分析 | `v-invest analyze AAPL -m US` |
 
 **字段筛选**（用于三表命令）：
 - 使用 `fields <market> <report>` 查看可用字段
 
 ```bash
 # 只返回指定字段
-cli income 600519 --fields "NETPROFIT"
-cli balance 600519 --fields "TOTAL_ASSETS,REPORT_DATE"
-cli cashflow 600519 --fields "NETCASH_OPERATE"
+v-invest income 600519 --fields "NETPROFIT"
+v-invest balance 600519 --fields "TOTAL_ASSETS,REPORT_DATE"
+v-invest cashflow 600519 --fields "NETCASH_OPERATE"
 ```
 
 **市场代码**：A股 `600519` | 港股 `00700` | 美股 `AAPL`
@@ -100,15 +100,15 @@ cli cashflow 600519 --fields "NETCASH_OPERATE"
 
 ```bash
 # 港股市值
-cli indicator latest_market_cap -s 00700 -m HK
+v-invest indicator latest_market_cap -s 00700 -m HK
 
 # A股市值（通过 finind 获取）
-cli finind 600519 -m A
+v-invest finind 600519 -m A
 ```
 
 **查看所有可用指标：**
 ```bash
-cli indicators
+v-invest indicators
 ```
 
 **市值单位：** 港股市值为港元，A股市值为人民币
@@ -120,7 +120,7 @@ cli indicators
 ## 参考文档
 
 - 指标体系: `references/indicators.md`
-- 财务报表字段: 使用 `cli fields <market> <report>` 命令查看
+- 财务报表字段: 使用 `v-invest fields <market> <report>` 命令查看
 - ROIC计算: `references/roic.md`
 
 ---

@@ -112,14 +112,13 @@ v-invest indicators
 **市值单位：** 港股市值为港元，A股市值为人民币
 
 **美股字段说明**：
-- 财务指标字段映射见 `src/value_investment/data/mapper.py` 中的 `FINANCIAL_INDICATOR_MAPPING`
+- 财务指标字段使用 `v-invest fields US finind` 查看
 - 美股特有字段：`total_revenue`, `net_profit`, `roe`, `roa`, `debt_ratio` 等
 
 ## 参考文档
 
-- 指标体系: `references/indicators.md`
+- 指标体系: 使用 `v-invest indicators` 命令查看
 - 财务报表字段: 使用 `v-invest fields <market> <report>` 命令查看
-- ROIC计算: `references/roic.md`
 
 ---
 
@@ -131,9 +130,10 @@ v-invest indicators
 
 ### sub_agent_a: 制定计划
 
-1. 查 `references/indicators.md` 确认现成指标
-2. 有 → 直接执行
-3. 无 → 制定计划（确定三表字段、确认字段名）
+1. 使用 `v-invest indicators` 确认现成指标
+2. 使用 `v-invest fields <market> <report>` 查看可用字段
+3. 有 → 直接执行
+4. 无 → 制定计划
 
 ### sub_agent_b: 执行
 

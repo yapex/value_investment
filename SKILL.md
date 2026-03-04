@@ -45,8 +45,20 @@ uv run --directory . python -m value_investment.cli cashflow 600519 --fields "NE
 ```
 
 **查询字段名**：
-1. 查看 `src/value_investment/data/mapper.py` 中的 `INCOME_MAPPING`（利润表）、`BALANCE_MAPPING`（资产负债表）、`CASHFLOW_MAPPING`（现金流量表）
-2. 或使用无效字段查询，会报错显示所有可用字段
+1. 使用 `fields <market> <report>` 命令查看可用标准字段
+2. 支持的报告类型：`balance`（资产负债表）、`income`（利润表）、`cashflow`（现金流量表）、`finind`（财务指标）、`quarterly`（季度数据）
+3. 例如：`fields A balance`、`fields HK finind`
+
+```bash
+# 查看A股资产负债表可用字段
+uv run --directory . python -m value_investment.cli fields A balance
+
+# 查看港股财务指标可用字段
+uv run --directory . python -m value_investment.cli fields HK finind
+
+# 查看美股利润表可用字段
+uv run --directory . python -m value_investment.cli fields US income
+```
 
 ## Quick Reference
 
@@ -62,12 +74,14 @@ uv run --directory . python -m value_investment.cli cashflow 600519 --fields "NE
 | 单个指标 | `cli indicator ROIC -s 00700 -m HK` |
 | PE百分位 | `cli indicator PEPct -s 600519 -m A -y 10` |
 | 完整分析 | `cli analyze 600519` |
+| **查看可用字段** | `cli fields A balance` |
+| **查看可用指标** | `cli indicators` |
 | 美股财务指标 | `cli finind AAPL -m US` |
 | 美股历史股价 | `cli hist AAPL -m US --end 20241231 --start 20150101` |
 | 美股完整分析 | `cli analyze AAPL -m US` |
 
 **字段筛选**（用于三表命令）：
-- 先查 `src/value_investment/data/mapper.py` 确认字段名，或用无效字段触发错误查看可用字段
+- 使用 `fields <market> <report>` 查看可用字段
 
 ```bash
 # 只返回指定字段
@@ -82,7 +96,7 @@ cli cashflow 600519 --fields "NETCASH_OPERATE"
 
 ## 市值查询
 
-**注意：** `list-indicators` 显示 `market_cap`，但实际应使用 `latest_market_cap`：
+**注意：** `indicators` 显示 `market_cap`，但实际应使用 `latest_market_cap`：
 
 ```bash
 # 港股市值
@@ -90,6 +104,11 @@ cli indicator latest_market_cap -s 00700 -m HK
 
 # A股市值（通过 finind 获取）
 cli finind 600519 -m A
+```
+
+**查看所有可用指标：**
+```bash
+cli indicators
 ```
 
 **市值单位：** 港股市值为港元，A股市值为人民币
@@ -101,7 +120,7 @@ cli finind 600519 -m A
 ## 参考文档
 
 - 指标体系: `references/indicators.md`
-- 财务报表字段: `src/value_investment/data/mapper.py` (INCOME_MAPPING / BALANCE_MAPPING / CASHFLOW_MAPPING)
+- 财务报表字段: 使用 `cli fields <market> <report>` 命令查看
 - ROIC计算: `references/roic.md`
 
 ---

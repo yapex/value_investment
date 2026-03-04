@@ -22,26 +22,26 @@ description: Use when analyzing A股/港股/美股基本面，需要查询股票
 **必须使用 `--directory .` 指定当前目录：**
 
 ```bash
-uv run --directory . python -m value_investment.cli info 600519
+v-invest info 600519
 ```
 
 **强制刷新缓存使用 `--refresh` / `-r`：**
 
 ```bash
-uv run --directory . python -m value_investment.cli info 600519 --refresh
+v-invest info 600519 --refresh
 ```
 
 **字段筛选使用 `--fields` / `-f`（三表命令）：**
 
 ```bash
 # 利润表筛选字段
-uv run --directory . python -m value_investment.cli income 600519 --fields "REPORT_DATE,NETPROFIT"
+v-invest income 600519 --fields "REPORT_DATE,NETPROFIT"
 
 # 资产负债表筛选字段
-uv run --directory . python -m value_investment.cli balance 600519 --fields "TOTAL_ASSETS,TOTAL_LIABILITIES"
+v-invest balance 600519 --fields "TOTAL_ASSETS,TOTAL_LIABILITIES"
 
 # 现金流量表筛选字段
-uv run --directory . python -m value_investment.cli cashflow 600519 --fields "NETCASH_OPERATE,NETCASH_INVEST"
+v-invest cashflow 600519 --fields "NETCASH_OPERATE,NETCASH_INVEST"
 ```
 
 **查询字段名**：
@@ -51,13 +51,13 @@ uv run --directory . python -m value_investment.cli cashflow 600519 --fields "NE
 
 ```bash
 # 查看A股资产负债表可用字段
-uv run --directory . python -m value_investment.cli fields A balance
+v-invest fields A balance
 
 # 查看港股财务指标可用字段
-uv run --directory . python -m value_investment.cli fields HK finind
+v-invest fields HK finind
 
 # 查看美股利润表可用字段
-uv run --directory . python -m value_investment.cli fields US income
+v-invest fields US income
 ```
 
 ## Quick Reference

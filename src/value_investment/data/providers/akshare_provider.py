@@ -259,14 +259,30 @@ class AkshareProvider:
         cache_key = f"hist_{symbol}_{adjust}"
 
         def fetch_full_data() -> pd.DataFrame:
-            """Fetch full historical data from akshare"""
-            data = ak.stock_zh_a_hist(
-                symbol=symbol,
-                period="daily",
+            """Fetch full historical data from akshare (using Tencent API)"""
+            # Convert symbol to TX format (sh600519 or sz000001)
+            tx_symbol = symbol
+            if not symbol.startswith(("sh", "sz")):
+                if symbol.startswith(("00", "30")):
+                    tx_symbol = f"sz{symbol}"
+                else:
+                    tx_symbol = f"sh{symbol}"
+
+            data = ak.stock_zh_a_hist_tx(
+                symbol=tx_symbol,
                 start_date="19700101",  # Fetch from earliest available
                 end_date=end_date,
                 adjust=adjust,
             )
+            # Convert column names to match the original format
+            data = data.rename(columns={
+                "date": "日期",
+                "open": "开盘",
+                "close": "收盘",
+                "high": "最高",
+                "low": "最低",
+                "amount": "成交量",
+            })
             # Convert date column to string for consistent format
             data["日期"] = pd.to_datetime(data["日期"]).dt.strftime("%Y-%m-%d")
             return data
@@ -344,13 +360,17 @@ class AkshareProvider:
         cache_key = f"hist_{symbol}_{adjust}"
 
         def fetch_full_data() -> pd.DataFrame:
-            """Fetch full historical data from akshare"""
-            # Convert end_date to akshare format (YYYYMMDD)
-            end_date_ak = end_date.replace("-", "") if isinstance(end_date, str) else end_date
-            # Use a reasonable start date for historical data
-            start_date_ak = "19700101"
-
-            data = ak.stock_hk_hist(symbol=symbol, start_date=start_date_ak, end_date=end_date_ak)
+            """Fetch full historical data from akshare (using Sina API)"""
+            data = ak.stock_hk_daily(symbol=symbol)
+            # Convert column names to match the original format
+            data = data.rename(columns={
+                "date": "日期",
+                "open": "开盘",
+                "close": "收盘",
+                "high": "最高",
+                "low": "最低",
+                "volume": "成交量",
+            })
             # Convert date column to string for consistent format
             data["日期"] = pd.to_datetime(data["日期"]).dt.strftime("%Y-%m-%d")
             return data

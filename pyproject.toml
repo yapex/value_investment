@@ -29,6 +29,11 @@ dev = [
     "pytest-cov>=7.0.0",
 ]
 
+[tool.poe.tasks.to_nanobot]
+help = "Copy SKILL.md to nanobot skills directory"
+shell = "mkdir -p ~/.nanobot/workspace/skills/value_investment && cp SKILL.md ~/.nanobot/workspace/skills/value_investment/"
+
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]

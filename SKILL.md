@@ -19,8 +19,6 @@ description: Use when analyzing A股/港股/美股基本面，需要查询股票
 
 ## ⚠️ 执行要点
 
-**必须使用 `--directory .` 指定当前目录：**
-
 ```bash
 v-invest info 600519
 ```

@@ -714,3 +714,83 @@ class DataMapper:
         return cls.apply_hierarchical_mapping(
             df, QUARTERLY_MAPPING, market, keep_original=False
         )
+
+    # =========================================================================
+    # Self-description methods (for CLI introspection)
+    # =========================================================================
+
+    # Registry of report types to mapping names (extensible without CLI changes)
+    REPORT_MAPPINGS = {
+        'balance': 'BALANCE_MAPPING',
+        'income': 'INCOME_MAPPING',
+        'cashflow': 'CASHFLOW_MAPPING',
+        'finind': 'FINANCIAL_INDICATOR_MAPPING',
+        'quarterly': 'QUARTERLY_MAPPING',
+    }
+
+    @classmethod
+    def get_standard_fields(cls, report: str, market: str = 'A') -> list:
+        """
+        Get list of standard internal fields for a given report type and market.
+
+        Only returns IFRS standard fields (without market prefix like a_, hk_, us_).
+
+        Args:
+            report: Report type (see REPORT_MAPPINGS for valid options)
+            market: Market code ('A', 'HK', 'US')
+
+        Returns:
+            Sorted list of standard field names
+        """
+        report = report.lower()
+        market = market.upper()
+
+        if report not in cls.REPORT_MAPPINGS:
+            valid_options = ', '.join(cls.REPORT_MAPPINGS.keys())
+            raise ValueError(f"Unknown report type: {report}. Valid options: {valid_options}")
+
+        mapping_name = cls.REPORT_MAPPINGS[report]
+
+        # Check class attributes first (BALANCE_MAPPING, INCOME_MAPPING, etc.)
+        if hasattr(cls, mapping_name):
+            mapping = getattr(cls, mapping_name)
+            return cls._extract_standard_fields(mapping)
+        # Fall back to module-level mappings (FINANCIAL_INDICATOR_MAPPING, QUARTERLY_MAPPING)
+        else:
+            import sys
+            module = sys.modules.get(__name__)
+            if module and hasattr(module, mapping_name):
+                mapping = getattr(module, mapping_name)
+                return cls._extract_standard_fields_hierarchical(mapping, market)
+            else:
+                raise ValueError(f"Mapping '{mapping_name}' not found for report '{report}'")
+
+    @classmethod
+    def _extract_standard_fields(cls, mapping: dict) -> list:
+        """Extract unique standard field names from a flat mapping dict."""
+        fields = set()
+        for value in mapping.values():
+            if isinstance(value, str):
+                fields.add(value)
+        return sorted(fields)
+
+    @classmethod
+    def _extract_standard_fields_hierarchical(cls, mapping: dict, market: str) -> list:
+        """
+        Extract standard field names from hierarchical mapping.
+
+        Only returns fields without market prefix (a_, hk_, us_).
+        """
+        fields = set()
+        market_prefixes = ('a_', 'hk_', 'us_')
+
+        for key, value in mapping.items():
+            # Skip market-specific sub-dicts
+            if isinstance(key, str) and key in ('A', 'HK', 'US'):
+                continue
+            if isinstance(value, str):
+                # Only include if not a market-specific field
+                if not any(value.lower().startswith(prefix) for prefix in market_prefixes):
+                    fields.add(value)
+
+        return sorted(fields)

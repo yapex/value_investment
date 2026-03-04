@@ -4,6 +4,7 @@ from typing import Optional
 import pandas as pd
 
 from value_investment.api import ValueInvestment
+from value_investment.data.mapper import DataMapper
 
 app = typer.Typer(name="v-investment", help="Value investment analysis tool")
 
@@ -187,14 +188,28 @@ def analyze(
             print(f"- {item['label']}: {item['value']}")
 
 
-@app.command("list")
-@app.command("list-indicators")
+@app.command("indicators")
 def list_indicators():
     """List all available indicators"""
     vi = ValueInvestment()
     indicators = vi.list_indicators()
     for name in indicators:
         print(name)
+
+
+@app.command()
+def fields(
+    market: str = typer.Argument(..., help="Market: A, HK, US"),
+    report: str = typer.Argument(..., help="Report type: balance, income, cashflow, finind, quarterly"),
+):
+    """List available standard fields for a market and report type"""
+    try:
+        fields_list = DataMapper.get_standard_fields(report, market)
+        for field in fields_list:
+            print(field)
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1)
 
 
 @app.command()

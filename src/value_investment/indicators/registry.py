@@ -1,6 +1,7 @@
 """Indicator Registry for managing financial indicators"""
 from typing import Dict, List, Optional
 from value_investment.indicators.base import IndicatorMeta, IndicatorType
+from value_investment.data.mapper import CORE_FIELD_MAPPING
 
 
 class IndicatorRegistry:
@@ -84,72 +85,111 @@ class IndicatorRegistry:
         self._indicators.clear()
 
 
-# Default raw financial indicators
-DEFAULT_RAW_INDICATORS = [
+# ========================================================================
+# 辅助函数：从 CORE_FIELD_MAPPING 生成指标定义
+# ========================================================================
+
+def _build_core_indicators() -> List[dict]:
+    """从 CORE_FIELD_MAPPING 动态生成核心指标列表"""
+    indicators = []
+    for field_name, market_map in CORE_FIELD_MAPPING.items():
+        field_names = list(set(market_map.values()))
+        indicators.append({
+            "name": field_name,
+            "display_name": _get_display_name(field_name),
+            "field_names": field_names,
+            "market_fields": market_map,
+            "description": _get_description(field_name),
+            "unit": _get_unit(field_name),
+        })
+    return indicators
+
+
+# Display name mapping for core fields
+_DISPLAY_NAME_MAP = {
+    "total_revenue": "营业收入",
+    "net_profit": "净利润",
+    "operating_profit": "营业利润",
+    "gross_profit": "毛利润",
+    "operating_cost": "营业成本",
+    "total_assets": "总资产",
+    "total_equity": "股东权益",
+    "total_liabilities": "总负债",
+    "current_assets": "流动资产",
+    "current_liabilities": "流动负债",
+    "cash_and_equivalents": "货币资金",
+    "inventory": "存货",
+    "accounts_receivable": "应收账款",
+    "fixed_assets": "固定资产",
+    "operating_cash_flow": "经营现金流",
+    "investing_cash_flow": "投资现金流",
+    "financing_cash_flow": "融资现金流",
+    "capital_expenditure": "资本支出",
+    "basic_eps": "每股收益",
+    "diluted_eps": "稀释每股收益",
+    "book_value_per_share": "每股净资产",
+    "pe_ratio": "市盈率",
+    "pb_ratio": "市净率",
+    "market_cap": "总市值",
+    "roe": "净资产收益率",
+    "roa": "总资产收益率",
+    "gross_margin": "毛利率",
+    "net_profit_margin": "净利率",
+    "current_ratio": "流动比率",
+    "quick_ratio": "速动比率",
+    "debt_ratio": "资产负债率",
+    "asset_turnover": "资产周转率",
+    "inventory_turnover": "存货周转率",
+    "receivable_turnover": "应收账款周转率",
+    "total_shares": "总股本",
+}
+
+
+def _get_display_name(field_name: str) -> str:
+    """获取字段的中文显示名称"""
+    return _DISPLAY_NAME_MAP.get(field_name, field_name)
+
+
+def _get_description(field_name: str) -> str:
+    """获取字段描述"""
+    descriptions = {
+        "total_revenue": "企业营业收入",
+        "net_profit": "企业净利润",
+        "total_assets": "企业总资产",
+        "total_equity": "企业股东权益",
+        "market_cap": "股票总市值",
+    }
+    return descriptions.get(field_name, f"字段: {field_name}")
+
+
+def _get_unit(field_name: str) -> str:
+    """获取字段单位"""
+    units = {
+        "total_revenue": "元",
+        "net_profit": "元",
+        "total_assets": "元",
+        "total_equity": "元",
+        "total_liabilities": "元",
+        "basic_eps": "元",
+        "diluted_eps": "元",
+        "book_value_per_share": "元",
+        "market_cap": "元/港元/美元",
+        "roe": "%",
+        "roa": "%",
+        "gross_margin": "%",
+        "net_profit_margin": "%",
+    }
+    return units.get(field_name, "")
+
+
+# ========================================================================
+# 市场特有指标 (港股/美股 特有字段，不在 CORE_FIELD_MAPPING 中)
+# ========================================================================
+
+HK_SPECIFIC_INDICATORS = [
     {
-        "name": "revenue",
-        "display_name": "营业收入",
-        "field_names": ["营业总收入", "收益", "totalRevenue"],
-        "market_fields": {
-            "A股": "营业总收入",
-            "港股": "收益",
-            "美股": "totalRevenue",
-        },
-        "description": "企业营业收入",
-        "unit": "元",
-    },
-    {
-        "name": "net_profit",
-        "display_name": "净利润",
-        "field_names": ["净利润", "期内溢利", "netIncome"],
-        "market_fields": {
-            "A股": "净利润",
-            "港股": "期内溢利",
-            "美股": "netIncome",
-        },
-        "description": "企业净利润",
-        "unit": "元",
-    },
-    {
-        "name": "total_assets",
-        "display_name": "总资产",
-        "field_names": ["资产总计", "资产总值", "totalAssets"],
-        "market_fields": {
-            "A股": "资产总计",
-            "港股": "资产总值",
-            "美股": "totalAssets",
-        },
-        "description": "企业总资产",
-        "unit": "元",
-    },
-    {
-        "name": "total_equity",
-        "display_name": "股东权益",
-        "field_names": ["股东权益合计", "权益总额", "totalStockholdersEquity"],
-        "market_fields": {
-            "A股": "股东权益合计",
-            "港股": "权益总额",
-            "美股": "totalStockholdersEquity",
-        },
-        "description": "企业股东权益",
-        "unit": "元",
-    },
-    {
-        "name": "operating_income",
-        "display_name": "营业利润",
-        "field_names": ["营业利润", "营业溢利", "operatingIncome"],
-        "market_fields": {
-            "A股": "营业利润",
-            "港股": "营业溢利",
-            "美股": "operatingIncome",
-        },
-        "description": "企业营业利润",
-        "unit": "元",
-    },
-    # 港股财务指标 (stock_hk_financial_indicator_em)
-    {
-        "name": "eps",
-        "display_name": "每股收益",
+        "name": "hk_eps",
+        "display_name": "每股收益(港币)",
         "field_names": ["基本每股收益(元)"],
         "market_fields": {
             "港股": "基本每股收益(元)",
@@ -158,8 +198,8 @@ DEFAULT_RAW_INDICATORS = [
         "unit": "元",
     },
     {
-        "name": "bvps",
-        "display_name": "每股净资产",
+        "name": "hk_bvps",
+        "display_name": "每股净资产(港币)",
         "field_names": ["每股净资产(元)"],
         "market_fields": {
             "港股": "每股净资产(元)",
@@ -168,7 +208,7 @@ DEFAULT_RAW_INDICATORS = [
         "unit": "元",
     },
     {
-        "name": "legal_capital",
+        "name": "hk_legal_capital",
         "display_name": "法定股本",
         "field_names": ["法定股本(股)"],
         "market_fields": {
@@ -178,7 +218,7 @@ DEFAULT_RAW_INDICATORS = [
         "unit": "股",
     },
     {
-        "name": "dividend_per_share",
+        "name": "hk_dividend_per_share",
         "display_name": "每股股息",
         "field_names": ["每股股息TTM(港元)"],
         "market_fields": {
@@ -188,7 +228,7 @@ DEFAULT_RAW_INDICATORS = [
         "unit": "港元",
     },
     {
-        "name": "payout_ratio",
+        "name": "hk_payout_ratio",
         "display_name": "派息比率",
         "field_names": ["派息比率(%)"],
         "market_fields": {
@@ -198,7 +238,7 @@ DEFAULT_RAW_INDICATORS = [
         "unit": "%",
     },
     {
-        "name": "issued_shares",
+        "name": "hk_issued_shares",
         "display_name": "已发行股本",
         "field_names": ["已发行股本(股)"],
         "market_fields": {
@@ -208,7 +248,7 @@ DEFAULT_RAW_INDICATORS = [
         "unit": "股",
     },
     {
-        "name": "h_shares",
+        "name": "hk_h_shares",
         "display_name": "H股股本",
         "field_names": ["已发行股本-H股(股)"],
         "market_fields": {
@@ -218,7 +258,7 @@ DEFAULT_RAW_INDICATORS = [
         "unit": "股",
     },
     {
-        "name": "cfo_per_share",
+        "name": "hk_cfo_per_share",
         "display_name": "每股经营现金流",
         "field_names": ["每股经营现金流(元)"],
         "market_fields": {
@@ -228,7 +268,7 @@ DEFAULT_RAW_INDICATORS = [
         "unit": "元",
     },
     {
-        "name": "dividend_yield",
+        "name": "hk_dividend_yield",
         "display_name": "股息率",
         "field_names": ["股息率TTM(%)"],
         "market_fields": {
@@ -248,7 +288,7 @@ DEFAULT_RAW_INDICATORS = [
         "unit": "港元",
     },
     {
-        "name": "revenue_growth",
+        "name": "hk_revenue_growth",
         "display_name": "营收环比增长",
         "field_names": ["营业总收入滚动环比增长(%)"],
         "market_fields": {
@@ -258,7 +298,7 @@ DEFAULT_RAW_INDICATORS = [
         "unit": "%",
     },
     {
-        "name": "net_profit_margin",
+        "name": "hk_net_profit_margin",
         "display_name": "销售净利率",
         "field_names": ["销售净利率(%)"],
         "market_fields": {
@@ -268,7 +308,7 @@ DEFAULT_RAW_INDICATORS = [
         "unit": "%",
     },
     {
-        "name": "net_profit_growth",
+        "name": "hk_net_profit_growth",
         "display_name": "净利润环比增长",
         "field_names": ["净利润滚动环比增长(%)"],
         "market_fields": {
@@ -277,41 +317,13 @@ DEFAULT_RAW_INDICATORS = [
         "description": "净利润滚动环比增长(%)",
         "unit": "%",
     },
-    {
-        "name": "pe",
-        "display_name": "市盈率",
-        "field_names": ["市盈率"],
-        "market_fields": {
-            "港股": "市盈率",
-            "A股": "市盈率",
-        },
-        "description": "市盈率 (PE = 市值/净利润)",
-        "unit": "",
-    },
-    {
-        "name": "pb",
-        "display_name": "市净率",
-        "field_names": ["市净率"],
-        "market_fields": {
-            "港股": "市净率",
-            "A股": "市净率",
-        },
-        "description": "市净率 (PB = 市值/股东权益)",
-        "unit": "",
-    },
-    {
-        "name": "market_cap",
-        "display_name": "总市值",
-        "field_names": ["总市值(元)", "总市值(港元)", "总市值(美元)"],
-        "market_fields": {
-            "港股": "总市值(港元)",
-            "A股": "总市值(元)",
-            "美股": "总市值(美元)",
-        },
-        "description": "股票总市值",
-        "unit": "元/港元/美元",
-    },
 ]
+
+
+# Default raw financial indicators - 从 CORE_FIELD_MAPPING 动态生成 + 港股特有指标
+# 注意: pe_ratio, pb_ratio 等共享指标已包含在 CORE_FIELD_MAPPING 中
+DEFAULT_RAW_INDICATORS = _build_core_indicators() + HK_SPECIFIC_INDICATORS
+
 
 # Default calculated financial indicators (SIMPLE)
 DEFAULT_CALCULATED_INDICATORS = [

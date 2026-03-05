@@ -1,7 +1,234 @@
 """Data mapper for converting A股 fields to IFRS standard fields"""
 import pandas as pd
 import numpy as np
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
+
+
+# ============================================================================
+# 核心财务字段映射 (Core Field Mapping) - 唯一数据源
+# ============================================================================
+# 结构：标准字段名 → {市场: 市场字段名}
+# 用途：统一管理 A股/港股/美股 的字段映射
+
+CORE_FIELD_MAPPING: Dict[str, Dict[str, str]] = {
+    # ----- 利润表 (Income Statement) -----
+    "total_revenue": {
+        "A股": "营业总收入",
+        "港股": "收益",
+        "美股": "totalRevenue",
+    },
+    "net_profit": {
+        "A股": "净利润",
+        "港股": "期内溢利",
+        "美股": "netIncome",
+    },
+    "operating_profit": {
+        "A股": "营业利润",
+        "港股": "营业溢利",
+        "美股": "operatingIncome",
+    },
+    "gross_profit": {
+        "A股": "毛利",
+        "港股": "毛利",
+        "美股": "grossProfit",
+    },
+    "operating_cost": {
+        "A股": "营业成本",
+        "港股": "已售存货成本",
+        "美股": "costOfRevenue",
+    },
+
+    # ----- 资产负债表 (Balance Sheet) -----
+    "total_assets": {
+        "A股": "资产总计",
+        "港股": "资产总值",
+        "美股": "totalAssets",
+    },
+    "total_equity": {
+        "A股": "股东权益合计",
+        "港股": "权益总额",
+        "美股": "totalStockholdersEquity",
+    },
+    "total_liabilities": {
+        "A股": "负债合计",
+        "港股": "总负债",
+        "美股": "totalLiabilities",
+    },
+    "current_assets": {
+        "A股": "流动资产合计",
+        "港股": "流动资产合计",
+        "美股": "totalCurrentAssets",
+    },
+    "current_liabilities": {
+        "A股": "流动负债合计",
+        "港股": "流动负债合计",
+        "美股": "totalCurrentLiabilities",
+    },
+    "cash_and_equivalents": {
+        "A股": "货币资金",
+        "港股": "现金及等价物",
+        "美股": "cashAndCashEquivalents",
+    },
+    "inventory": {
+        "A股": "存货",
+        "港股": "存货",
+        "美股": "inventory",
+    },
+    "accounts_receivable": {
+        "A股": "应收账款",
+        "港股": "应收帐款",
+        "美股": "accountsReceivable",
+    },
+    "fixed_assets": {
+        "A股": "固定资产",
+        "港股": "固定资产",
+        "美股": "propertyPlantEquipment",
+    },
+
+    # ----- 现金流量表 (Cash Flow Statement) -----
+    "operating_cash_flow": {
+        "A股": "经营活动产生的现金流量净额",
+        "港股": "经营业务现金净额",
+        "美股": "operatingCashFlow",
+    },
+    "investing_cash_flow": {
+        "A股": "投资活动产生的现金流量净额",
+        "港股": "投资业务现金净额",
+        "美股": "investingCashFlow",
+    },
+    "financing_cash_flow": {
+        "A股": "筹资活动产生的现金流量净额",
+        "港股": "融资业务现金净额",
+        "美股": "financingCashFlow",
+    },
+    "capital_expenditure": {
+        "A股": "购建固定资产支付的现金",
+        "港股": "购建固定资产",
+        "美股": "capitalExpenditure",
+    },
+
+    # ----- 每股指标 (Per Share Metrics) -----
+    "basic_eps": {
+        "A股": "基本每股收益",
+        "港股": "基本每股收益(元)",
+        "美股": "basicEps",
+    },
+    "diluted_eps": {
+        "A股": "稀释每股收益",
+        "港股": "稀释每股收益(元)",
+        "美股": "dilutedEps",
+    },
+    "book_value_per_share": {
+        "A股": "每股净资产",
+        "港股": "每股净资产(元)",
+        "美股": "bookValuePerShare",
+    },
+
+    # ----- 估值指标 (Valuation Metrics) -----
+    "pe_ratio": {
+        "A股": "市盈率",
+        "港股": "市盈率",
+        "美股": "peRatio",
+    },
+    "pb_ratio": {
+        "A股": "市净率",
+        "港股": "市净率",
+        "美股": "pbRatio",
+    },
+    "market_cap": {
+        "A股": "总市值(元)",
+        "港股": "总市值(港元)",
+        "美股": "总市值(美元)",
+    },
+
+    # ----- 盈利能力指标 (Profitability Metrics) -----
+    "roe": {
+        "A股": "净资产收益率(%)",
+        "港股": "股东权益回报率(%)",
+        "美股": "returnOnEquity",
+    },
+    "roa": {
+        "A股": "总资产收益率(%)",
+        "港股": "总资产回报率(%)",
+        "美股": "returnOnAssets",
+    },
+    "gross_margin": {
+        "A股": "销售毛利率(%)",
+        "港股": "毛利率",
+        "美股": "grossMargin",
+    },
+    "net_profit_margin": {
+        "A股": "销售净利率(%)",
+        "港股": "销售净利率(%)",
+        "美股": "netProfitMargin",
+    },
+
+    # ----- 流动性指标 (Liquidity Metrics) -----
+    "current_ratio": {
+        "A股": "流动比率",
+        "港股": "流动比率",
+        "美股": "currentRatio",
+    },
+    "quick_ratio": {
+        "A股": "速动比率",
+        "港股": "速动比率",
+        "美股": "quickRatio",
+    },
+
+    # ----- 杠杆指标 (Leverage Metrics) -----
+    "debt_ratio": {
+        "A股": "资产负债率(%)",
+        "港股": "资产负债率",
+        "美股": "debtToAssetsRatio",
+    },
+
+    # ----- 效率指标 (Efficiency Metrics) -----
+    "asset_turnover": {
+        "A股": "总资产周转率(次)",
+        "港股": "总资产周转率",
+        "美股": "assetTurnover",
+    },
+    "inventory_turnover": {
+        "A股": "存货周转率(次)",
+        "港股": "存货周转率",
+        "美股": "inventoryTurnover",
+    },
+    "receivable_turnover": {
+        "A股": "应收账款周转率(次)",
+        "港股": "应收账款周转率",
+        "美股": "receivablesTurnover",
+    },
+
+    # ----- 股本指标 (Share Capital) -----
+    "total_shares": {
+        "A股": "总股本",
+        "港股": "已发行股本(股)",
+        "美股": "sharesOutstanding",
+    },
+}
+
+
+# ============================================================================
+# 反向索引：市场字段 → 标准字段 (自动生成)
+# ============================================================================
+_REVERSE_FIELD_INDEX: Dict[str, Dict[str, str]] = {}
+
+
+def _build_reverse_index() -> None:
+    """构建反向索引：市场字段名 → 标准字段名"""
+    global _REVERSE_FIELD_INDEX
+
+    for market in ["A股", "港股", "美股"]:
+        _REVERSE_FIELD_INDEX[market] = {}
+
+    for standard_field, market_map in CORE_FIELD_MAPPING.items():
+        for market, market_field in market_map.items():
+            if market in _REVERSE_FIELD_INDEX:
+                _REVERSE_FIELD_INDEX[market][market_field] = standard_field
+
+
+# 模块加载时构建索引
+_build_reverse_index()
 
 
 # ============================================================================
@@ -396,6 +623,56 @@ class DataMapper:
 
     # 基础字段（不映射）
     BASE_FIELDS = ["year", "SECURITY_CODE", "REPORT_DATE"]
+
+    # ========================================================================
+    # 核心字段映射方法 (Core Field Mapping Methods)
+    # ========================================================================
+
+    @classmethod
+    def get_market_field(cls, standard_field: str, market: str) -> Optional[str]:
+        """
+        正向查找：标准字段名 → 市场字段名
+
+        Args:
+            standard_field: 标准字段名 (如 "total_revenue")
+            market: 市场名称 ("A股", "港股", "美股")
+
+        Returns:
+            市场特定字段名，不存在则返回 None
+        """
+        if standard_field in CORE_FIELD_MAPPING:
+            return CORE_FIELD_MAPPING[standard_field].get(market)
+        return None
+
+    @classmethod
+    def get_standard_field(cls, market_field: str, market: str) -> Optional[str]:
+        """
+        反向查找：市场字段名 → 标准字段名
+
+        Args:
+            market_field: 市场特定字段名 (如 "营业总收入")
+            market: 市场名称 ("A股", "港股", "美股")
+
+        Returns:
+            标准字段名，不存在则返回 None
+        """
+        if market in _REVERSE_FIELD_INDEX:
+            return _REVERSE_FIELD_INDEX[market].get(market_field)
+        return None
+
+    @classmethod
+    def list_core_fields(cls) -> List[str]:
+        """
+        列出所有核心标准字段名
+
+        Returns:
+            排序后的标准字段名列表
+        """
+        return sorted(CORE_FIELD_MAPPING.keys())
+
+    # ========================================================================
+    # 财务报表映射方法 (Financial Statement Mapping Methods)
+    # ========================================================================
 
     @classmethod
     def map_balance_sheet(cls, df: pd.DataFrame, keep_original: bool = True) -> pd.DataFrame:

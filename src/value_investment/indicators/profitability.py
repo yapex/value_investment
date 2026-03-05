@@ -34,13 +34,6 @@ class ROEIndicator(BaseIndicator):
     def get_required_fields(self) -> list[str]:
         return ['net_profit', 'total_equity']
 
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
-        """Find first matching column from candidates - strict mode, no fallback"""
-        for col in candidates:
-            if col in df.columns:
-                return col
-        return None
-
 
 class ROAIndicator(BaseIndicator):
     """Return on Assets = Net Profit / Total Assets"""
@@ -69,16 +62,6 @@ class ROAIndicator(BaseIndicator):
 
     def get_required_fields(self) -> list[str]:
         return ['net_profit', 'total_assets']
-
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
-        for col in candidates:
-            if col in df.columns:
-                return col
-        for col in df.columns:
-            for cand in candidates:
-                if cand.lower() in col.lower():
-                    return col
-        return None
 
 
 class GrossMarginIndicator(BaseIndicator):
@@ -110,16 +93,6 @@ class GrossMarginIndicator(BaseIndicator):
     def get_required_fields(self) -> list[str]:
         return ['revenue', 'cost_of_sales']
 
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
-        for col in candidates:
-            if col in df.columns:
-                return col
-        for col in df.columns:
-            for cand in candidates:
-                if cand.lower() in col.lower():
-                    return col
-        return None
-
 
 class NetProfitMarginIndicator(BaseIndicator):
     """Net Profit Margin = Net Profit / Revenue"""
@@ -149,16 +122,6 @@ class NetProfitMarginIndicator(BaseIndicator):
     def get_required_fields(self) -> list[str]:
         return ['net_profit', 'revenue']
 
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
-        for col in candidates:
-            if col in df.columns:
-                return col
-        for col in df.columns:
-            for cand in candidates:
-                if cand.lower() in col.lower():
-                    return col
-        return None
-
 
 class OperatingProfitMarginIndicator(BaseIndicator):
     """Operating Profit Margin = Operating Profit / Revenue * 100"""
@@ -187,13 +150,3 @@ class OperatingProfitMarginIndicator(BaseIndicator):
 
     def get_required_fields(self) -> list[str]:
         return ['operating_profit', 'revenue']
-
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
-        for col in candidates:
-            if col in df.columns:
-                return col
-        for col in df.columns:
-            for cand in candidates:
-                if cand.lower() in col.lower():
-                    return col
-        return None

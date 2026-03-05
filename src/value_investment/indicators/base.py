@@ -98,3 +98,28 @@ class BaseIndicator(ABC):
     def get_required_fields(self) -> list:
         """Return list of required data fields for this indicator"""
         return []
+
+    def _find_column(self, df: "pd.DataFrame", candidates: list[str], strict: bool = False) -> str | None:
+        """Find first matching column from candidates
+        
+        Args:
+            df: DataFrame to search in
+            candidates: List of column names to try (in order of priority)
+            strict: If True, only exact matches; if False, also try fuzzy matching
+            
+        Returns:
+            Column name if found, None otherwise
+        """
+        # First try exact match
+        for col in candidates:
+            if col in df.columns:
+                return col
+        
+        # If not strict, try fuzzy match (case-insensitive contains)
+        if not strict:
+            for col in df.columns:
+                for cand in candidates:
+                    if cand.lower() in col.lower():
+                        return col
+        
+        return None

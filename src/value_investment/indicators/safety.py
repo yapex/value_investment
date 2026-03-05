@@ -61,16 +61,6 @@ class CashToDebtIndicator(BaseIndicator):
     def get_required_fields(self) -> list[str]:
         return ['MONETARYFUNDS', 'SHORT_LOAN', 'LONG_LOAN', 'BOND_PAYABLE']
 
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
-        for col in candidates:
-            if col in df.columns:
-                return col
-        for col in df.columns:
-            for cand in candidates:
-                if cand.lower() in col.lower():
-                    return col
-        return None
-
 
 class DebtRatioTotalIndicator(BaseIndicator):
     """Debt Ratio (Total) = Interest-bearing Debt / Total Assets"""
@@ -127,13 +117,3 @@ class DebtRatioTotalIndicator(BaseIndicator):
 
     def get_required_fields(self) -> list[str]:
         return ['TOTAL_ASSETS', 'SHORT_LOAN', 'LONG_LOAN', 'BOND_PAYABLE']
-
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
-        for col in candidates:
-            if col in df.columns:
-                return col
-        for col in df.columns:
-            for cand in candidates:
-                if cand.lower() in col.lower():
-                    return col
-        return None

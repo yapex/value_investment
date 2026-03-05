@@ -37,3 +37,10 @@ shell = "mkdir -p ~/.nanobot/workspace/skills/value_investment && cp SKILL.md ~/
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.pyright]
+include = ["src", "tests"]
+exclude = ["node_modules", ".venv"]
+pythonPath = ".venv/bin/python"
+pythonVersion = "3.11"
+extraPaths = ["src"]

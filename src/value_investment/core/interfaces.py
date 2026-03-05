@@ -1,6 +1,7 @@
 from typing import Protocol
+
 import pandas as pd
-from typing import Optional, Any
+
 
 class IStockProvider(Protocol):
     """Abstract interface for stock data providers"""
@@ -16,8 +17,8 @@ class IStockProvider(Protocol):
     def get_historical_data(
         self,
         stock_code: str,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
         adjust: str = ""
     ) -> pd.DataFrame:
         """Get historical price data"""

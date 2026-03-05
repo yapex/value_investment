@@ -1,5 +1,5 @@
 """Valuation indicators: Latest Market Cap, Implied Growth, PE Percentile."""
-from typing import List
+
 import pandas as pd
 
 from value_investment.indicators.base import BaseIndicator, IndicatorResult, IndicatorType
@@ -175,10 +175,10 @@ class LatestMarketCapIndicator(BaseIndicator):
                 values=[]
             )
 
-    def get_required_fields(self) -> List[str]:
+    def get_required_fields(self) -> list[str]:
         return []
 
-    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -212,7 +212,7 @@ class ImpliedGrowthIndicator(BaseIndicator):
         # Get parameters
         growth_rate = kwargs.get("growth_rate", 0.03)  # Terminal growth
         wacc = kwargs.get("wacc", 0.10)  # Weighted Average Cost of Capital
-        market_cap = kwargs.get("market_cap", None)  # Required for implied growth
+        market_cap = kwargs.get("market_cap")  # Required for implied growth
 
         # Use injected dependencies instead of kwargs.get('provider')
         financial_indicator = kwargs.get('financial_indicator')  # Injected from registry
@@ -255,7 +255,7 @@ class ImpliedGrowthIndicator(BaseIndicator):
             return IndicatorResult(
                 value=0.0,
                 unit="%",
-                description=f"Implied Growth (invalid FCF)",
+                description="Implied Growth (invalid FCF)",
                 years=[],
                 values=[]
             )
@@ -290,7 +290,6 @@ class ImpliedGrowthIndicator(BaseIndicator):
         - Discounts all cash flows to present
         - Solves for g where PV equals market_cap
         """
-        import numpy as np
 
         n_years = 10  # 10-year projection period for stability
 
@@ -334,10 +333,10 @@ class ImpliedGrowthIndicator(BaseIndicator):
 
         return (low + high) / 2
 
-    def get_required_fields(self) -> List[str]:
+    def get_required_fields(self) -> list[str]:
         return ['free_cash_flow', 'operating_cash_flow']
 
-    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -405,6 +404,7 @@ class PEPercentileIndicator(BaseIndicator):
     def _calculate_pe_ttm_percentile_with_data(self, quarterly_data, prices_data, stock_info, stock_code: str, years: int):
         """使用PE-TTM计算百分位（使用注入的数据）"""
         from datetime import datetime
+
         import pandas as pd
 
         if quarterly_data.empty or prices_data.empty:
@@ -585,6 +585,7 @@ class PEPercentileIndicator(BaseIndicator):
     def _calculate_pe_ttm_percentile(self, provider, stock_code: str, years: int):
         """使用PE-TTM计算百分位（支持A股和港股）"""
         from datetime import datetime
+
         import pandas as pd
 
         # 1. 获取季度净利润数据
@@ -770,6 +771,7 @@ class PEPercentileIndicator(BaseIndicator):
     def _calculate_hk_pe_ttm_percentile_with_data(self, quarterly_data, prices_data, stock_code: str, years: int):
         """使用港股半年报数据计算PE-TTM百分位（使用注入的数据）"""
         from datetime import datetime
+
         import pandas as pd
 
         if quarterly_data.empty or prices_data.empty:
@@ -862,6 +864,7 @@ class PEPercentileIndicator(BaseIndicator):
     def _calculate_hk_pe_ttm_percentile(self, quarterly_data, provider, stock_code: str, years: int):
         """使用港股半年报数据计算PE-TTM百分位"""
         from datetime import datetime
+
         import pandas as pd
 
         # 港股字段映射 - 优先使用内部标准字段
@@ -1251,5 +1254,5 @@ class PEPercentileIndicator(BaseIndicator):
             values=pe_list
         )
 
-    def get_required_fields(self) -> List[str]:
+    def get_required_fields(self) -> list[str]:
         return []

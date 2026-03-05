@@ -1,12 +1,12 @@
 """Indicators package"""
 from value_investment.indicators.base import (
     BaseIndicator,
+    IndicatorMeta,
     IndicatorResult,
     IndicatorType,
-    IndicatorMeta,
 )
+from value_investment.indicators.mapping import FIELD_MAPPING, MarketConfig, get_mapped_field
 from value_investment.indicators.market import Market, detect_market
-from value_investment.indicators.mapping import get_mapped_field, MarketConfig, FIELD_MAPPING
 from value_investment.indicators.registry import IndicatorRegistry, register_defaults
 
 __all__ = [

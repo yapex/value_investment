@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, TYPE_CHECKING, Any, Dict, Optional, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -41,12 +41,12 @@ class IndicatorMeta:
     name: str
     display_name: str
     type: IndicatorType
-    field_names: List[str] = field(default_factory=list)
-    market_fields: Dict[str, str] = field(default_factory=dict)
+    field_names: list[str] = field(default_factory=list)
+    market_fields: dict[str, str] = field(default_factory=dict)
     description: str = ""
     unit: str = ""
 
-    def get_field_for_market(self, market: str) -> Optional[str]:
+    def get_field_for_market(self, market: str) -> str | None:
         """Get field name for specific market"""
         return self.market_fields.get(market)
 
@@ -58,8 +58,8 @@ class IndicatorResult:
     value: float
     unit: str
     description: str
-    years: List[int]
-    values: List[float] = None  # Per-year values
+    years: list[int]
+    values: list[float] = None  # Per-year values
 
     def __post_init__(self):
         if self.values is None:

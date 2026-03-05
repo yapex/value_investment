@@ -1,8 +1,9 @@
 """Smart cache module using diskcache"""
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, List, Optional, Union
+from typing import Any
 
 import diskcache
 import pandas as pd
@@ -23,14 +24,14 @@ class SmartCache:
         self.default_ttl = default_ttl
         self._cache = diskcache.Cache(str(self.cache_dir))
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         """Get value from cache"""
         try:
             return self._cache.get(key)
         except KeyError:
             return None
 
-    def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
+    def set(self, key: str, value: Any, ttl: int | None = None) -> None:
         """Set value in cache with optional TTL"""
         ttl = ttl if ttl is not None else self.default_ttl
         self._cache.set(key, value, expire=ttl)
@@ -39,7 +40,7 @@ class SmartCache:
         self,
         key: str,
         fetch_func: Callable[[], Any],
-        ttl: Optional[int] = None,
+        ttl: int | None = None,
         force_refresh: bool = False,
     ) -> Any:
         """
@@ -73,8 +74,8 @@ class SmartCache:
         self,
         df: pd.DataFrame,
         date_column: str,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> pd.DataFrame:
         """
         Filter DataFrame by date range.
@@ -113,11 +114,11 @@ class SmartCache:
     def get_or_fetch_with_range(
         self,
         key: str,
-        date_column: Optional[str],
+        date_column: str | None,
         fetch_func: Callable[[], Any],
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-        ttl: Optional[int] = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        ttl: int | None = None,
         force_refresh: bool = False,
     ) -> Any:
         """
@@ -205,8 +206,8 @@ class SmartCache:
         self,
         key: str,
         data: Any,
-        end_date: Optional[str],
-        ttl: Optional[int] = None,
+        end_date: str | None,
+        ttl: int | None = None,
     ) -> None:
         """
         Store data with end_date metadata.
@@ -235,7 +236,7 @@ class SmartCache:
         except KeyError:
             pass
 
-    def list_keys(self) -> List[str]:
+    def list_keys(self) -> list[str]:
         """List all cached keys"""
         return list(self._cache.iterkeys())
 

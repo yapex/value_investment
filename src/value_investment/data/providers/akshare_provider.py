@@ -1,8 +1,9 @@
 """Akshare data provider"""
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
+
 import akshare as ak
 import pandas as pd
-from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Optional
 
 from value_investment.data.mapper import DataMapper
 
@@ -69,7 +70,7 @@ class AkshareProvider:
 
         return digits
 
-    def _detect_market(self, code: str) -> Optional[str]:
+    def _detect_market(self, code: str) -> str | None:
         """Detect market from stock code
 
         Args:

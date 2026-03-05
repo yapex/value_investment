@@ -1,57 +1,57 @@
 """Indicator factory module"""
 
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING
 
 from value_investment.indicators.base import BaseIndicator
+from value_investment.indicators.cashflow import (
+    CfoToNetprofitIndicator,
+    CfoToNetprofitSumIndicator,
+    FcfToRevenueIndicator,
+)
+from value_investment.indicators.efficiency import (
+    AccountsReceivableRatioIndicator,
+    AssetTurnoverIndicator,
+    ExpenseRatioIndicator,
+    FeeRateIndicator,
+    FeeToGrossProfitRatioIndicator,
+    FixedAssetTurnoverIndicator,
+    InventoryTurnoverIndicator,
+    PayableTurnoverIndicator,
+    ProductionAssetRatioIndicator,
+    ReceivablesToAssetsRatioIndicator,
+    ReceivableTurnoverIndicator,
+    ReturnOnProductionAssetsIndicator,
+)
+from value_investment.indicators.growth import (
+    CAGRIndicator,
+    NetAssetGrowthIndicator,
+    OperatingProfitGrowthIndicator,
+    RevenueGrowthIndicator,
+    ROICIndicator,
+    TotalAssetGrowthIndicator,
+)
+from value_investment.indicators.market_cap import MarketCapIndicator
 from value_investment.indicators.profitability import (
-    ROEIndicator,
-    ROAIndicator,
     GrossMarginIndicator,
     NetProfitMarginIndicator,
     OperatingProfitMarginIndicator,
-)
-from value_investment.indicators.solvency import (
-    CurrentRatioIndicator,
-    QuickRatioIndicator,
-    DebtRatioIndicator,
-)
-from value_investment.indicators.efficiency import (
-    AssetTurnoverIndicator,
-    InventoryTurnoverIndicator,
-    ReceivableTurnoverIndicator,
-    PayableTurnoverIndicator,
-    ExpenseRatioIndicator,
-    FeeRateIndicator,
-    FixedAssetTurnoverIndicator,
-    FeeToGrossProfitRatioIndicator,
-    AccountsReceivableRatioIndicator,
-    ProductionAssetRatioIndicator,
-    ReturnOnProductionAssetsIndicator,
-    ReceivablesToAssetsRatioIndicator,
-)
-from value_investment.indicators.cashflow import (
-    CfoToNetprofitIndicator,
-    FcfToRevenueIndicator,
-    CfoToNetprofitSumIndicator,
-)
-from value_investment.indicators.growth import (
-    ROICIndicator,
-    CAGRIndicator,
-    RevenueGrowthIndicator,
-    OperatingProfitGrowthIndicator,
-    NetAssetGrowthIndicator,
-    TotalAssetGrowthIndicator,
+    ROAIndicator,
+    ROEIndicator,
 )
 from value_investment.indicators.safety import (
     CashToDebtIndicator,
     DebtRatioTotalIndicator,
 )
+from value_investment.indicators.solvency import (
+    CurrentRatioIndicator,
+    DebtRatioIndicator,
+    QuickRatioIndicator,
+)
 from value_investment.indicators.valuation import (
-    LatestMarketCapIndicator,
     ImpliedGrowthIndicator,
+    LatestMarketCapIndicator,
     PEPercentileIndicator,
 )
-from value_investment.indicators.market_cap import MarketCapIndicator
 
 if TYPE_CHECKING:
     from value_investment.data.providers.akshare_provider import AkshareProvider
@@ -62,54 +62,11 @@ class IndicatorFactory:
 
     def __init__(self, provider: "AkshareProvider | None" = None):
         self._provider = provider
-        self._indicators: Dict[str, BaseIndicator] = {}
+        self._indicators: dict[str, BaseIndicator] = {}
         self._register_default_indicators()
 
     def _register_default_indicators(self) -> None:
         """Register all default indicators"""
-        from value_investment.indicators.profitability import (
-            ROEIndicator,
-            ROAIndicator,
-            GrossMarginIndicator,
-            NetProfitMarginIndicator,
-            OperatingProfitMarginIndicator,
-        )
-        from value_investment.indicators.solvency import (
-            CurrentRatioIndicator,
-            QuickRatioIndicator,
-            DebtRatioIndicator,
-        )
-        from value_investment.indicators.efficiency import (
-            AssetTurnoverIndicator, InventoryTurnoverIndicator,
-            ReceivableTurnoverIndicator, PayableTurnoverIndicator,
-            ExpenseRatioIndicator, FeeRateIndicator, FixedAssetTurnoverIndicator,
-            FeeToGrossProfitRatioIndicator, AccountsReceivableRatioIndicator,
-            ProductionAssetRatioIndicator, ReturnOnProductionAssetsIndicator,
-            ReceivablesToAssetsRatioIndicator,
-        )
-        from value_investment.indicators.cashflow import (
-            CfoToNetprofitIndicator,
-            FcfToRevenueIndicator,
-            CfoToNetprofitSumIndicator,
-        )
-        from value_investment.indicators.growth import (
-            ROICIndicator,
-            CAGRIndicator,
-            RevenueGrowthIndicator,
-            OperatingProfitGrowthIndicator,
-            NetAssetGrowthIndicator,
-            TotalAssetGrowthIndicator,
-        )
-        from value_investment.indicators.valuation import (
-            LatestMarketCapIndicator,
-            ImpliedGrowthIndicator,
-            PEPercentileIndicator,
-        )
-        from value_investment.indicators.market_cap import MarketCapIndicator
-        from value_investment.indicators.safety import (
-            CashToDebtIndicator,
-            DebtRatioTotalIndicator,
-        )
 
         indicators = [
             ROEIndicator(),

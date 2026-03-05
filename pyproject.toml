@@ -27,6 +27,7 @@ dev = [
     "pytest>=9.0.2",
     "poethepoet>=0.30.0",
     "pytest-cov>=7.0.0",
+    "ruff>=0.15.4",
 ]
 
 [tool.poe.tasks.to_nanobot]
@@ -44,3 +45,15 @@ exclude = ["node_modules", ".venv"]
 pythonPath = ".venv/bin/python"
 pythonVersion = "3.11"
 extraPaths = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+# Only basic errors, no style checks for now
+select = ["E", "F", "UP"]
+ignore = ["E501", "E722"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]

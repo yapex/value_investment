@@ -4,7 +4,6 @@ This module provides compatibility layer for legacy field mapping.
 New code should use value_investment.data.mapper.CORE_FIELD_MAPPING directly.
 """
 from dataclasses import dataclass
-from typing import Dict, Optional
 
 # Import unified mapping from data/mapper.py
 from value_investment.data.mapper import CORE_FIELD_MAPPING, DataMapper
@@ -18,7 +17,7 @@ _LEGACY_FIELD_ALIASES = {
 
 # Build FIELD_MAPPING for backward compatibility
 # Combines CORE_FIELD_MAPPING with legacy aliases
-FIELD_MAPPING: Dict[str, Dict[str, str]] = {}
+FIELD_MAPPING: dict[str, dict[str, str]] = {}
 
 # Add all core fields
 for standard_field, market_map in CORE_FIELD_MAPPING.items():
@@ -30,7 +29,7 @@ for legacy_name, standard_name in _LEGACY_FIELD_ALIASES.items():
         FIELD_MAPPING[legacy_name] = CORE_FIELD_MAPPING[standard_name].copy()
 
 
-def get_mapped_field(indicator_name: str, market: str) -> Optional[str]:
+def get_mapped_field(indicator_name: str, market: str) -> str | None:
     """Get field name for indicator in specific market
 
     Args:
@@ -61,6 +60,6 @@ class MarketConfig:
     year_field: str
     data_source: str
 
-    def get_field_mapping(self, indicator_name: str) -> Optional[Dict[str, str]]:
+    def get_field_mapping(self, indicator_name: str) -> dict[str, str] | None:
         """Get all market field mappings for an indicator"""
         return FIELD_MAPPING.get(indicator_name)

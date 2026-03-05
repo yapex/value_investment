@@ -1,15 +1,14 @@
 """Python API for value investment analysis"""
-from typing import Optional
+
 import pandas as pd
 
+from value_investment.core.dependencies import DataProvider, DependencyRegistry
 from value_investment.data.cache import SmartCache
 from value_investment.data.mapper import DataMapper
 from value_investment.data.providers.akshare_provider import AkshareProvider
+from value_investment.indicators.base import IndicatorMeta, IndicatorResult
 from value_investment.indicators.factory import IndicatorFactory
-from value_investment.indicators.base import IndicatorResult
 from value_investment.indicators.registry import IndicatorRegistry, register_defaults
-from value_investment.indicators.base import IndicatorMeta
-from value_investment.core.dependencies import DependencyRegistry, DataProvider
 
 
 class ValueInvestment:
@@ -22,7 +21,7 @@ class ValueInvestment:
         >>> print(info)
     """
 
-    def __init__(self, cache_dir: Optional[str] = None, market: str = "A"):
+    def __init__(self, cache_dir: str | None = None, market: str = "A"):
         """
         Initialize ValueInvestment API
 
@@ -71,7 +70,7 @@ class ValueInvestment:
         # Default to A股
         return "A"
 
-    def get_market(self, symbol: Optional[str] = None) -> str:
+    def get_market(self, symbol: str | None = None) -> str:
         """Get market, auto-detect from symbol if not specified
 
         Args:
@@ -486,6 +485,7 @@ class ValueInvestment:
     def _format_analyze_results(self, name: str, results: dict, years: int) -> dict:
         """Format analyze results for display."""
         import math
+
         import pandas as pd
 
         # Chinese labels for indicators
@@ -617,7 +617,7 @@ class ValueInvestment:
 
         return keys[:limit]
 
-    def get_indicator(self, name: str) -> Optional[IndicatorMeta]:
+    def get_indicator(self, name: str) -> IndicatorMeta | None:
         """
         Get indicator metadata by name
 
@@ -632,8 +632,8 @@ class ValueInvestment:
 
     def list_indicators(
         self,
-        market: Optional[str] = None,
-        indicator_type: Optional[str] = None,
+        market: str | None = None,
+        indicator_type: str | None = None,
     ) -> list:
         """
         List available indicators with optional filters
@@ -679,7 +679,7 @@ class ValueInvestment:
         # Return indicator names (backward compatible)
         return [ind.name for ind in results]
 
-    def clear_cache(self, symbol: Optional[str] = None):
+    def clear_cache(self, symbol: str | None = None):
         """
         Clear cache
 

@@ -1,8 +1,7 @@
 """Data mapper for converting A股 fields to IFRS standard fields"""
-import pandas as pd
-import numpy as np
-from typing import Optional, Dict, Any, List
+from typing import Any
 
+import pandas as pd
 
 # ============================================================================
 # 核心财务字段映射 (Core Field Mapping) - 唯一数据源
@@ -10,7 +9,7 @@ from typing import Optional, Dict, Any, List
 # 结构：标准字段名 → {市场: 市场字段名}
 # 用途：统一管理 A股/港股/美股 的字段映射
 
-CORE_FIELD_MAPPING: Dict[str, Dict[str, str]] = {
+CORE_FIELD_MAPPING: dict[str, dict[str, str]] = {
     # ----- 利润表 (Income Statement) -----
     "total_revenue": {
         "A股": "营业总收入",
@@ -211,7 +210,7 @@ CORE_FIELD_MAPPING: Dict[str, Dict[str, str]] = {
 # ============================================================================
 # 反向索引：市场字段 → 标准字段 (自动生成)
 # ============================================================================
-_REVERSE_FIELD_INDEX: Dict[str, Dict[str, str]] = {}
+_REVERSE_FIELD_INDEX: dict[str, dict[str, str]] = {}
 
 
 def _build_reverse_index() -> None:
@@ -629,7 +628,7 @@ class DataMapper:
     # ========================================================================
 
     @classmethod
-    def get_market_field(cls, standard_field: str, market: str) -> Optional[str]:
+    def get_market_field(cls, standard_field: str, market: str) -> str | None:
         """
         正向查找：标准字段名 → 市场字段名
 
@@ -645,7 +644,7 @@ class DataMapper:
         return None
 
     @classmethod
-    def get_standard_field(cls, market_field: str, market: str) -> Optional[str]:
+    def get_standard_field(cls, market_field: str, market: str) -> str | None:
         """
         反向查找：市场字段名 → 标准字段名
 
@@ -661,7 +660,7 @@ class DataMapper:
         return None
 
     @classmethod
-    def list_core_fields(cls) -> List[str]:
+    def list_core_fields(cls) -> list[str]:
         """
         列出所有核心标准字段名
 
@@ -823,7 +822,7 @@ class DataMapper:
         rename_map: dict
     ) -> pd.DataFrame:
         """保留原始字段，添加 _original 后缀"""
-        for old_field in rename_map.keys():
+        for old_field in rename_map:
             if old_field in original_df.columns:
                 mapped_df[f"{rename_map[old_field]}_original"] = original_df[old_field]
 
@@ -878,7 +877,7 @@ class DataMapper:
     def apply_hierarchical_mapping(
         cls,
         df,
-        mapping: Dict[str, Any],
+        mapping: dict[str, Any],
         market: str = 'A',
         keep_original: bool = False
     ):

@@ -1,5 +1,5 @@
 """Profitability indicators: ROE, ROA, Gross Margin, Net Profit Margin, Operating Profit Margin."""
-from typing import List
+
 import pandas as pd
 
 from value_investment.indicators.base import BaseIndicator, IndicatorResult, IndicatorType
@@ -31,10 +31,10 @@ class ROEIndicator(BaseIndicator):
             values=roe.tolist() if len(roe) > 0 else []
         )
 
-    def get_required_fields(self) -> List[str]:
+    def get_required_fields(self) -> list[str]:
         return ['net_profit', 'total_equity']
 
-    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
         """Find first matching column from candidates - strict mode, no fallback"""
         for col in candidates:
             if col in df.columns:
@@ -67,10 +67,10 @@ class ROAIndicator(BaseIndicator):
             values=roa.tolist() if len(roa) > 0 else []
         )
 
-    def get_required_fields(self) -> List[str]:
+    def get_required_fields(self) -> list[str]:
         return ['net_profit', 'total_assets']
 
-    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -107,10 +107,10 @@ class GrossMarginIndicator(BaseIndicator):
             values=gross_margin.tolist() if len(gross_margin) > 0 else []
         )
 
-    def get_required_fields(self) -> List[str]:
+    def get_required_fields(self) -> list[str]:
         return ['revenue', 'cost_of_sales']
 
-    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -146,10 +146,10 @@ class NetProfitMarginIndicator(BaseIndicator):
             values=npm.tolist() if len(npm) > 0 else []
         )
 
-    def get_required_fields(self) -> List[str]:
+    def get_required_fields(self) -> list[str]:
         return ['net_profit', 'revenue']
 
-    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -185,10 +185,10 @@ class OperatingProfitMarginIndicator(BaseIndicator):
             values=margin.tolist() if len(margin) > 0 else []
         )
 
-    def get_required_fields(self) -> List[str]:
+    def get_required_fields(self) -> list[str]:
         return ['operating_profit', 'revenue']
 
-    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
         for col in candidates:
             if col in df.columns:
                 return col

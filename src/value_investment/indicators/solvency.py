@@ -1,5 +1,5 @@
 """Solvency indicators: Current Ratio, Quick Ratio, Debt Ratio."""
-from typing import List
+
 import pandas as pd
 
 from value_investment.indicators.base import BaseIndicator, IndicatorResult, IndicatorType
@@ -30,10 +30,10 @@ class CurrentRatioIndicator(BaseIndicator):
             values=cr.tolist() if len(cr) > 0 else []
         )
 
-    def get_required_fields(self) -> List[str]:
+    def get_required_fields(self) -> list[str]:
         return ['current_assets', 'current_liabilities']
 
-    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -72,10 +72,10 @@ class QuickRatioIndicator(BaseIndicator):
             values=qr.tolist() if len(qr) > 0 else []
         )
 
-    def get_required_fields(self) -> List[str]:
+    def get_required_fields(self) -> list[str]:
         return ['current_assets', 'inventory', 'current_liabilities']
 
-    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -111,10 +111,10 @@ class DebtRatioIndicator(BaseIndicator):
             values=dr.tolist() if len(dr) > 0 else []
         )
 
-    def get_required_fields(self) -> List[str]:
+    def get_required_fields(self) -> list[str]:
         return ['total_liabilities', 'total_assets']
 
-    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
         for col in candidates:
             if col in df.columns:
                 return col

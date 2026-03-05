@@ -1,5 +1,5 @@
 """Cash flow indicators: CFO to Net Profit, FCF to Revenue, CFO to Net Profit Sum."""
-from typing import List
+
 import pandas as pd
 
 from value_investment.indicators.base import BaseIndicator, IndicatorResult, IndicatorType
@@ -30,10 +30,10 @@ class CfoToNetprofitIndicator(BaseIndicator):
             values=ratio.tolist() if len(ratio) > 0 else []
         )
 
-    def get_required_fields(self) -> List[str]:
+    def get_required_fields(self) -> list[str]:
         return ['operating_cash_flow', 'net_profit']
 
-    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -69,10 +69,10 @@ class FcfToRevenueIndicator(BaseIndicator):
             values=ratio.tolist() if len(ratio) > 0 else []
         )
 
-    def get_required_fields(self) -> List[str]:
+    def get_required_fields(self) -> list[str]:
         return ['free_cash_flow', 'operating_income']
 
-    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -124,10 +124,10 @@ class CfoToNetprofitSumIndicator(BaseIndicator):
             values=[]  # Empty to show as summary metric
         )
 
-    def get_required_fields(self) -> List[str]:
+    def get_required_fields(self) -> list[str]:
         return ['operating_cash_flow', 'net_profit']
 
-    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
         for col in candidates:
             if col in df.columns:
                 return col

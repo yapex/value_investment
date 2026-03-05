@@ -1,5 +1,5 @@
 """Safety indicators: Cash to Debt, Debt Ratio (Total)."""
-from typing import List
+
 import pandas as pd
 
 from value_investment.indicators.base import BaseIndicator, IndicatorResult, IndicatorType
@@ -58,10 +58,10 @@ class CashToDebtIndicator(BaseIndicator):
             values=ratio.tolist() if len(ratio) > 0 else []
         )
 
-    def get_required_fields(self) -> List[str]:
+    def get_required_fields(self) -> list[str]:
         return ['MONETARYFUNDS', 'SHORT_LOAN', 'LONG_LOAN', 'BOND_PAYABLE']
 
-    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -125,10 +125,10 @@ class DebtRatioTotalIndicator(BaseIndicator):
             values=ratio.tolist() if len(ratio) > 0 else []
         )
 
-    def get_required_fields(self) -> List[str]:
+    def get_required_fields(self) -> list[str]:
         return ['TOTAL_ASSETS', 'SHORT_LOAN', 'LONG_LOAN', 'BOND_PAYABLE']
 
-    def _find_column(self, df: pd.DataFrame, candidates: List[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
         for col in candidates:
             if col in df.columns:
                 return col

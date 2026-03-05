@@ -1,14 +1,15 @@
 """Indicator Registry for managing financial indicators"""
-from typing import Dict, List, Optional
-from value_investment.indicators.base import IndicatorMeta, IndicatorType
+from typing import Optional
+
 from value_investment.data.mapper import CORE_FIELD_MAPPING
+from value_investment.indicators.base import IndicatorMeta, IndicatorType
 
 
 class IndicatorRegistry:
     """Singleton registry for managing financial indicators"""
 
     _instance: Optional["IndicatorRegistry"] = None
-    _indicators: Dict[str, IndicatorMeta] = {}
+    _indicators: dict[str, IndicatorMeta] = {}
 
     def __init__(self) -> None:
         if IndicatorRegistry._instance is not None:
@@ -31,7 +32,7 @@ class IndicatorRegistry:
         """
         self._indicators[meta.name] = meta
 
-    def get(self, name: str) -> Optional[IndicatorMeta]:
+    def get(self, name: str) -> IndicatorMeta | None:
         """Get indicator by name
 
         Args:
@@ -42,7 +43,7 @@ class IndicatorRegistry:
         """
         return self._indicators.get(name)
 
-    def list_all(self) -> List[IndicatorMeta]:
+    def list_all(self) -> list[IndicatorMeta]:
         """List all registered indicators
 
         Returns:
@@ -50,7 +51,7 @@ class IndicatorRegistry:
         """
         return list(self._indicators.values())
 
-    def list_by_type(self, indicator_type: IndicatorType) -> List[IndicatorMeta]:
+    def list_by_type(self, indicator_type: IndicatorType) -> list[IndicatorMeta]:
         """List indicators by type
 
         Args:
@@ -65,7 +66,7 @@ class IndicatorRegistry:
             if meta.type == indicator_type
         ]
 
-    def list_by_market(self, market: str) -> List[IndicatorMeta]:
+    def list_by_market(self, market: str) -> list[IndicatorMeta]:
         """List indicators available for a market
 
         Args:
@@ -89,7 +90,7 @@ class IndicatorRegistry:
 # 辅助函数：从 CORE_FIELD_MAPPING 生成指标定义
 # ========================================================================
 
-def _build_core_indicators() -> List[dict]:
+def _build_core_indicators() -> list[dict]:
     """从 CORE_FIELD_MAPPING 动态生成核心指标列表"""
     indicators = []
     for field_name, market_map in CORE_FIELD_MAPPING.items():

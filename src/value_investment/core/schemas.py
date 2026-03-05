@@ -1,6 +1,7 @@
+
 import pandera.pandas as pa
-from pandera import Field, Check
-from typing import Optional
+from pandera import Field
+
 
 class CoreFinancialSchema(pa.DataFrameModel):
     """Core financial fields - required for 90% of indicators"""
@@ -14,11 +15,11 @@ class CoreFinancialSchema(pa.DataFrameModel):
     revenue: float = Field(gt=0)
 
     # Optional fields
-    operating_cash_flow: Optional[float] = Field(nullable=True)
-    operating_profit: Optional[float] = Field(nullable=True)
-    total_liabilities: Optional[float] = Field(nullable=True)
-    current_assets: Optional[float] = Field(nullable=True)
-    current_liabilities: Optional[float] = Field(nullable=True)
+    operating_cash_flow: float | None = Field(nullable=True)
+    operating_profit: float | None = Field(nullable=True)
+    total_liabilities: float | None = Field(nullable=True)
+    current_assets: float | None = Field(nullable=True)
+    current_liabilities: float | None = Field(nullable=True)
 
     class Config:
         strict = False  # Allow extra columns
@@ -29,6 +30,6 @@ class CoreFinancialSchemaLite(pa.DataFrameModel):
     year: int = Field(gt=1990)
 
     # At least one of these must be present
-    net_profit: Optional[float] = Field(nullable=True)
-    revenue: Optional[float] = Field(nullable=True)
-    total_assets: Optional[float] = Field(nullable=True)
+    net_profit: float | None = Field(nullable=True)
+    revenue: float | None = Field(nullable=True)
+    total_assets: float | None = Field(nullable=True)

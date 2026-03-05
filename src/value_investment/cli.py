@@ -1,7 +1,7 @@
 """CLI for value investment analysis"""
-import typer
-from typing import Optional
+
 import pandas as pd
+import typer
 
 from value_investment.api import ValueInvestment
 from value_investment.data.mapper import DataMapper
@@ -9,7 +9,7 @@ from value_investment.data.mapper import DataMapper
 app = typer.Typer(name="v-investment", help="Value investment analysis tool")
 
 
-def _get_market(market: Optional[str], symbol: str) -> str:
+def _get_market(market: str | None, symbol: str) -> str:
     """Get market, auto-detect from symbol if not specified"""
     if market:
         return market
@@ -19,7 +19,7 @@ def _get_market(market: Optional[str], symbol: str) -> str:
 @app.command()
 def info(
     symbol: str = typer.Argument(..., help="Stock code (e.g., 600519)"),
-    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+    market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
     refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
 ):
     """Query stock basic information"""
@@ -34,7 +34,7 @@ def hist(
     start: str = typer.Option("19700101", "--start", "-s", help="Start date (YYYYMMDD, optional, defaults to earliest)"),
     end: str = typer.Option("20241231", "--end", "-e", help="End date (YYYYMMDD)"),
     adjust: str = typer.Option("hfq", "--adjust", "-a", help="Adjustment: '', 'qfq', 'hfq' (default: hfq for backtesting)"),
-    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+    market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
     refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
 ):
     """Get historical price data"""
@@ -47,9 +47,9 @@ def hist(
 def balance(
     symbol: str = typer.Argument(..., help="Stock code"),
     end_year: int = typer.Option(2024, "--end", "-e", help="End year"),
-    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+    market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
     refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
-    fields: Optional[str] = typer.Option(None, "--fields", "-f", help="Comma-separated fields to return"),
+    fields: str | None = typer.Option(None, "--fields", "-f", help="Comma-separated fields to return"),
 ):
     """Get balance sheet"""
     try:
@@ -66,9 +66,9 @@ def balance(
 def income(
     symbol: str = typer.Argument(..., help="Stock code"),
     end_year: int = typer.Option(2024, "--end", "-e", help="End year"),
-    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+    market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
     refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
-    fields: Optional[str] = typer.Option(None, "--fields", "-f", help="Comma-separated fields to return"),
+    fields: str | None = typer.Option(None, "--fields", "-f", help="Comma-separated fields to return"),
 ):
     """Get profit sheet (income statement)"""
     try:
@@ -85,9 +85,9 @@ def income(
 def cashflow(
     symbol: str = typer.Argument(..., help="Stock code"),
     end_year: int = typer.Option(2024, "--end", "-e", help="End year"),
-    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+    market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
     refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
-    fields: Optional[str] = typer.Option(None, "--fields", "-f", help="Comma-separated fields to return"),
+    fields: str | None = typer.Option(None, "--fields", "-f", help="Comma-separated fields to return"),
 ):
     """Get cash flow sheet"""
     try:
@@ -105,7 +105,7 @@ def indicator(
     name: str = typer.Argument(..., help="Indicator name"),
     stock_code: str = typer.Option(..., "--stock", "-s", help="Stock code"),
     years: int = typer.Option(10, "--years", "-y", help="Number of years"),
-    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+    market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
 ):
     """Calculate a specific indicator"""
     vi = ValueInvestment(market=_get_market(market, stock_code))
@@ -138,7 +138,7 @@ def indicator(
 @app.command()
 def finind(
     stock_code: str = typer.Argument(..., help="Stock code"),
-    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+    market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
     refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
 ):
     """Get financial indicators directly from data source (no calculation needed)"""
@@ -164,7 +164,7 @@ def finind(
 def analyze(
     stock_code: str = typer.Argument(..., help="Stock code"),
     years: int = typer.Option(10, "--years", "-y", help="Number of years"),
-    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+    market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
 ):
     """Perform complete analysis"""
     vi = ValueInvestment(market=_get_market(market, stock_code))
@@ -214,8 +214,8 @@ def fields(
 
 @app.command()
 def cache_clear(
-    symbol: Optional[str] = typer.Argument(None, help="Specific stock code to clear"),
-    market: Optional[str] = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+    symbol: str | None = typer.Argument(None, help="Specific stock code to clear"),
+    market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
 ):
     """Clear cache"""
     # Use symbol to detect market if not specified, default to A if no symbol
@@ -238,7 +238,7 @@ def cache_stats():
 
 
 @app.command()
-def cache_list(symbol: Optional[str] = typer.Argument(None, help="Filter by stock code")):
+def cache_list(symbol: str | None = typer.Argument(None, help="Filter by stock code")):
     """List cached items."""
     vi = ValueInvestment()
     keys = vi.list_cache_keys(symbol=symbol)

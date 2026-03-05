@@ -1,6 +1,5 @@
 """Market enum and detection functions for multi-market support"""
 from enum import Enum
-from typing import Optional
 
 
 class Market(str, Enum):
@@ -11,7 +10,7 @@ class Market(str, Enum):
     US = "美股"
 
 
-def detect_market(code: str) -> Optional[str]:
+def detect_market(code: str) -> str | None:
     """Detect market from stock code
 
     Args:

@@ -1,6 +1,9 @@
-import pandas as pd
 from dataclasses import dataclass
+
+import pandas as pd
+
 from value_investment.core.schemas import CoreFinancialSchema
+
 
 @dataclass
 class ValidationError(Exception):

@@ -3,7 +3,7 @@ from dependency_injector import containers, providers
 
 from value_investment.core.config import Config
 from value_investment.data.cache import SmartCache
-from value_investment.data.providers.akshare_provider import AkshareProvider
+from value_investment.data.providers.factory import ProviderFactory
 from value_investment.indicators.factory import IndicatorFactory
 
 
@@ -30,9 +30,9 @@ class Container(containers.DeclarativeContainer):
         default_ttl=config.cache_ttl,
     )
 
-    # Data providers
-    akshare_provider = providers.Factory(
-        AkshareProvider,
+    # Data providers - use factory for market-specific providers
+    akshare_provider = providers.Callable(
+        ProviderFactory.create_provider,
         cache=cache,
         market=config.market,
     )

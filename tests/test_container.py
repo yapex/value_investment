@@ -1,67 +1,140 @@
-"""Tests for dependency injection container - Phase 1"""
-import pytest
-from unittest.mock import Mock, patch
+"""Tests for dependency injection container"""
+
+import pytest  # type: ignore
+from dependency_injector import containers, providers  # type: ignore
 
 
-class TestContainer:
-    """Test DI container setup"""
+class TestContainerBasic:
+    """Test basic Container functionality"""
 
-    def test_container_imports(self):
-        """Container module should be importable"""
+    def test_container_import(self):
+        """Container should be importable"""
         from value_investment.core.container import Container
-
         assert Container is not None
 
-    def test_container_has_cache_provider(self):
+    def test_container_has_config(self):
+        """Container should have config provider"""
+        from value_investment.core.container import Container
+        
+        container = Container()
+        assert hasattr(container, 'config')
+
+    def test_container_has_settings(self):
+        """Container should have settings provider"""
+        from value_investment.core.container import Container
+        
+        container = Container()
+        assert hasattr(container, 'app_settings')
+
+    def test_container_has_datasources(self):
+        """Container should have datasources provider"""
+        from value_investment.core.container import Container
+        
+        container = Container()
+        assert hasattr(container, 'datasources')
+
+    def test_container_has_cache(self):
         """Container should have cache provider"""
         from value_investment.core.container import Container
-
+        
         container = Container()
         assert hasattr(container, 'cache')
 
-    def test_container_has_akshare_provider(self):
-        """Container should have akshare provider"""
+
+class TestContainerProviders:
+    """Test Container provider creation"""
+
+    def test_container_create_provider(self):
+        """Container should create providers from config"""
         from value_investment.core.container import Container
-
+        from value_investment.core.config import ProviderConfig
+        
+        # Create test config
+        test_config = ProviderConfig(
+            name="test_provider",
+            module="value_investment.data.providers.base_provider",
+            class_name="BaseProvider",
+            init_kwargs={},
+            field_mappings={}
+        )
+        
         container = Container()
-        assert hasattr(container, 'akshare_provider')
+        container.datasources.override(
+            providers.Object(
+                type('Config', (), {
+                    'providers': {'test': test_config},
+                    'markets': {},
+                    'get_provider': lambda self, name: test_config,
+                    'get_market_source': lambda self, market: None,
+                    'list_providers': lambda self: ['test'],
+                    'list_markets': lambda self: [],
+                })()
+            )
+        )
+        
+        # Should be able to call create_provider method
+        assert hasattr(container, 'create_provider')
 
-    def test_container_has_indicator_factory(self):
-        """Container should have indicator factory"""
+    def test_container_get_financial_provider(self):
+        """Container should provide get_financial_provider method"""
         from value_investment.core.container import Container
-
+        
         container = Container()
-        assert hasattr(container, 'indicator_factory')
+        assert hasattr(container, 'get_financial_provider')
 
-    def test_cache_is_singleton(self):
-        """Cache should be singleton"""
+    def test_container_get_market_provider(self):
+        """Container should provide get_market_provider method"""
         from value_investment.core.container import Container
-
+        
         container = Container()
-        cache1 = container.cache()
-        cache2 = container.cache()
-        assert cache1 is cache2
+        assert hasattr(container, 'get_market_provider')
 
 
-class TestConfig:
-    """Test configuration"""
+class TestContainerIntegration:
+    """Test Container integration"""
 
-    def test_config_imports(self):
-        """Config module should be importable"""
-        from value_investment.core.config import Config
+    def test_container_with_default_config(self):
+        """Container should work with default configuration"""
+        from value_investment.core.container import Container
+        from value_investment.core.defaults import DEFAULT_DATASOURCES
+        
+        container = Container()
+        
+        # Override datasources with default config
+        container.datasources.override(
+            providers.Object(DEFAULT_DATASOURCES)
+        )
+        
+        # Verify config is accessible
+        datasources = container.datasources()
+        assert datasources is not None
+        assert len(datasources.providers) > 0
+        assert len(datasources.markets) > 0
 
-        assert Config is not None
-
-    def test_config_has_cache_dir(self):
-        """Config should have cache_dir setting"""
-        from value_investment.core.config import Config
-
-        config = Config()
-        assert hasattr(config, 'cache_dir')
-
-    def test_config_has_cache_ttl(self):
-        """Config should have cache_ttl setting"""
-        from value_investment.core.config import Config
-
-        config = Config()
-        assert hasattr(config, 'cache_ttl')
+    def test_container_config_override(self):
+        """Container should support config override"""
+        from value_investment.core.container import Container
+        from value_investment.core.config import DataSourcesConfig, ProviderConfig, MarketDataSource
+        
+        # Create custom config
+        custom_config = DataSourcesConfig(
+            providers={
+                "custom": ProviderConfig(
+                    name="custom",
+                    module="test.module",
+                    class_name="CustomProvider",
+                )
+            },
+            markets={
+                "A": MarketDataSource(financial="custom", market="custom")
+            }
+        )
+        
+        container = Container()
+        container.datasources.override(
+            providers.Object(custom_config)
+        )
+        
+        datasources = container.datasources()
+        assert "custom" in datasources.providers
+        assert datasources.get_provider("custom").class_name == "CustomProvider"

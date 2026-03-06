@@ -1,5 +1,6 @@
 """Tests for API get_indicator method"""
-import pytest
+
+import pytest  # type: ignore
 from unittest.mock import Mock, patch
 
 

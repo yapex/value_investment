@@ -52,3 +52,6 @@ Thumbs.db
 
 # Lock files (optional - keep if needed for reproducibility)
 # uv.lock
+
+# Environment variables (contains sensitive data)
+.env

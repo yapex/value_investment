@@ -14,6 +14,7 @@ dependencies = [
     "pydantic-settings>=2.13.1",
     "tushare>=1.4.25",
     "yfinance>=1.2.0",
+    "pytest-dotenv>=0.5.2",
 ]
 
 [project.scripts]
@@ -32,6 +33,7 @@ dev = [
     "poethepoet>=0.30.0",
     "pytest-cov>=7.0.0",
     "ruff>=0.15.4",
+    "pytest-dotenv>=0.5.2",
 ]
 
 [tool.poe.tasks.to_nanobot]
@@ -42,6 +44,7 @@ shell = "mkdir -p ~/.nanobot/workspace/skills/value_investment && cp SKILL.md ~/
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+env_files = [".env"]
 
 [tool.pyright]
 include = ["src", "tests"]

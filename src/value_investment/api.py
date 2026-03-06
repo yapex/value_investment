@@ -1,11 +1,15 @@
-"""Python API for value investment analysis"""
+"""Python API for value investment analysis
+
+Refactored to use SimpleContainer for dependency injection.
+"""
+
+from datetime import datetime
 
 import pandas as pd
 
+from value_investment.core.container_simple import SimpleContainer
 from value_investment.core.dependencies import DataProvider, DependencyRegistry
-from value_investment.data.cache import SmartCache
 from value_investment.data.mapper import DataMapper
-from value_investment.data.providers.akshare_provider import AkshareProvider
 from value_investment.indicators.base import IndicatorMeta, IndicatorResult
 from value_investment.indicators.factory import IndicatorFactory
 from value_investment.indicators.registry import IndicatorRegistry, register_defaults
@@ -27,15 +31,26 @@ class ValueInvestment:
 
         Args:
             cache_dir: Cache directory path
-            market: Market type - "A" (A股), "HK" (港股), "US" (美股). Can be auto-detected from symbol.
+            market: Market type - "A" (A 股), "HK" (港股), "US" (美股). Can be auto-detected from symbol.
         """
-        self._cache = SmartCache(cache_dir=cache_dir or "./.cache")
+        # Use SimpleContainer for dependency injection
+        self._container = SimpleContainer(cache_dir=cache_dir)
         self._market = market
-        self._provider = AkshareProvider(cache=self._cache, market=market)
+        
+        # Get market-specific providers
+        self._financial_provider = self._container.get_financial_provider(market)
+        self._market_provider = self._container.get_market_provider(market)
+        
+        # Use financial provider as default provider
+        self._provider = self._financial_provider
+        
+        # Initialize indicator factory with provider
         self._factory = IndicatorFactory(provider=self._provider)
+        
         # Add dependency injection
         self._data_provider = DataProvider(self._provider, market=market)
         self._registry = DependencyRegistry(self._data_provider)
+        
         # Initialize indicator registry with defaults
         register_defaults()
 
@@ -54,20 +69,20 @@ class ValueInvestment:
 
         code = code.strip()
 
-        # A股: 6-digit codes starting with 0, 3, 6
+        # A 股：6-digit codes starting with 0, 3, 6
         if code.isdigit() and len(code) == 6:
             if code[0] in ("0", "3", "6"):
                 return "A"
 
-        # 港股: 5-digit codes
+        # 港股：5-digit codes
         if code.isdigit() and len(code) == 5:
             return "HK"
 
-        # 美股: alphabetic ticker symbols
+        # 美股：alphabetic ticker symbols
         if code.isalpha():
             return "US"
 
-        # Default to A股
+        # Default to A 股
         return "A"
 
     def get_market(self, symbol: str | None = None) -> str:
@@ -119,7 +134,10 @@ class ValueInvestment:
         Returns:
             DataFrame with historical prices
         """
-        return self._provider.get_historical_data(symbol, end_date, start_date, adjust, force_refresh=force_refresh)
+        # Use market provider for historical data
+        return self._market_provider.get_historical_data(
+            symbol, start_date, end_date, adjust
+        )
 
     def get_balance_sheet(
         self,
@@ -141,7 +159,7 @@ class ValueInvestment:
         Returns:
             DataFrame with balance sheet data
         """
-        df = self._provider.get_balance_sheet(symbol, end_year, force_refresh=force_refresh)
+        df = self._provider.get_balance_sheet(symbol, end_year)
         return self._filter_fields(df, fields)
 
     def get_profit_sheet(
@@ -164,7 +182,7 @@ class ValueInvestment:
         Returns:
             DataFrame with profit sheet data
         """
-        df = self._provider.get_profit_sheet(symbol, end_year, force_refresh=force_refresh)
+        df = self._provider.get_income_statement(symbol, end_year)
         return self._filter_fields(df, fields)
 
     def get_cashflow_sheet(
@@ -187,7 +205,7 @@ class ValueInvestment:
         Returns:
             DataFrame with cash flow sheet data
         """
-        df = self._provider.get_cashflow_sheet(symbol, end_year, force_refresh=force_refresh)
+        df = self._provider.get_cash_flow_statement(symbol, end_year)
         return self._filter_fields(df, fields)
 
     def get_financial_indicator(self, symbol: str, force_refresh: bool = False):
@@ -222,14 +240,13 @@ class ValueInvestment:
         Returns:
             IndicatorResult with calculated value
         """
-        # 计算日期范围，用于获取多年历史数据（如prices依赖）
-        from datetime import datetime
+        # 计算日期范围，用于获取多年历史数据（如 prices 依赖）
         end_date = datetime.now().strftime('%Y%m%d')
         start_year = datetime.now().year - years
         start_date = f'{start_year}0101'
 
-        # 将日期范围传入kwargs，这样prices依赖会获取多年数据
-        # 注意：使用不复权价格(adjust="")来计算历史PE，因为复权价格会扭曲历史PE
+        # 将日期范围传入 kwargs，这样 prices 依赖会获取多年数据
+        # 注意：使用不复权价格 (adjust="") 来计算历史 PE，因为复权价格会扭曲历史 PE
         kwargs['start_date'] = start_date
         kwargs['end_date'] = end_date
         kwargs['adjust'] = ""
@@ -266,8 +283,6 @@ class ValueInvestment:
         """
         Prepare financial data and market cap for indicators.
         """
-        from datetime import datetime
-
         current_year = datetime.now().year
 
         # Get merged financial data (fetches cached sheets, merges in memory)
@@ -347,8 +362,8 @@ class ValueInvestment:
         """
         # Fetch individual sheets (each is cached separately)
         balance = self._provider.get_balance_sheet(symbol, end_year)
-        profit = self._provider.get_profit_sheet(symbol, end_year)
-        cashflow = self._provider.get_cashflow_sheet(symbol, end_year)
+        profit = self._provider.get_income_statement(symbol, end_year)
+        cashflow = self._provider.get_cash_flow_statement(symbol, end_year)
 
         # Apply field mapping to standardize column names to IFRS standard
         balance = DataMapper.map_balance_sheet(balance)
@@ -486,8 +501,6 @@ class ValueInvestment:
         """Format analyze results for display."""
         import math
 
-        import pandas as pd
-
         # Chinese labels for indicators
         label_map = {
             "ROE": "ROE",
@@ -496,9 +509,9 @@ class ValueInvestment:
             "net_profit_margin": "净利率",
             "current_ratio": "流动比率",
             "ROIC": "ROIC",
-            "CAGR": "营收CAGR",
-            "CAGR_revenue": "营收CAGR",
-            "CAGR_net_profit": "净利润CAGR",
+            "CAGR": "营收 CAGR",
+            "CAGR_revenue": "营收 CAGR",
+            "CAGR_net_profit": "净利润 CAGR",
             "ImpliedGrowth": "市场隐含增长率",
             "asset_turnover": "资产周转率",
             "inventory_turnover": "存货周转率",
@@ -506,7 +519,7 @@ class ValueInvestment:
             "debt_ratio": "资产负债率",
             "receivable_turnover": "应收账款周转率",
             "payable_turnover": "应付账款周转率",
-            "cfo_to_netprofit_sum": "盈利质量(CFO/净利)",
+            "cfo_to_netprofit_sum": "盈利质量 (CFO/净利)",
         }
 
         # Collect all years from results
@@ -593,7 +606,7 @@ class ValueInvestment:
 
     def get_cache_stats(self) -> dict:
         """Get cache statistics."""
-        cache = self._cache
+        cache = self._container.cache
         stats = {
             "memory_size": len(cache._memory_cache) if hasattr(cache, '_memory_cache') else 0,
         }
@@ -605,7 +618,7 @@ class ValueInvestment:
 
     def list_cache_keys(self, symbol: str | None = None, limit: int = 20) -> list[str]:
         """List cache keys."""
-        cache = self._cache
+        cache = self._container.cache
         keys = []
         if hasattr(cache, '_disk_cache'):
             keys = list(cache._disk_cache.keys())
@@ -639,7 +652,7 @@ class ValueInvestment:
         List available indicators with optional filters
 
         Args:
-            market: Filter by market ("A股", "港股", "美股")
+            market: Filter by market ("A 股", "港股", "美股")
             indicator_type: Filter by type ("RAW", "SIMPLE", "COMPLEX")
 
         Returns:
@@ -687,17 +700,16 @@ class ValueInvestment:
             symbol: Optional specific symbol to clear cache for
         """
         if symbol:
-            self._cache.invalidate(f"info_{symbol}")
+            self._container.cache.invalidate(f"info_{symbol}")
             # Clear financial data cache (all end_years)
-            for key in self._cache.list_keys():
+            for key in self._container.cache.list_keys():
                 if key.startswith(f"financial_{symbol}_"):
-                    self._cache.invalidate(key)
+                    self._container.cache.invalidate(key)
             # Clear historical data cache (all end_dates)
-            for key in self._cache.list_keys():
+            for key in self._container.cache.list_keys():
                 if key.startswith(f"hist_{symbol}_"):
-                    self._cache.invalidate(key)
-            self._cache.invalidate(f"indicator_{symbol}")
+                    self._container.cache.invalidate(key)
+            self._container.cache.invalidate(f"indicator_{symbol}")
         else:
             # Clear all cache
-            for key in self._cache.list_keys():
-                self._cache.invalidate(key)
+            self._container.clear_cache()

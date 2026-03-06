@@ -142,6 +142,7 @@ YFINANCE_CONFIG = ProviderConfig(
             "Low": "low",
             "Volume": "volume",
             "Adj Close": "adj_close",
+            "trade_date": "trade_date",
         }
     }
 )

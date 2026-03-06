@@ -1,6 +1,7 @@
 """Tests for TushareProvider"""
 import os
-import pytest
+
+import pytest  # type: ignore
 import pandas as pd
 
 from value_investment.data.providers.tushare_provider import TushareProvider

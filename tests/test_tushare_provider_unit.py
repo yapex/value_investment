@@ -1,5 +1,6 @@
 """Unit tests for TushareProvider (no API token required)"""
-import pytest
+
+import pytest  # type: ignore
 import pandas as pd
 from unittest.mock import Mock, MagicMock, patch
 

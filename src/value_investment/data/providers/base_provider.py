@@ -1,8 +1,33 @@
 """Base provider with field mapping and cache support"""
 from abc import ABC, abstractmethod
+from datetime import datetime, timedelta
 from typing import Any
 
 import pandas as pd
+
+
+def get_ttl_until_next_midnight() -> int:
+    """Get TTL in seconds until next midnight (for daily refresh data like stock info)"""
+    now = datetime.now()
+    tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    return int((tomorrow - now).total_seconds())
+
+
+def get_ttl_until_june_next_year(end_year: int) -> int:
+    """Get TTL in seconds until June 30th of the next year
+
+    This gives sufficient time for financial reports to be published.
+
+    Args:
+        end_year: The end year of the financial data
+
+    Returns:
+        TTL in seconds until next year June 30th
+    """
+    now = datetime.now()
+    # June 30th of next year
+    june_next_year = datetime(now.year + 1, 6, 30, 23, 59, 59)
+    return int((june_next_year - now).total_seconds())
 
 
 class BaseProvider(ABC):

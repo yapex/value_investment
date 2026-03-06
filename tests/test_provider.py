@@ -1,5 +1,5 @@
 """Tests for AkshareProvider - Phase 4"""
-import pytest
+import pytest  # type: ignore[import-untyped]
 import pandas as pd
 from unittest.mock import Mock, patch, MagicMock
 import tempfile
@@ -169,10 +169,8 @@ class TestAkshareProviderStockInfo:
         """港股股票信息缓存应到次年6月底"""
         from datetime import datetime
         from value_investment.data.cache import SmartCache
-        from value_investment.data.providers.akshare_provider import (
-            AkshareProvider,
-            _get_ttl_until_june_next_year,
-        )
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+        from value_investment.data.providers.base_provider import get_ttl_until_june_next_year
 
         cache = SmartCache(cache_dir=temp_cache_dir)
         provider = AkshareProvider(cache=cache, market="HK")
@@ -193,10 +191,8 @@ class TestAkshareProviderStockInfo:
         """美股股票信息缓存应到次年6月底"""
         from datetime import datetime
         from value_investment.data.cache import SmartCache
-        from value_investment.data.providers.akshare_provider import (
-            AkshareProvider,
-            _get_ttl_until_june_next_year,
-        )
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+        from value_investment.data.providers.base_provider import get_ttl_until_june_next_year
 
         cache = SmartCache(cache_dir=temp_cache_dir)
         provider = AkshareProvider(cache=cache, market="US")
@@ -243,7 +239,9 @@ class TestAkshareProviderStockInfo:
         # Return new data
         assert result.iloc[0]["value"] == "600519"
         # Cache should be updated
-        assert cache.get("info_600519").iloc[0]["value"] == "600519"
+        cached = cache.get("info_600519")
+        assert cached is not None
+        assert cached.iloc[0]["value"] == "600519"
 
 
 class TestAkshareProviderHistorical:

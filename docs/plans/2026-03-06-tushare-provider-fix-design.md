@@ -72,14 +72,14 @@ df = ts.pro_bar(ts_code=..., adj=adj)
 
 ## 待办事项
 
-### 下一步
-1. 查阅 tushare pro 文档确认各接口返回的字段名
-2. 更新 `defaults.py` 中的 TUSHARE_A_CONFIG 字段映射
-3. 更新 `TushareProvider` 各方法的 API 调用：
+### ✅ 已完成
+1. ✅ 查阅 tushare pro 文档确认各接口返回的字段名
+2. ✅ 更新 `defaults.py` 中的 TUSHARE_A_CONFIG 字段映射
+3. ✅ 更新 `TushareProvider` 各方法的 API 调用：
    - 请求正确的字段集
    - 设置正确的缓存 TTL
    - 历史行情改用 `pro_bar()` 接口
-4. 更新单元测试以匹配新的字段名
+4. ✅ 更新单元测试以匹配新的字段名
 
 ## 相关文件
 
@@ -96,3 +96,51 @@ df = ts.pro_bar(ts_code=..., adj=adj)
 - Tushare Token: 已配置在 `.env` 中
 - Git 分支: `feature/pydantic-datasource-config`
 - 测试命令: `uv run python -m pytest tests/test_tushare_provider_unit.py -v`
+
+## 实施总结 (2026-03-06)
+
+### 修改的文件
+
+1. **`src/value_investment/core/defaults.py`**
+   - 更新 `TUSHARE_A_CONFIG.field_mappings` 中的字段映射
+   - 使用 tushare API 实际返回的字段名
+   - 添加 `market` 和 `info` 类型的映射
+
+2. **`src/value_investment/data/providers/tushare_provider.py`**
+   - 添加 `BALANCE_FIELDS`, `INCOME_FIELDS`, `CASHFLOW_FIELDS`, `MARKET_FIELDS`, `STOCK_INFO_FIELDS` 常量
+   - 添加 `HISTORICAL_DATA_TTL` 常量
+   - 更新所有 5 个方法使用正确的字段名
+   - `get_historical_data()` 改用 `ts.pro_bar()` 替代 `pro.daily()`
+   - 所有方法添加正确的 TTL 设置
+
+3. **`tests/test_tushare_provider_unit.py`**
+   - 更新 `test_get_historical_data_with_mock` 测试使用 `ts.pro_bar` mock
+
+### 测试结果
+
+- 单元测试: 14 passed ✅
+- Container 测试: 20 passed ✅
+- 集成测试: 全部通过 ✅
+
+### Tushare API 字段对照表
+
+| 数据类型 | Tushare 原生字段 | 标准字段 |
+|---------|-----------------|---------|
+| Balance | `total_assets` | `total_assets` |
+| Balance | `total_hldr_eqy_inc_min_int` | `total_equity` |
+| Balance | `total_liab` | `total_liabilities` |
+| Balance | `money_cap` | `cash_and_equivalents` |
+| Balance | `accounts_receiv` | `accounts_receivable` |
+| Balance | `acct_payable` | `accounts_payable` |
+| Balance | `fix_assets` | `fixed_assets` |
+| Income | `revenue` | `operating_revenue` |
+| Income | `n_income` | `net_profit` |
+| Income | `n_income_attr_p` | `parent_net_profit` |
+| Income | `operate_profit` | `operating_profit` |
+| Income | `oper_cost` | `operating_cost` |
+| Cashflow | `n_cashflow_act` | `operating_cash_flow` |
+| Cashflow | `n_cashflow_inv_act` | `investing_cash_flow` |
+| Cashflow | `n_cash_flows_fnc_act` | `financing_cash_flow` |
+| Cashflow | `c_pay_acq_const_fiolta` | `capital_expenditure` |
+| Market | `vol` | `volume` |
+| Info | `ts_code` | `stock_code` |

@@ -15,28 +15,28 @@ class TestContainerBasic:
     def test_container_has_config(self):
         """Container should have config provider"""
         from value_investment.core.container import Container
-        
+
         container = Container()
         assert hasattr(container, 'config')
 
     def test_container_has_settings(self):
         """Container should have settings provider"""
         from value_investment.core.container import Container
-        
+
         container = Container()
         assert hasattr(container, 'app_settings')
 
     def test_container_has_datasources(self):
         """Container should have datasources provider"""
         from value_investment.core.container import Container
-        
+
         container = Container()
         assert hasattr(container, 'datasources')
 
     def test_container_has_cache(self):
         """Container should have cache provider"""
         from value_investment.core.container import Container
-        
+
         container = Container()
         assert hasattr(container, 'cache')
 
@@ -45,10 +45,17 @@ class TestContainerProviders:
     """Test Container provider creation"""
 
     def test_container_create_provider(self):
-        """Container should create providers from config"""
-        from value_investment.core.container import Container
+        """Container should create providers from config via module function"""
+        from value_investment.core.container import (
+            Container, create_provider, get_financial_provider, get_market_provider
+        )
         from value_investment.core.config import ProviderConfig
-        
+
+        # Verify module-level functions exist
+        assert callable(create_provider)
+        assert callable(get_financial_provider)
+        assert callable(get_market_provider)
+
         # Create test config
         test_config = ProviderConfig(
             name="test_provider",
@@ -57,7 +64,7 @@ class TestContainerProviders:
             init_kwargs={},
             field_mappings={}
         )
-        
+
         container = Container()
         container.datasources.override(
             providers.Object(
@@ -71,23 +78,27 @@ class TestContainerProviders:
                 })()
             )
         )
-        
-        # Should be able to call create_provider method
-        assert hasattr(container, 'create_provider')
+
+        # Should be able to call create_provider function
+        # (Note: BaseProvider is abstract so this will fail instantiation,
+        # but we're just testing the function exists and is callable)
+        try:
+            create_provider(container, "test")
+        except Exception as e:
+            # Expected - BaseProvider is abstract
+            pass
 
     def test_container_get_financial_provider(self):
-        """Container should provide get_financial_provider method"""
-        from value_investment.core.container import Container
-        
-        container = Container()
-        assert hasattr(container, 'get_financial_provider')
+        """Container should provide get_financial_provider function"""
+        from value_investment.core.container import get_financial_provider
+
+        assert callable(get_financial_provider)
 
     def test_container_get_market_provider(self):
-        """Container should provide get_market_provider method"""
-        from value_investment.core.container import Container
-        
-        container = Container()
-        assert hasattr(container, 'get_market_provider')
+        """Container should provide get_market_provider function"""
+        from value_investment.core.container import get_market_provider
+
+        assert callable(get_market_provider)
 
 
 class TestContainerIntegration:
@@ -97,14 +108,14 @@ class TestContainerIntegration:
         """Container should work with default configuration"""
         from value_investment.core.container import Container
         from value_investment.core.defaults import DEFAULT_DATASOURCES
-        
+
         container = Container()
-        
+
         # Override datasources with default config
         container.datasources.override(
             providers.Object(DEFAULT_DATASOURCES)
         )
-        
+
         # Verify config is accessible
         datasources = container.datasources()
         assert datasources is not None
@@ -115,7 +126,7 @@ class TestContainerIntegration:
         """Container should support config override"""
         from value_investment.core.container import Container
         from value_investment.core.config import DataSourcesConfig, ProviderConfig, MarketDataSource
-        
+
         # Create custom config
         custom_config = DataSourcesConfig(
             providers={
@@ -129,12 +140,12 @@ class TestContainerIntegration:
                 "A": MarketDataSource(financial="custom", market="custom")
             }
         )
-        
+
         container = Container()
         container.datasources.override(
             providers.Object(custom_config)
         )
-        
+
         datasources = container.datasources()
         assert "custom" in datasources.providers
         assert datasources.get_provider("custom").class_name == "CustomProvider"

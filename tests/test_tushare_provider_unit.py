@@ -231,7 +231,7 @@ class TestTushareProviderUnit:
 
     @patch('value_investment.data.providers.tushare_provider.ts')
     def test_get_historical_data_with_mock(self, mock_ts):
-        """Should fetch and map historical data"""
+        """Should fetch and map historical data using pro_bar"""
         mock_api = Mock()
         mock_df = pd.DataFrame({
             "trade_date": ["20231231"],
@@ -239,26 +239,30 @@ class TestTushareProviderUnit:
             "open": [10.0],
             "vol": [1000],
         })
-        mock_api.daily.return_value = mock_df
+        # pro_bar 返回 DataFrame
+        mock_ts.pro_bar.return_value = mock_df
         mock_ts.pro_api.return_value = mock_api
-        
+
         provider = TushareProvider(
             cache=MockCache(),
             token="test_token",
             field_mappings={"market": {"close": "close"}}
         )
-        
+
         df = provider.get_historical_data(
             "000001.SZ",
             start_date="20230101",
             end_date="20231231",
             adjust="qfq"
         )
-        
-        mock_api.daily.assert_called_once()
-        # Verify adjust parameter
-        call_args = mock_api.daily.call_args
+
+        # 验证 pro_bar 被调用
+        mock_ts.pro_bar.assert_called_once()
+        call_args = mock_ts.pro_bar.call_args
+        assert call_args[1]["ts_code"] == "000001.SZ"
         assert call_args[1]["adj"] == "qfq"
+        # daily 不应该被调用
+        mock_api.daily.assert_not_called()
 
     @patch('value_investment.data.providers.tushare_provider.ts')
     def test_get_stock_info_with_mock(self, mock_ts):

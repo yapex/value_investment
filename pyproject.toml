@@ -6,7 +6,6 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "akshare>=1.18.25",
-    "dependency-injector>=4.48.3",
     "diskcache>=5.6.3",
     "typer>=0.23.1",
     "pandas>=2.0.0",
@@ -15,6 +14,7 @@ dependencies = [
     "tushare>=1.4.25",
     "yfinance>=1.2.0",
     "pytest-dotenv>=0.5.2",
+    "dependency-injector>=4.48.3",
 ]
 
 [project.scripts]

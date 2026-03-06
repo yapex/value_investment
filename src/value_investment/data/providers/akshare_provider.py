@@ -1,38 +1,18 @@
 """Akshare data provider"""
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
-import akshare as ak
+import akshare as ak  # type: ignore[import-untyped]
 import pandas as pd
 
 from value_investment.data.mapper import DataMapper
+from value_investment.data.providers.base_provider import (
+    get_ttl_until_next_midnight,
+    get_ttl_until_june_next_year,
+)
 
 if TYPE_CHECKING:
     from value_investment.data.cache import SmartCache
-
-
-def _get_ttl_until_next_midnight() -> int:
-    """Get TTL in seconds until next midnight (for daily refresh data like stock info)"""
-    now = datetime.now()
-    tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    return int((tomorrow - now).total_seconds())
-
-
-def _get_ttl_until_june_next_year(end_year: int) -> int:
-    """Get TTL in seconds until June 30th of the next year
-
-    This gives sufficient time for financial reports to be published.
-
-    Args:
-        end_year: The end year of the financial data
-
-    Returns:
-        TTL in seconds until next year June 30th
-    """
-    now = datetime.now()
-    # June 30th of next year
-    june_next_year = datetime(now.year + 1, 6, 30, 23, 59, 59)
-    return int((june_next_year - now).total_seconds())
 
 
 class AkshareProvider:
@@ -136,7 +116,7 @@ class AkshareProvider:
         data = ak.stock_individual_info_em(symbol=symbol)
 
         # Cache until next midnight
-        self._cache.set(cache_key, data, ttl=_get_ttl_until_next_midnight())
+        self._cache.set(cache_key, data, ttl=get_ttl_until_next_midnight())
         return data
 
     def _get_hk_stock_info(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
@@ -176,7 +156,7 @@ class AkshareProvider:
 
         # Cache until next June 30th (company info rarely changes)
         self._cache.set(
-            cache_key, result, ttl=_get_ttl_until_june_next_year(datetime.now().year)
+            cache_key, result, ttl=get_ttl_until_june_next_year(datetime.now().year)
         )
         return result
 
@@ -198,7 +178,7 @@ class AkshareProvider:
 
         # Cache until next June 30th (company info rarely changes)
         self._cache.set(
-            cache_key, data, ttl=_get_ttl_until_june_next_year(datetime.now().year)
+            cache_key, data, ttl=get_ttl_until_june_next_year(datetime.now().year)
         )
         return data
 
@@ -604,7 +584,7 @@ class AkshareProvider:
                 df["_year"] = pd.to_numeric(df[year_col], errors="coerce")
 
             # Filter: keep rows where year <= end_year (ignore NaN)
-            result = df[df["_year"] <= end_year].drop(columns=["_year"])
+            result = cast(pd.DataFrame, df[df["_year"] <= end_year].drop(columns=["_year"]))
         except Exception:
             # If anything fails, return original data
             result = df
@@ -664,7 +644,7 @@ class AkshareProvider:
         # Normalize HK stock code to 5-digit format
         hk_code = self._normalize_hk_code(symbol)
         cache_key = f"balance_sheet_hk_{hk_code}"
-        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+        ttl = get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
             df = ak.stock_financial_hk_report_em(
@@ -679,7 +659,7 @@ class AkshareProvider:
         # Normalize HK stock code to 5-digit format
         hk_code = self._normalize_hk_code(symbol)
         cache_key = f"profit_sheet_hk_{hk_code}"
-        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+        ttl = get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
             df = ak.stock_financial_hk_report_em(
@@ -694,7 +674,7 @@ class AkshareProvider:
         # Normalize HK stock code to 5-digit format
         hk_code = self._normalize_hk_code(symbol)
         cache_key = f"cashflow_sheet_hk_{hk_code}"
-        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+        ttl = get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
             df = ak.stock_financial_hk_report_em(
@@ -707,7 +687,7 @@ class AkshareProvider:
     def _get_us_balance_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 美股 balance sheet"""
         cache_key = f"balance_sheet_us_{symbol}"
-        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+        ttl = get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
             df = ak.stock_financial_us_report_em(
@@ -720,7 +700,7 @@ class AkshareProvider:
     def _get_us_profit_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 美股 profit sheet (income statement)"""
         cache_key = f"profit_sheet_us_{symbol}"
-        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+        ttl = get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
             df = ak.stock_financial_us_report_em(
@@ -733,7 +713,7 @@ class AkshareProvider:
     def _get_us_cashflow_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get 美股 cash flow sheet"""
         cache_key = f"cashflow_sheet_us_{symbol}"
-        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+        ttl = get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
             df = ak.stock_financial_us_report_em(
@@ -746,7 +726,7 @@ class AkshareProvider:
     def _get_balance_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get A股 balance sheet"""
         cache_key = f"balance_sheet_a_{symbol}"
-        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+        ttl = get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
             full_symbol = self._format_stock_symbol(symbol)
@@ -757,7 +737,7 @@ class AkshareProvider:
     def _get_profit_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get A股 profit sheet (income statement)"""
         cache_key = f"profit_sheet_a_{symbol}"
-        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+        ttl = get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
             # 判断交易所：60x上交所，00x/30x深交所
@@ -769,7 +749,7 @@ class AkshareProvider:
     def _get_cashflow_sheet(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get A股 cash flow sheet"""
         cache_key = f"cashflow_sheet_a_{symbol}"
-        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+        ttl = get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
             full_symbol = self._format_stock_symbol(symbol)
@@ -1011,7 +991,7 @@ class AkshareProvider:
         # Normalize HK stock code to 5-digit format
         hk_code = self._normalize_hk_code(symbol)
         cache_key = f"indicator_hk_{hk_code}"
-        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+        ttl = get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
             return ak.stock_hk_financial_indicator_em(symbol=hk_code)
@@ -1022,7 +1002,7 @@ class AkshareProvider:
         """Get US stock financial indicators"""
         cache_key = f"indicator_us_{symbol}"
         # US financial data is published annually, so use same TTL as A-share
-        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+        ttl = get_ttl_until_june_next_year(datetime.now().year)
 
         # Force refresh: invalidate cache first
         if force_refresh:
@@ -1052,7 +1032,7 @@ class AkshareProvider:
         """Get US stock quarterly financial indicators (单季度数据)"""
         cache_key = f"quarterly_us_{symbol}"
         # US quarterly data is published quarterly, so use same TTL as A-share
-        ttl = _get_ttl_until_june_next_year(datetime.now().year)
+        ttl = get_ttl_until_june_next_year(datetime.now().year)
 
         # Force refresh: invalidate cache first
         if force_refresh:

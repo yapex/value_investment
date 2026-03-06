@@ -1,13 +1,13 @@
 """Python API for value investment analysis
 
-Refactored to use SimpleContainer for dependency injection.
+Refactored to use Container for dependency injection.
 """
 
 from datetime import datetime
 
 import pandas as pd
 
-from value_investment.core.container_simple import SimpleContainer
+from value_investment.core.container import Container, get_financial_provider, get_market_provider
 from value_investment.core.dependencies import DataProvider, DependencyRegistry
 from value_investment.data.mapper import DataMapper
 from value_investment.indicators.base import IndicatorMeta, IndicatorResult
@@ -33,24 +33,26 @@ class ValueInvestment:
             cache_dir: Cache directory path
             market: Market type - "A" (A 股), "HK" (港股), "US" (美股). Can be auto-detected from symbol.
         """
-        # Use SimpleContainer for dependency injection
-        self._container = SimpleContainer(cache_dir=cache_dir)
+        # Use Container for dependency injection
+        self._container = Container()
+        if cache_dir:
+            self._container.config.cache_dir.from_value(cache_dir)
         self._market = market
-        
+
         # Get market-specific providers
-        self._financial_provider = self._container.get_financial_provider(market)
-        self._market_provider = self._container.get_market_provider(market)
-        
+        self._financial_provider = get_financial_provider(self._container, market)
+        self._market_provider = get_market_provider(self._container, market)
+
         # Use financial provider as default provider
         self._provider = self._financial_provider
-        
+
         # Initialize indicator factory with provider
         self._factory = IndicatorFactory(provider=self._provider)
-        
+
         # Add dependency injection
         self._data_provider = DataProvider(self._provider, market=market)
         self._registry = DependencyRegistry(self._data_provider)
-        
+
         # Initialize indicator registry with defaults
         register_defaults()
 
@@ -259,11 +261,11 @@ class ValueInvestment:
 
         # Use shared method to prepare data
         years = kwargs.pop('years', 10)
-        market_cap = kwargs.get('market_cap')
-        financial_data, market_cap = self._prepare_data(stock_code, years, market_cap)
+        market_cap_input = kwargs.get('market_cap')
+        financial_data, market_cap_result = self._prepare_data(stock_code, years, market_cap_input)
 
-        if market_cap:
-            kwargs['market_cap'] = market_cap
+        if market_cap_result is not None:
+            kwargs['market_cap'] = market_cap_result
 
         # Pass stock_code for indicators that need it
         kwargs['stock_code'] = stock_code
@@ -278,8 +280,8 @@ class ValueInvestment:
         self,
         stock_code: str,
         years: int = 10,
-        market_cap: float = None,
-    ) -> tuple:
+        market_cap: float | None = None,
+    ) -> tuple[pd.DataFrame, float | None]:
         """
         Prepare financial data and market cap for indicators.
         """
@@ -335,12 +337,14 @@ class ValueInvestment:
         if invalid_fields:
             raise ValueError(f"Invalid fields: {invalid_fields}. Available fields: {sorted(available_cols)}")
 
-        # 筛选列
+        # 筛选列 (ensure we always get a DataFrame)
         result = df[field_list].copy()
+        if isinstance(result, pd.Series):
+            result = result.to_frame().T
 
         # 格式化日期为 YYYY-MM-DD
         if "REPORT_DATE" in result.columns:
-            result["REPORT_DATE"] = pd.to_datetime(result["REPORT_DATE"]).dt.strftime("%Y-%m-%d")
+            result["REPORT_DATE"] = pd.to_datetime(result["REPORT_DATE"]).strftime("%Y-%m-%d")
 
         return result
 
@@ -394,8 +398,8 @@ class ValueInvestment:
         self,
         stock_code: str,
         years: int = 10,
-        cagr_metrics: list = None,
-        market_cap: float = None,
+        cagr_metrics: list | None = None,
+        market_cap: float | None = None,
         report: bool = False,
         **kwargs,
     ) -> dict:
@@ -544,9 +548,9 @@ class ValueInvestment:
         # Build DataFrame
         data = []
         for year in sorted_years:
-            row = {"年份": year}
+            row: dict[str, str | int | float] = {"年份": year}
             for ind_name, result in results.items():
-                label = label_map.get(ind_name, ind_name)
+                label = label_map.get(ind_name, ind_name) or ind_name
                 if hasattr(result, 'values') and result.values and hasattr(result, 'years') and result.years:
                     if year in result.years:
                         idx = result.years.index(year)
@@ -581,12 +585,12 @@ class ValueInvestment:
         df = df[existing_cols]
 
         # Summary metrics
-        summary = []
+        summary: list[dict[str, str]] = []
         for ind_name, result in results.items():
             if hasattr(result, 'values') and not result.values and hasattr(result, 'value') and result.value:
                 if ind_name == "CAGR":
                     continue
-                label = label_map.get(ind_name, ind_name)
+                label = label_map.get(ind_name, ind_name) or ind_name
                 if result.unit == "%":
                     summary.append({"label": label, "value": f"{result.value:.1f}%"})
                 elif result.unit == "CNY":
@@ -606,7 +610,7 @@ class ValueInvestment:
 
     def get_cache_stats(self) -> dict:
         """Get cache statistics."""
-        cache = self._container.cache
+        cache = self._container.cache()
         stats = {
             "memory_size": len(cache._memory_cache) if hasattr(cache, '_memory_cache') else 0,
         }
@@ -618,7 +622,7 @@ class ValueInvestment:
 
     def list_cache_keys(self, symbol: str | None = None, limit: int = 20) -> list[str]:
         """List cache keys."""
-        cache = self._container.cache
+        cache = self._container.cache()
         keys = []
         if hasattr(cache, '_disk_cache'):
             keys = list(cache._disk_cache.keys())
@@ -699,17 +703,18 @@ class ValueInvestment:
         Args:
             symbol: Optional specific symbol to clear cache for
         """
+        cache = self._container.cache()
         if symbol:
-            self._container.cache.invalidate(f"info_{symbol}")
+            cache.invalidate(f"info_{symbol}")
             # Clear financial data cache (all end_years)
-            for key in self._container.cache.list_keys():
+            for key in cache.list_keys():
                 if key.startswith(f"financial_{symbol}_"):
-                    self._container.cache.invalidate(key)
+                    cache.invalidate(key)
             # Clear historical data cache (all end_dates)
-            for key in self._container.cache.list_keys():
+            for key in cache.list_keys():
                 if key.startswith(f"hist_{symbol}_"):
-                    self._container.cache.invalidate(key)
-            self._container.cache.invalidate(f"indicator_{symbol}")
+                    cache.invalidate(key)
+            cache.invalidate(f"indicator_{symbol}")
         else:
             # Clear all cache
-            self._container.clear_cache()
+            cache.clear()

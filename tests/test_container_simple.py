@@ -74,17 +74,6 @@ class TestSimpleContainerProviderCreation:
         assert provider.__class__.__name__ == "YFinanceProvider"
 
     @patch('value_investment.data.providers.yfinance_provider.yf')
-    def test_create_yfinance_provider(self, mock_yf):
-        """Should create YFinanceProvider"""
-        mock_yf.Ticker.return_value = Mock()
-        
-        container = SimpleContainer()
-        provider = container.create_provider("yfinance")
-        
-        assert provider is not None
-        assert provider.__class__.__name__ == "YFinanceProvider"
-
-    @patch('value_investment.data.providers.yfinance_provider.yf')
     def test_create_provider_singleton(self, mock_yf):
         """Should cache provider instances"""
         mock_yf.Ticker.return_value = Mock()

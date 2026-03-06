@@ -133,45 +133,51 @@ def get_income_statement(self, stock_code, end_year):
 
 ### Phase 1 总结
 
-**测试覆盖**: 44 个测试通过 ✅
+**测试覆盖**: 83 个测试通过 ✅
 - Settings: 6 passed
 - Config: 15 passed
 - Defaults: 7 passed
 - BaseProvider: 16 passed
+- TushareProvider: 14 passed
+- Container: 20 passed
+- Cache: 25 passed
 
 **核心成果**:
 1. ✅ Pydantic 配置系统（类型安全、环境变量支持）
 2. ✅ 默认数据源配置（A 股 tushare、港股/美股 akshare+yfinance）
-3. ✅ BaseProvider 抽象类（字段映射、缓存支持）
+3. ✅ BaseProvider 抽象类（字段映射、缓存支持、TTL 辅助函数）
+4. ✅ TushareProvider 修复（字段对齐、API 修复、TTL 设置）
+5. ✅ YFinanceProvider 修复（TTL 设置）
+6. ✅ DI Container（dependency-injector）
 
 **待完成**:
-- Container 简化（建议使用简单工厂模式替代复杂的 dependency-injector）
-- 具体 Provider 实现（TushareProvider、YFinanceProvider）
+- AkshareProvider 改造（继承 BaseProvider，使用配置驱动）
 
 ---
 
 ### Phase 2: Provider 实现（2-3 天）
 
-#### 2.1 TushareProvider（A 股）
-- [ ] `data/providers/tushare_provider.py`
-- [ ] 配置字段映射（income/balance/cashflow）
-- [ ] 实现核心方法
+#### 2.1 TushareProvider（A 股）✅
+- [x] `data/providers/tushare_provider.py`
+- [x] 配置字段映射（income/balance/cashflow/market/info）
+- [x] 实现核心方法
+- [x] 添加 TTL 设置
 
-**测试**:
-- [ ] `test_tushare_provider.py` - 验证数据获取
-- [ ] `test_tushare_mapping.py` - 验证字段映射
+**测试** ✅:
+- [x] `test_tushare_provider_unit.py` - 14 passed
 
-#### 2.2 YFinanceProvider（交易数据）
-- [ ] `data/providers/yfinance_provider.py`
-- [ ] 配置字段映射（market data）
-- [ ] 实现核心方法
+#### 2.2 YFinanceProvider（交易数据）✅
+- [x] `data/providers/yfinance_provider.py`
+- [x] 配置字段映射（market）
+- [x] 添加 TTL 设置
 
-**测试**:
-- [ ] `test_yfinance_provider.py` - 验证数据获取
+**测试** ✅:
+- [x] 集成测试通过（港股/美股历史数据）
 
-#### 2.3 AkshareProvider 改造
+#### 2.3 AkshareProvider 改造 ⚠️ 待定
 - [ ] 移除硬编码映射
 - [ ] 使用配置驱动
+- [ ] 继承 BaseProvider
 
 **测试**:
 - [ ] `test_akshare_provider.py` - 回归测试

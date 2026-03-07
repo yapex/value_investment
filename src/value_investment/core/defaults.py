@@ -32,6 +32,16 @@ TUSHARE_A_CONFIG = ProviderConfig(
             "n_income_attr_p": "parent_net_profit",
             "operate_profit": "operating_profit",
             "oper_cost": "operating_cost",
+            "total_cogs": "total_operating_cost",
+            "sell_exp": "sales_expense",
+            "admin_exp": "management_expense",
+            "fin_exp": "financial_expense",
+            "basic_eps": "basic_eps",
+            "diluted_eps": "diluted_eps",
+            "ebit": "ebit",
+            "ebitda": "ebitda",
+            "income_tax": "income_tax",
+            "total_profit": "total_profit",
         },
         # Balance sheet mappings
         "balance": {
@@ -47,6 +57,13 @@ TUSHARE_A_CONFIG = ProviderConfig(
             "accounts_receiv": "accounts_receivable",
             "acct_payable": "accounts_payable",
             "fix_assets": "fixed_assets",
+            "total_nca": "non_current_assets",
+            "total_ncl": "non_current_liabilities",
+            "capital_rese": "capital_reserve",
+            "surplus_rese": "surplus_reserve",
+            "undistr_porfit": "retained_earnings",
+            "intan_assets": "intangible_assets",
+            "goodwill": "goodwill",
         },
         # Cash flow mappings
         "cashflow": {
@@ -56,6 +73,11 @@ TUSHARE_A_CONFIG = ProviderConfig(
             "n_cashflow_inv_act": "investing_cash_flow",
             "n_cash_flows_fnc_act": "financing_cash_flow",
             "c_pay_acq_const_fiolta": "capital_expenditure",
+            "free_cashflow": "free_cash_flow",
+            "c_fr_sale_sg": "cash_from_sales",
+            "c_paid_goods_s": "cash_paid_for_goods",
+            "c_paid_to_for_empl": "cash_paid_to_employees",
+            "c_paid_for_taxes": "cash_paid_for_taxes",
         },
         # Market data mappings (pro_bar)
         "market": {

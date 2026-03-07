@@ -1,12 +1,13 @@
 """Akshare data provider"""
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import akshare as ak  # type: ignore[import-untyped]
 import pandas as pd
 
 from value_investment.data.mapper import DataMapper
 from value_investment.data.providers.base_provider import (
+    BaseProvider,
     get_ttl_until_next_midnight,
     get_ttl_until_june_next_year,
 )
@@ -15,18 +16,26 @@ if TYPE_CHECKING:
     from value_investment.data.cache import SmartCache
 
 
-class AkshareProvider:
+class AkshareProvider(BaseProvider):
     """Akshare data provider for A股/港股/美股"""
 
-    def __init__(self, cache: "SmartCache", market: str = "A"):
+    def __init__(
+        self,
+        cache: "SmartCache",
+        market: str = "A",
+        field_mappings: dict[str, dict[str, str]] | None = None,
+        **kwargs: Any,
+    ):
         """
         Initialize provider
 
         Args:
             cache: SmartCache instance
-            market: Market type - "A" (A股), "HK" (港股), "US" (美股)
+            market: Market type - "A" (A 股), "HK" (港股), "US" (美股)
+            field_mappings: Field name mappings from config (optional)
+            **kwargs: Additional provider-specific arguments
         """
-        self._cache = cache
+        super().__init__(cache, field_mappings, **kwargs)
         self._market = market
 
     def _normalize_hk_code(self, symbol: str) -> str:
@@ -650,7 +659,10 @@ class AkshareProvider:
             df = ak.stock_financial_hk_report_em(
                 stock=hk_code, symbol="资产负债表", indicator="年度"
             )
-            return self._transform_hk_financial_data(df)
+            wide_df = self._transform_hk_financial_data(df)
+            # Apply field mapping
+            result = self._apply_mapping(wide_df, "balance")
+            return result if result is not None else wide_df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
@@ -665,7 +677,10 @@ class AkshareProvider:
             df = ak.stock_financial_hk_report_em(
                 stock=hk_code, symbol="利润表", indicator="年度"
             )
-            return self._transform_hk_financial_data(df)
+            wide_df = self._transform_hk_financial_data(df)
+            # Apply field mapping
+            result = self._apply_mapping(wide_df, "income")
+            return result if result is not None else wide_df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
@@ -680,7 +695,10 @@ class AkshareProvider:
             df = ak.stock_financial_hk_report_em(
                 stock=hk_code, symbol="现金流量表", indicator="年度"
             )
-            return self._transform_hk_financial_data(df)
+            wide_df = self._transform_hk_financial_data(df)
+            # Apply field mapping
+            result = self._apply_mapping(wide_df, "cashflow")
+            return result if result is not None else wide_df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
@@ -693,7 +711,10 @@ class AkshareProvider:
             df = ak.stock_financial_us_report_em(
                 stock=symbol, symbol="资产负债表", indicator="年报"
             )
-            return self._transform_hk_financial_data(df)
+            wide_df = self._transform_hk_financial_data(df)
+            # Apply field mapping
+            result = self._apply_mapping(wide_df, "balance")
+            return result if result is not None else wide_df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
@@ -706,7 +727,10 @@ class AkshareProvider:
             df = ak.stock_financial_us_report_em(
                 stock=symbol, symbol="综合损益表", indicator="年报"
             )
-            return self._transform_hk_financial_data(df)
+            wide_df = self._transform_hk_financial_data(df)
+            # Apply field mapping
+            result = self._apply_mapping(wide_df, "income")
+            return result if result is not None else wide_df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
@@ -719,7 +743,10 @@ class AkshareProvider:
             df = ak.stock_financial_us_report_em(
                 stock=symbol, symbol="现金流量表", indicator="年报"
             )
-            return self._transform_hk_financial_data(df)
+            wide_df = self._transform_hk_financial_data(df)
+            # Apply field mapping
+            result = self._apply_mapping(wide_df, "cashflow")
+            return result if result is not None else wide_df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
@@ -730,7 +757,10 @@ class AkshareProvider:
 
         def fetch():
             full_symbol = self._format_stock_symbol(symbol)
-            return ak.stock_balance_sheet_by_yearly_em(symbol=full_symbol)
+            df = ak.stock_balance_sheet_by_yearly_em(symbol=full_symbol)
+            # Apply field mapping
+            result = self._apply_mapping(df, "balance")
+            return result if result is not None else df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
@@ -740,9 +770,11 @@ class AkshareProvider:
         ttl = get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
-            # 判断交易所：60x上交所，00x/30x深交所
             full_symbol = self._format_stock_symbol(symbol)
-            return ak.stock_profit_sheet_by_yearly_em(symbol=full_symbol)
+            df = ak.stock_profit_sheet_by_yearly_em(symbol=full_symbol)
+            # Apply field mapping
+            result = self._apply_mapping(df, "income")
+            return result if result is not None else df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
@@ -753,7 +785,10 @@ class AkshareProvider:
 
         def fetch():
             full_symbol = self._format_stock_symbol(symbol)
-            return ak.stock_cash_flow_sheet_by_yearly_em(symbol=full_symbol)
+            df = ak.stock_cash_flow_sheet_by_yearly_em(symbol=full_symbol)
+            # Apply field mapping
+            result = self._apply_mapping(df, "cashflow")
+            return result if result is not None else df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 
@@ -994,7 +1029,12 @@ class AkshareProvider:
         ttl = get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
-            return ak.stock_hk_financial_indicator_em(symbol=hk_code)
+            data = ak.stock_hk_financial_indicator_em(symbol=hk_code)
+            if data is None or (hasattr(data, 'empty') and data.empty):
+                return pd.DataFrame()
+            # Apply field mapping using DataMapper (HK market)
+            data = DataMapper.map_financial_indicator(data, market='HK')
+            return data
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
 

@@ -482,8 +482,30 @@ FINANCIAL_INDICATOR_MAPPING = {
         'update_flag': 'update_flag',
     },
     'HK': {
+        # 市值字段
         '总市值(港元)': 'hk_market_cap',
         '港股市值(港元)': 'hk_market_cap',
+        # 每股指标
+        '基本每股收益 (元)': 'basic_eps',
+        '每股净资产 (元)': 'book_value_per_share',
+        '每股经营现金流 (元)': 'operating_cash_flow_per_share',
+        '每股股息 TTM(港元)': 'hk_dividend_per_share',
+        # 盈利能力
+        '股东权益回报率 (%)': 'roe',
+        '销售净利率 (%)': 'net_profit_margin',
+        '总资产回报率 (%)': 'roa',
+        # 估值指标
+        '市盈率': 'pe_ratio',
+        '市净率': 'pb_ratio',
+        '股息率 TTM(%)': 'hk_dividend_yield_ttm',
+        # 增长指标
+        '营业总收入滚动环比增长 (%)': 'hk_total_revenue_growth_qoq',
+        '净利润滚动环比增长 (%)': 'hk_net_profit_growth_qoq',
+        # 其他
+        '派息比率 (%)': 'hk_dividend_payout_ratio',
+        # 标准字段映射
+        '营业总收入': 'total_revenue',
+        '净利润': 'net_profit',
     },
     'US': {
         '总市值(美元)': 'us_market_cap',

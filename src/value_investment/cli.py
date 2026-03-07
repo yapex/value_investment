@@ -102,37 +102,63 @@ def cashflow(
 
 @app.command()
 def indicator(
-    name: str = typer.Argument(..., help="Indicator name"),
+    names: str = typer.Argument(None, help="Indicator name(s), comma-separated (e.g., 'roe,roa'). Leave empty for all."),
     stock_code: str = typer.Option(..., "--stock", "-s", help="Stock code"),
     years: int = typer.Option(10, "--years", "-y", help="Number of years"),
     market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
 ):
-    """Calculate a specific indicator"""
+    """Get indicator values (unified interface for RAW and CALCULATED)"""
     vi = ValueInvestment(market=_get_market(market, stock_code))
     try:
-        result = vi.calculate_indicator(name, stock_code, years)
-
-        # 特殊处理PEPct指标：显示百分位，但year-by-year显示PE值
-        if name.upper() in ('PEPCT', 'PE_PCT'):
-            print(f"{name}: {result.value:.1f}{result.unit}")
-            print(f"Description: {result.description}")
-            if result.values and len(result.values) > 0:
-                print("\n历史PE:")
-                for year, val in zip(result.years, result.values):
-                    print(f"  {year}: {val:.1f}x")
-            print(f"PE Range: {min(result.values):.1f}x ~ {max(result.values):.1f}x")
+        import warnings
+        import pandas as pd
+        
+        # Parse indicator names
+        if names:
+            indicator_names = [n.strip() for n in names.split(",")]
+            if len(indicator_names) == 1:
+                indicator_names = indicator_names[0]
         else:
-            print(f"{name}: {result.value} {result.unit}")
-            print(f"Description: {result.description}")
-            if result.values and len(result.values) > 0:
-                # Show per-year values
-                print("\nYear-by-Year:")
-                for year, val in zip(result.years, result.values):
-                    print(f"  {year}: {val:.2f}{result.unit}")
-            else:
-                print(f"Years: {result.years}")
+            indicator_names = None
+        
+        # Get indicator values using unified interface
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = vi.indicator(indicator_names, stock_code, years)
+            
+            # Show warning if getting all indicators
+            if w:
+                for warning in w:
+                    print(f"⚠️  Warning: {warning.message}")
+        
+        # Handle different result types
+        if isinstance(result, pd.DataFrame):
+            # All indicators - show as table
+            print(f"=== All Indicators for {stock_code} ===")
+            print(result.T.to_markdown(headers="keys"))
+        elif isinstance(result, dict):
+            # Single or multiple indicators
+            print(f"=== Indicators for {stock_code} ===")
+            for name, value in result.items():
+                if value is not None:
+                    # Try to get unit from metadata
+                    try:
+                        from value_investment.indicators.registry import IndicatorRegistry
+                        registry = IndicatorRegistry.get_instance()
+                        meta = registry.get(name)
+                        unit = getattr(meta, 'unit', '') if meta else ''
+                        print(f"{name}: {value} {unit}".strip())
+                    except:
+                        print(f"{name}: {value}")
+                else:
+                    print(f"{name}: N/A")
+        else:
+            print(f"Result: {result}")
+            
     except Exception as e:
         print(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 @app.command()

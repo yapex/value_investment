@@ -15,6 +15,46 @@ from value_investment.indicators.factory import IndicatorFactory
 from value_investment.indicators.registry import IndicatorRegistry, register_defaults
 
 
+# ============================================================================
+# Business Exceptions
+# ============================================================================
+
+class ValueInvestmentError(Exception):
+    """Base exception for ValueInvestment API"""
+    pass
+
+
+class IndicatorNotFoundError(ValueInvestmentError):
+    """Raised when an indicator is not found"""
+    
+    def __init__(self, indicator_name: str, available_indicators: list[str] | None = None):
+        self.indicator_name = indicator_name
+        self.available_indicators = available_indicators or []
+        
+        message = f"Indicator '{indicator_name}' not found"
+        if self.available_indicators:
+            message += f". Available indicators: {', '.join(self.available_indicators[:10])}"
+            if len(self.available_indicators) > 10:
+                message += f" (and {len(self.available_indicators) - 10} more)"
+        
+        super().__init__(message)
+
+
+class DataProviderError(ValueInvestmentError):
+    """Raised when data provider fails to fetch data"""
+    pass
+
+
+class MarketDataError(ValueInvestmentError):
+    """Raised when market data is unavailable or invalid"""
+    pass
+
+
+# ============================================================================
+# ValueInvestment API
+# ============================================================================
+
+
 class ValueInvestment:
     """
     Python API for value investment analysis
@@ -223,6 +263,156 @@ class ValueInvestment:
         """
         return self._provider.get_financial_indicator(symbol, force_refresh=force_refresh)
 
+    def indicator(
+        self,
+        names: str | list[str] | None = None,
+        stock_code: str | None = None,
+        years: int = 10,
+        **kwargs,
+    ) -> dict | pd.DataFrame | None:
+        """
+        Get indicator values - unified interface for RAW and CALCULATED indicators
+
+        This is the main interface for users. It automatically handles both RAW and 
+        CALCULATED indicators, returning consistent results.
+
+        Args:
+            names: Indicator name(s). Supports:
+                   - str: single indicator (e.g., "roe")
+                   - list[str]: multiple indicators (e.g., ["roe", "roa"])
+                   - None: get all indicators (will show warning)
+            stock_code: Stock code (required for getting values)
+            years: Number of years for historical data
+            **kwargs: Additional parameters (e.g., force_refresh)
+
+        Returns:
+            - dict: {indicator_name: value} for single or multiple indicators
+            - pd.DataFrame: if names=None (all indicators, with warning)
+            - None: if no data available
+
+        Raises:
+            IndicatorNotFoundError: if indicator is not found
+            ValueError: if stock_code is not provided when getting values
+
+        Example:
+            # Single indicator
+            vi.indicator("roe", stock_code="600519")
+            # Returns: {"roe": 26.37}
+
+            # Multiple indicators
+            vi.indicator(["roe", "roa"], stock_code="600519")
+            # Returns: {"roe": 26.37, "roa": 29.41}
+
+            # All indicators (with warning)
+            vi.indicator(stock_code="600519")
+            # Returns: DataFrame with all indicators
+        """
+        import warnings
+        
+        if stock_code is None:
+            raise ValueError("stock_code is required when getting indicator values")
+        
+        # Case 1: Get all indicators
+        if names is None:
+            warnings.warn(
+                "Getting all indicators may be slow. Consider specifying indicator names.",
+                UserWarning,
+                stacklevel=2
+            )
+            # Get all RAW indicators from financial_indicator
+            df = self.get_financial_indicator(stock_code, force_refresh=kwargs.get('force_refresh', False))
+            return df
+        
+        # Case 2: Single indicator
+        if isinstance(names, str):
+            names = [names]
+            single = True
+        else:
+            single = False
+        
+        # Case 3: Multiple indicators
+        result = {}
+        for name in names:
+            # Get metadata to determine type
+            registry = IndicatorRegistry.get_instance()
+            meta = registry.get(name)
+            
+            if meta is None:
+                all_indicators = [ind.name for ind in registry.list_all()]
+                raise IndicatorNotFoundError(name, all_indicators)
+            
+            from value_investment.indicators.base import IndicatorType
+            
+            if meta.type == IndicatorType.RAW:
+                # RAW indicator: get from financial_indicator
+                df = self.get_financial_indicator(stock_code, force_refresh=kwargs.get('force_refresh', False))
+                if name in df.columns:
+                    val = df[name].iloc[0] if len(df) > 0 else None
+                    result[name] = val
+                else:
+                    result[name] = None
+            else:
+                # CALCULATED indicator: calculate from financial statements
+                indicator_result = self.calculate_indicator(name, stock_code, years, **kwargs)
+                result[name] = indicator_result.value
+        
+        # Return single value dict or full dict
+        if single and len(result) == 1:
+            return {names[0]: result.get(names[0])}
+        return result
+
+    def get_indicator(
+        self,
+        name: str,
+        stock_code: str | None = None,
+        years: int = 10,
+        **kwargs,
+    ) -> IndicatorMeta | IndicatorResult | pd.DataFrame:
+        """
+        Get indicator metadata or data
+
+        Args:
+            name: Indicator name
+            stock_code: If provided, returns indicator data; otherwise returns metadata
+            years: Number of years for historical data (when stock_code is provided)
+            **kwargs: Additional parameters
+
+        Returns:
+            - IndicatorMeta: if stock_code is None (metadata only)
+            - IndicatorResult: for CALCULATED indicators
+            - pd.DataFrame: for RAW indicators (raw financial indicator data)
+
+        Raises:
+            IndicatorNotFoundError: if indicator is not found
+        """
+        from value_investment.indicators.base import IndicatorType
+        
+        # If no stock_code, return metadata only
+        if stock_code is None:
+            registry = IndicatorRegistry.get_instance()
+            meta = registry.get(name)
+            if meta is None:
+                # Get list of available indicators for error message
+                all_indicators = [ind.name for ind in registry.list_all()]
+                raise IndicatorNotFoundError(name, all_indicators)
+            return meta
+        
+        # Get indicator metadata to determine type
+        registry = IndicatorRegistry.get_instance()
+        meta = registry.get(name)
+        
+        # If indicator not found, raise exception
+        if meta is None:
+            all_indicators = [ind.name for ind in registry.list_all()]
+            raise IndicatorNotFoundError(name, all_indicators)
+        
+        if meta.type == IndicatorType.RAW:
+            # RAW indicator: get directly from financial_indicator
+            return self.get_financial_indicator(stock_code, force_refresh=kwargs.get('force_refresh', False))
+        else:
+            # CALCULATED indicator: calculate from financial statements
+            return self.calculate_indicator(name, stock_code, years, **kwargs)
+
     def calculate_indicator(
         self,
         indicator_name: str,
@@ -231,7 +421,10 @@ class ValueInvestment:
         **kwargs,
     ) -> IndicatorResult:
         """
-        Calculate a specific indicator
+        Calculate a specific indicator from financial statements
+
+        This method is for CALCULATED indicators only.
+        For RAW indicators, use get_indicator() which auto-detects the type.
 
         Args:
             indicator_name: Name of the indicator (e.g., "roe", "roa")
@@ -242,6 +435,16 @@ class ValueInvestment:
         Returns:
             IndicatorResult with calculated value
         """
+        from value_investment.indicators.base import IndicatorType
+        
+        indicator = self._factory.get(indicator_name)
+        
+        # Check if indicator type matches method purpose
+        if hasattr(indicator, 'type') and indicator.type == IndicatorType.RAW:
+            # RAW indicators should use get_indicator(), not calculate_indicator()
+            # But we still allow it for backward compatibility
+            pass
+
         # 计算日期范围，用于获取多年历史数据（如 prices 依赖）
         end_date = datetime.now().strftime('%Y%m%d')
         start_year = datetime.now().year - years
@@ -252,8 +455,6 @@ class ValueInvestment:
         kwargs['start_date'] = start_date
         kwargs['end_date'] = end_date
         kwargs['adjust'] = ""
-
-        indicator = self._factory.get(indicator_name)
 
         # Resolve dependencies if indicator has 'needs'
         needs = getattr(indicator, 'needs', [])
@@ -377,10 +578,13 @@ class ValueInvestment:
         if balance.empty:
             return profit if not profit.empty else cashflow
 
-        # Ensure year column exists
+        # Ensure year column exists (support both cases)
         for df in [balance, profit, cashflow]:
-            if 'year' not in df.columns and 'REPORT_DATE' in df.columns:
-                df['year'] = pd.to_datetime(df['REPORT_DATE']).dt.year
+            if 'year' not in df.columns:
+                if 'REPORT_DATE' in df.columns:
+                    df['year'] = pd.to_datetime(df['REPORT_DATE']).dt.year
+                elif 'report_date' in df.columns:
+                    df['year'] = pd.to_datetime(df['report_date']).dt.year
 
         # Merge on year
         merged = balance.copy()
@@ -633,19 +837,6 @@ class ValueInvestment:
             keys = [k for k in keys if symbol in k]
 
         return keys[:limit]
-
-    def get_indicator(self, name: str) -> IndicatorMeta | None:
-        """
-        Get indicator metadata by name
-
-        Args:
-            name: Indicator name
-
-        Returns:
-            Indicator metadata or None if not found
-        """
-        registry = IndicatorRegistry.get_instance()
-        return registry.get(name)
 
     def list_indicators(
         self,

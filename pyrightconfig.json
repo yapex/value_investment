@@ -1,0 +1,15 @@
+{
+    "venvPath": ".",
+    "venv": ".venv",
+    "extraPaths": ["src"],
+    "reportMissingTypeStubs": false,
+    "reportAttributeAccessIssue": "warning",
+    "reportOptionalMemberAccess": "warning",
+    "reportOptionalSubscript": "warning",
+    "reportPrivateImportUsage": "warning",
+    "reportUnboundVariable": "warning",
+    "pythonVersion": "3.14",
+    "pythonPlatform": "Darwin",
+    "typeCheckingMode": "basic",
+    "useLibraryCodeForTypes": true
+}

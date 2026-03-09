@@ -15,7 +15,7 @@ class MockCache:
     def get(self, key: str):
         return self._data.get(key)
     
-    def set(self, key: str, value, ttl: int = None):
+    def set(self, key: str, value, ttl: int | None = None):
         self._data[key] = value
     
     def invalidate(self, key: str):
@@ -179,8 +179,8 @@ class TestAkshareProviderHistoricalData:
             })
             
             provider = AkshareProvider(cache=cache)  # type: ignore[arg-type]
-            result = provider.get_historical_data("600519")
-            
+            result = provider.get_historical_data("600519", end_date="20241231")
+
             assert not result.empty
 
     def test_get_historical_data_with_dates(self):
@@ -323,7 +323,7 @@ class TestAkshareProviderCache:
         
         with patch("value_investment.data.providers.akshare_provider.ak") as mock_ak:
             provider = AkshareProvider(cache=cache)  # type: ignore[arg-type]
-            result = provider.get_historical_data("600519")
-            
+            result = provider.get_historical_data("600519", end_date="20241231")
+
             mock_ak.stock_zh_a_hist_tx.assert_not_called()
             assert result.equals(cached_data)

@@ -13,7 +13,7 @@ class MockCache:
     def get(self, key: str):
         return self._data.get(key)
     
-    def set(self, key: str, value, ttl: int = None):
+    def set(self, key: str, value, ttl: int | None = None):
         self._data[key] = value
     
     def invalidate(self, key: str):

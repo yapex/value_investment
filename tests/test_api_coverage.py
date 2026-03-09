@@ -45,34 +45,17 @@ class TestAPICacheManagement:
 class TestAPIDataPreparation:
     """Test API data preparation methods"""
 
-    def test_prepare_data_with_dependencies(self):
-        """Should prepare data with dependencies"""
+    def test_prepare_data_basic(self):
+        """Should prepare data"""
         from value_investment.api import ValueInvestment
         
         vi = ValueInvestment.__new__(ValueInvestment)
         vi._container = MagicMock()
         
-        # Mock the registry
-        mock_registry = MagicMock()
-        mock_registry.resolve.side_effect = lambda need: pd.DataFrame({"data": [1, 2, 3]})
-        vi._registry = mock_registry
+        # Mock the necessary methods
+        vi._get_financial_data = MagicMock(return_value=pd.DataFrame({"year": [2023], "value": [100]}))
         
-        result = vi._prepare_data(['financial_indicator', 'prices'], "600519")
-        
-        assert result is not None
-
-    def test_prepare_data_with_missing_dependency(self):
-        """Should handle missing dependency"""
-        from value_investment.api import ValueInvestment
-        
-        vi = ValueInvestment.__new__(ValueInvestment)
-        vi._container = MagicMock()
-        
-        # Mock registry returning None
-        vi._registry = MagicMock()
-        vi._registry.resolve.return_value = None
-        
-        result = vi._prepare_data(['financial_indicator'], "600519")
+        result, market_cap = vi._prepare_data("600519", years=10)
         
         assert result is not None
 

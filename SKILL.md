@@ -5,65 +5,23 @@ description: Use when analyzing A股/港股/美股基本面，需要查询股票
 
 # value-investment
 
-## Overview
-
 价值投资分析工具，支持A股/港股/美股基本面分析，数据来源 akshare。
 
-## When to Use
+## 市场与代码格式
 
-- 股票基本信息/市值/行业查询
-- 历史股价查询
-- 财务报表（利润表/资产负债表/现金流量表）
-- 财务指标计算（ROIC/ROE/CAGR/PE百分位）
-- 基本面分析
+| 市场 | 代码格式 | 示例 | 市场参数 |
+|-----|---------|------|---------|
+| A股 | 6位数字 | 600519 | `A` |
+| 港股 | 5位数字 | 00700 | `HK` |
+| 美股 | 字母 | AAPL | `US` |
 
-## ⚠️ 执行要点
+> 美股自动检测：纯字母代码自动识别为美股
 
-```bash
-v-invest info 600519
-```
-
-**强制刷新缓存使用 `--refresh` / `-r`：**
-
-```bash
-v-invest info 600519 --refresh
-```
-
-**字段筛选使用 `--fields` / `-f`（三表命令）：**
-
-```bash
-# 利润表筛选字段
-v-invest income 600519 --fields "REPORT_DATE,NETPROFIT"
-
-# 资产负债表筛选字段
-v-invest balance 600519 --fields "TOTAL_ASSETS,TOTAL_LIABILITIES"
-
-# 现金流量表筛选字段
-v-invest cashflow 600519 --fields "NETCASH_OPERATE,NETCASH_INVEST"
-```
-
-**查询字段名**：
-1. 使用 `fields <market> <report>` 命令查看可用标准字段
-2. 支持的报告类型：`balance`（资产负债表）、`income`（利润表）、`cashflow`（现金流量表）、`finind`（财务指标）、`quarterly`（季度数据）
-3. 例如：`fields A balance`、`fields HK finind`
-
-```bash
-# 查看A股资产负债表可用字段
-v-invest fields A balance
-
-# 查看港股财务指标可用字段
-v-invest fields HK finind
-
-# 查看美股利润表可用字段
-v-invest fields US income
-```
-
-## Quick Reference
+## 常用命令
 
 | 需求 | 命令 |
 |------|------|
 | 基本信息 | `v-invest info 600519` |
-| **市值（港股）** | `v-invest indicator latest_market_cap -s 00700 -m HK` |
 | 历史股价 | `v-invest hist 600519 --end 20241231` |
 | 利润表 | `v-invest income 600519` |
 | 资产负债表 | `v-invest balance 600519` |
@@ -72,71 +30,47 @@ v-invest fields US income
 | 单个指标 | `v-invest indicator ROIC -s 00700 -m HK` |
 | PE百分位 | `v-invest indicator PEPct -s 600519 -m A -y 10` |
 | 完整分析 | `v-invest analyze 600519` |
-| **查看可用字段** | `v-invest fields A balance` |
-| **查看可用指标** | `v-invest indicators` |
-| 美股财务指标 | `v-invest finind AAPL -m US` |
-| 美股历史股价 | `v-invest hist AAPL -m US --end 20241231 --start 20150101` |
-| 美股完整分析 | `v-invest analyze AAPL -m US` |
+| **可用字段** | `v-invest fields A balance` |
+| **可用指标** | `v-invest indicators A` |
 
-**字段筛选**（用于三表命令）：
-- 使用 `fields <market> <report>` 查看可用字段
+## 查询可用字段/指标
 
 ```bash
-# 只返回指定字段
-v-invest income 600519 --fields "NETPROFIT"
-v-invest balance 600519 --fields "TOTAL_ASSETS,REPORT_DATE"
-v-invest cashflow 600519 --fields "NETCASH_OPERATE"
+# 查看报表字段：fields <market> <report>
+v-invest fields A balance   # A股资产负债表
+v-invest fields HK finind   # 港股财务指标
+v-invest fields US income   # 美股利润表
+
+# 查看可用指标：indicators <market>（必须指定市场）
+v-invest indicators A       # A股指标
+v-invest indicators HK      # 港股指标
+v-invest indicators US      # 美股指标
 ```
 
-**市场代码**：A股 `600519` | 港股 `00700` | 美股 `AAPL`
+## 常用选项
 
-> 美股自动检测：纯字母股票代码自动识别为美股（如 `AAPL`、`TSLA`）
+- `--refresh` / `-r`：强制刷新缓存
+- `--fields` / `-f`：筛选字段（三表命令）
+- `-m` / `--market`：指定市场（A/HK/US）
+- `-y` / `--years`：指定年数
+
+```bash
+v-invest income 600519 --fields "NETPROFIT,REPORT_DATE"
+v-invest indicator PEPct -s 600519 -m A -y 10
+```
 
 ## 市值查询
 
-**注意：** `indicators` 显示 `market_cap`，但实际应使用 `latest_market_cap`：
-
 ```bash
-# 港股市值
-v-invest indicator latest_market_cap -s 00700 -m HK
-
-# A股市值（通过 finind 获取）
-v-invest finind 600519 -m A
+v-invest indicator latest_market_cap -s 00700 -m HK  # 港股
+v-invest finind 600519 -m A                          # A股（在 finind 中）
 ```
-
-**查看所有可用指标：**
-```bash
-v-invest indicators
-```
-
-**市值单位：** 港股市值为港元，A股市值为人民币
-
-**美股字段说明**：
-- 财务指标字段使用 `v-invest fields US finind` 查看
-- 美股特有字段：`total_revenue`, `net_profit`, `roe`, `roa`, `debt_ratio` 等
-
-## 参考文档
-
-- 指标体系: 使用 `v-invest indicators` 命令查看
-- 财务报表字段: 使用 `v-invest fields <market> <report>` 命令查看
 
 ---
 
 ## Agent 查询流程
 
-```
-主Agent → sub_agent_a(制定计划) → sub_agent_b(执行) → 返回结果
-```
-
-### sub_agent_a: 制定计划
-
-1. 使用 `v-invest indicators` 确认现成指标
-2. 使用 `v-invest fields <market> <report>` 查看可用字段
-3. 有 → 直接执行
-4. 无 → 制定计划
-
-### sub_agent_b: 执行
-
-1. 执行 CLI 命令
-2. 提取目标字段
-3. 计算并返回 Markdown 结果
+1. `v-invest indicators <market>` 确认可用指标
+2. `v-invest fields <market> <report>` 确认可用字段
+3. 有现成指标 → 直接执行
+4. 无现成指标 → 制定计算计划

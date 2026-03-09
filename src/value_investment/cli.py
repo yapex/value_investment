@@ -185,10 +185,16 @@ def analyze(
 
 
 @app.command("indicators")
-def list_indicators():
-    """List all available indicators"""
+def list_indicators(
+    market: str = typer.Argument(..., help="Market: A, HK, US"),
+):
+    """List all available indicators for a specific market"""
+    # 转换市场代码为中文名称（与项目统一格式）
+    market_map = {"A": "A股", "HK": "港股", "US": "美股"}
+    market_name = market_map.get(market.upper(), market)
+
     vi = ValueInvestment()
-    indicators = vi.list_indicators()
+    indicators = vi.list_indicators(market=market_name)
     for name in indicators:
         print(name)
 

@@ -6,15 +6,18 @@ from value_investment.cli import app
 
 runner = CliRunner()
 
-# Set TUSHARE_TOKEN for tests
-os.environ["TUSHARE_TOKEN"] = "test_token"
+
+@pytest.fixture(autouse=True)
+def mock_tushare_token(monkeypatch):
+    """Set mock TUSHARE_TOKEN for all tests in this module"""
+    monkeypatch.setenv("TUSHARE_TOKEN", "test_token_for_cli_fields")
 
 
 def test_income_with_single_field():
     """测试 income 命令只返回指定字段（使用标准字段名）"""
     result = runner.invoke(app, ["income", "600519", "--fields", "net_profit"])
     assert result.exit_code == 0
-    # 验证返回结果包含 net_profit
+    
     assert "net_profit" in result.stdout
 
 
@@ -30,7 +33,7 @@ def test_income_with_invalid_field():
     """测试不存在的字段返回错误"""
     result = runner.invoke(app, ["income", "600519", "--fields", "not_exist_field"])
     assert result.exit_code != 0
-    # 错误信息输出到 stderr
+    
     assert "not_exist_field" in result.stdout or "not_exist_field" in result.stderr
 
 

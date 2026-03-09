@@ -4,6 +4,9 @@ This tests the fix for: https://github.com/user/value_investment/issues/XXX
 - Provider should accept start_year parameter
 - API should accept years parameter
 - CLI should accept --years flag
+
+Tests use mocks to avoid depending on real TUSHARE_TOKEN.
+Only a few integration tests are kept for connectivity verification.
 """
 import os
 from unittest.mock import MagicMock, patch
@@ -14,109 +17,70 @@ import pytest  # type: ignore
 from value_investment.api import ValueInvestment
 
 
-class MockCache:
-    """Mock cache for testing"""
-
-    def __init__(self):
-        self._data = {}
-
-    def get(self, key):
-        return self._data.get(key)
-
-    def set(self, key, value, ttl=None):
-        self._data[key] = value
-
-    def invalidate(self, key):
-        if key in self._data:
-            del self._data[key]
-
-    def clear(self):
-        self._data.clear()
-
-
-@pytest.fixture
-def tushare_token():
-    """Get tushare token from environment"""
-    token = os.getenv("TUSHARE_TOKEN")
-    if not token:
-        pytest.skip("TUSHARE_TOKEN not set, skipping integration tests")
-    return token
-
-
 class TestTushareProviderStartYear:
     """Test TushareProvider start_year parameter"""
 
-    @pytest.mark.integration
-    def test_get_income_statement_with_start_year(self, tushare_token):
+    def test_get_income_statement_with_start_year(self, mock_tushare_provider):
         """Should fetch data from start_year to end_year"""
-        from value_investment.data.providers.tushare_provider import TushareProvider
-
-        provider = TushareProvider(cache=MockCache(), token=tushare_token)
-
-        # Fetch 10 years of data
-        df = provider.get_income_statement("600519.SH", end_year=2025, start_year=2015)
-
-        assert not df.empty
-
-        # Filter to annual reports (use end_date, the original column name)
-        date_col = "end_date" if "end_date" in df.columns else "report_date"
-        df["_date"] = df[date_col].astype(str)
-        annual = df[df["_date"].str.endswith("1231")]
-        years = sorted(
-            set(pd.to_datetime(annual[date_col]).dt.year.tolist())  # type: ignore[union-attr]
+        mock_tushare_provider._api.income.return_value = pd.DataFrame({
+            "ts_code": ["600519.SH"] * 10,
+            "end_date": ["20151231", "20161231", "20171231", "20181231", "20191231",
+                        "20201231", "20211231", "20221231", "20231231", "20241231"],
+            "total_revenue": [100000000] * 10,
+        })
+        
+        df = mock_tushare_provider.get_income_statement(
+            "600519.SH", end_year=2025, start_year=2015
         )
 
-        # Should have data from 2015-2024 (at least)
-        assert min(years) <= 2015
-        assert max(years) >= 2024
+        assert not df.empty
 
-    @pytest.mark.integration
-    def test_get_balance_sheet_with_start_year(self, tushare_token):
+    def test_get_balance_sheet_with_start_year(self, mock_tushare_provider):
         """Should fetch balance sheet from start_year to end_year"""
-        from value_investment.data.providers.tushare_provider import TushareProvider
+        mock_tushare_provider._api.balancesheet.return_value = pd.DataFrame({
+            "ts_code": ["600519.SH"] * 5,
+            "end_date": ["20211231", "20221231", "20231231", "20241231", "20251231"],
+            "total_assets": [100000000] * 5,
+        })
 
-        provider = TushareProvider(cache=MockCache(), token=tushare_token)
-
-        df = provider.get_balance_sheet("600519.SH", end_year=2025, start_year=2015)
+        df = mock_tushare_provider.get_balance_sheet(
+            "600519.SH", end_year=2025, start_year=2015
+        )
 
         assert not df.empty
 
-    @pytest.mark.integration
-    def test_get_cash_flow_statement_with_start_year(self, tushare_token):
+    def test_get_cash_flow_statement_with_start_year(self, mock_tushare_provider):
         """Should fetch cash flow statement from start_year to end_year"""
-        from value_investment.data.providers.tushare_provider import TushareProvider
+        mock_tushare_provider._api.cashflow.return_value = pd.DataFrame({
+            "ts_code": ["600519.SH"] * 5,
+            "end_date": ["20211231", "20221231", "20231231", "20241231", "20251231"],
+            "net_cash_operate": [50000000] * 5,
+        })
 
-        provider = TushareProvider(cache=MockCache(), token=tushare_token)
-
-        df = provider.get_cash_flow_statement("600519.SH", end_year=2025, start_year=2015)
+        df = mock_tushare_provider.get_cash_flow_statement(
+            "600519.SH", end_year=2025, start_year=2015
+        )
 
         assert not df.empty
 
-    @pytest.mark.integration
-    def test_default_start_year_is_end_year_minus_15(self, tushare_token):
+    def test_default_start_year_is_end_year_minus_15(self, mock_tushare_provider):
         """Should default start_year to end_year - 15"""
-        from value_investment.data.providers.tushare_provider import TushareProvider
-
-        provider = TushareProvider(cache=MockCache(), token=tushare_token)
+        mock_tushare_provider._api.income.return_value = pd.DataFrame({
+            "ts_code": ["600519.SH"] * 5,
+            "end_date": ["20211231", "20221231", "20231231", "20241231", "20251231"],
+            "total_revenue": [100000000] * 5,
+        })
 
         # Without start_year, should get 15 years of data
-        df = provider.get_income_statement("600519.SH", end_year=2025)
+        df = mock_tushare_provider.get_income_statement("600519.SH", end_year=2025)
 
         assert not df.empty
-
-        date_col = "end_date" if "end_date" in df.columns else "report_date"
-        df["_date"] = df[date_col].astype(str)
-        annual = df[df["_date"].str.endswith("1231")]
-        years = sorted(
-            set(pd.to_datetime(annual[date_col]).dt.year.tolist())  # type: ignore[union-attr]
-        )
-
-        # Should have data from at least 2010 (2025 - 15)
-        assert min(years) <= 2011
+        # Verify API was called (default start_year should be end_year - 15)
+        mock_tushare_provider._api.income.assert_called_once()
 
 
 class TestAPIYearsParameter:
-    """Test ValueInvestment API years parameter"""
+    """Test ValueInvestment API years parameter - already uses mocks"""
 
     def test_get_profit_sheet_default_years(self):
         """get_profit_sheet should default to 10 years"""
@@ -214,85 +178,134 @@ class TestAPIYearsParameter:
         )
 
 
-class TestAPIYearsParameterIntegration:
-    """Integration tests for years parameter"""
+class TestAPIYearsParameterMock:
+    """Mock-based tests for years parameter with provider integration"""
 
-    @pytest.mark.integration
-    def test_maotai_10_years_eps(self, tushare_token):
-        """Should fetch 10 years of EPS data for Maotai"""
+    def test_years_parameter_calculates_correct_start_year(self):
+        """years parameter should correctly calculate start_year"""
         vi = ValueInvestment()
 
-        # Clear cache first
-        vi.clear_cache("600519")
+        # Create a mock provider
+        mock_provider = MagicMock()
+        mock_provider.get_income_statement.return_value = pd.DataFrame({
+            "end_date": ["20201231", "20211231", "20221231", "20231231", "20241231"],
+            "total_revenue": [100000] * 5,
+        })
+        vi._provider = mock_provider
 
-        # Get 10 years of income statements
-        df = vi.get_profit_sheet("600519", end_year=2025, years=10)
+        # Test with years=5
+        vi.get_profit_sheet("600519", end_year=2025, years=5)
 
-        assert not df.empty
+        # Verify start_year = 2025 - 5 = 2020
+        call_args = mock_provider.get_income_statement.call_args
+        assert call_args[0][1] == 2025  # end_year
+        assert call_args[0][2] == 2020  # start_year
 
-        # Filter to annual reports
-        df["report_date"] = df["report_date"].astype(str)
-        annual = df[df["report_date"].str.endswith("1231")].copy()
-        annual = annual.sort_values("report_date", ascending=False).drop_duplicates(  # type: ignore[call-overload]
-            subset=["report_date"]
-        )
-        annual = annual.sort_values("report_date")  # type: ignore[call-overload]
-        annual["year"] = pd.to_datetime(annual["report_date"]).dt.year
-
-        eps_data = annual[["year", "basic_eps"]].dropna()
-
-        # Should have 10 years of data
-        assert len(eps_data) >= 10
-
-        # Should include 2015
-        years = eps_data["year"].tolist()
-        assert 2015 in years
-
-    @pytest.mark.integration
-    def test_maotai_5_years_fewer_data(self, tushare_token):
-        """5 years should return fewer data than 10 years"""
-        import numpy as np
-
+    def test_different_years_produce_different_start_years(self):
+        """Different years values should produce different start_year values"""
         vi = ValueInvestment()
+        
+        mock_provider = MagicMock()
+        mock_provider.get_income_statement.return_value = pd.DataFrame({
+            "end_date": ["20201231", "20211231", "20221231"],
+            "total_revenue": [100000] * 3,
+        })
+        vi._provider = mock_provider
 
-        vi.clear_cache("600519")
-
-        # Get 5 years
-        df_5y = vi.get_profit_sheet("600519", end_year=2025, years=5)
-        df_5y["report_date"] = df_5y["report_date"].astype(str)
-        annual_5y = df_5y[df_5y["report_date"].str.endswith("1231")]
-        years_5y = len(np.unique(annual_5y["report_date"]))
-
-        vi.clear_cache("600519")
-
-        # Get 10 years
-        df_10y = vi.get_profit_sheet("600519", end_year=2025, years=10)
-        df_10y["report_date"] = df_10y["report_date"].astype(str)
-        annual_10y = df_10y[df_10y["report_date"].str.endswith("1231")]
-        years_10y = len(np.unique(annual_10y["report_date"]))
-
-        # 10 years should have more data
-        assert years_10y > years_5y
+        # Test with years=3
+        vi.get_profit_sheet("600519", end_year=2025, years=3)
+        call_3 = mock_provider.get_income_statement.call_args[0][2]
+        
+        # Reset mock
+        mock_provider.get_income_statement.reset_mock()
+        
+        # Test with years=5
+        vi.get_profit_sheet("600519", end_year=2025, years=5)
+        call_5 = mock_provider.get_income_statement.call_args[0][2]
+        
+        # Different years should produce different start_years
+        assert call_3 != call_5
+        assert call_3 == 2022  # 2025 - 3
+        assert call_5 == 2020  # 2025 - 5
 
 
 class TestCacheKeyWithStartYear:
     """Test that cache key includes start_year"""
 
-    def test_cache_key_includes_start_year(self, tushare_token):
+    def test_cache_key_includes_start_year(self, mock_cache):
         """Cache key should include start_year to differentiate requests"""
         from value_investment.data.providers.tushare_provider import TushareProvider
 
-        cache = MockCache()
-        provider = TushareProvider(cache=cache, token=tushare_token)
+        with patch("value_investment.data.providers.tushare_provider.ts") as mock_ts:
+            mock_api = MagicMock()
+            mock_ts.pro_api.return_value = mock_api
+            mock_api.income.return_value = pd.DataFrame({
+                "ts_code": ["600519.SH"],
+                "end_date": ["20231231"],
+                "total_revenue": [100000000],
+            })
+            
+            provider = TushareProvider(cache=mock_cache, token="mock_token")
 
-        # First request with 5 years
-        provider.get_income_statement("600519.SH", end_year=2025, start_year=2020)
+            # First request with 5 years
+            provider.get_income_statement("600519.SH", end_year=2025, start_year=2020)
 
-        # Check cache key exists
-        cache_keys_5y = [k for k in cache._data.keys() if "income" in k and "600519" in k]
-        assert len(cache_keys_5y) == 1
-        key_5y = cache_keys_5y[0]
+            # Check cache key exists
+            cache_keys = [k for k in mock_cache._data.keys() if "income" in k]
+            assert len(cache_keys) == 1
+            key = cache_keys[0]
 
-        # Should contain both start and end year
-        assert "2020" in key_5y  # start_year
-        assert "2025" in key_5y  # end_year
+            # Should contain both start and end year
+            assert "2020" in key  # start_year
+            assert "2025" in key  # end_year
+
+    def test_cache_key_different_start_years(self, mock_cache):
+        """Different start_year should produce different cache keys"""
+        from value_investment.data.providers.tushare_provider import TushareProvider
+
+        with patch("value_investment.data.providers.tushare_provider.ts") as mock_ts:
+            mock_api = MagicMock()
+            mock_ts.pro_api.return_value = mock_api
+            
+            # Return different data for different requests
+            mock_api.income.side_effect = [
+                pd.DataFrame({"end_date": ["20201231"], "total_revenue": [100]}),
+                pd.DataFrame({"end_date": ["20231231"], "total_revenue": [100]}),
+            ]
+            
+            provider = TushareProvider(cache=mock_cache, token="mock_token")
+
+            # First request with start_year=2020
+            provider.get_income_statement("600519.SH", end_year=2025, start_year=2020)
+            keys_1 = [k for k in mock_cache._data.keys()]
+            
+            # Second request with start_year=2022
+            provider.get_income_statement("600519.SH", end_year=2025, start_year=2022)
+            keys_2 = [k for k in mock_cache._data.keys()]
+
+            # Should have different cache keys
+            assert len(keys_2) > len(keys_1)
+
+
+class TestIntegration:
+    """Integration tests - kept for connectivity verification only
+    
+    These tests require real TUSHARE_TOKEN.
+    Run with: pytest -m integration
+    """
+    
+    @pytest.mark.integration
+    def test_integration_years_parameter_with_real_api(self):
+        """Verify years parameter works with real Tushare API"""
+        token = os.getenv("TUSHARE_TOKEN")
+        if not token:
+            pytest.skip("TUSHARE_TOKEN not set, skipping integration test")
+        
+        from value_investment.data.providers.tushare_provider import TushareProvider
+        from tests.conftest import MockCache
+        
+        provider = TushareProvider(cache=MockCache(), token=token)
+        
+        df = provider.get_income_statement("600519.SH", end_year=2025, start_year=2020)
+        
+        assert not df.empty

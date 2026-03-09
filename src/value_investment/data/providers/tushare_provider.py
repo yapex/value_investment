@@ -204,8 +204,6 @@ class TushareProvider(BaseProvider):
             return cached
 
         # 使用 ts.pro_bar() 获取历史数据
-        # 注意: pro_bar 的 adj 参数在某些版本可能有兼容性问题
-        # 如果不需要复权，使用 None 或不传 adj 参数
         adj_param = adjust if adjust in ("qfq", "hfq") else None
 
         df = ts.pro_bar(

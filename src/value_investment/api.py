@@ -136,10 +136,12 @@ class ValueInvestment:
         Returns:
             Market code
         """
-        if self._market:
-            return self._market
+        # If symbol provided, auto-detect from it (overrides default market)
         if symbol:
             return self.detect_market(symbol)
+        # Otherwise use the configured market
+        if self._market:
+            return self._market
         return "A"
 
     def get_stock_info(self, symbol: str, force_refresh: bool = False):
@@ -153,7 +155,12 @@ class ValueInvestment:
         Returns:
             DataFrame with stock info
         """
-        return self._provider.get_stock_info(symbol, force_refresh=force_refresh)
+        # Handle force_refresh at API level (provider may not support it)
+        if force_refresh:
+            # Invalidate cache for this symbol
+            cache_key = f"info_{symbol}"
+            self._container.cache().invalidate(cache_key)
+        return self._provider.get_stock_info(symbol)
 
     def get_historical_data(
         self,
@@ -519,7 +526,7 @@ class ValueInvestment:
         Args:
             df: Input DataFrame
             fields: List of fields to return. If None, returns all columns.
-                   REPORT_DATE is always included if fields is provided.
+                   report_date is always included if fields is provided.
 
         Returns:
             DataFrame with filtered columns and formatted dates
@@ -528,9 +535,10 @@ class ValueInvestment:
             return df
 
         field_list = list(fields)
-        # 强制包含 REPORT_DATE
-        if "REPORT_DATE" not in field_list:
-            field_list.insert(0, "REPORT_DATE")
+        # 强制包含 report_date（支持大小写）
+        date_col = "report_date" if "report_date" in df.columns else "REPORT_DATE"
+        if date_col not in field_list:
+            field_list.insert(0, date_col)
 
         # 验证字段存在
         available_cols = set(df.columns)
@@ -544,8 +552,8 @@ class ValueInvestment:
             result = result.to_frame().T
 
         # 格式化日期为 YYYY-MM-DD
-        if "REPORT_DATE" in result.columns:
-            result["REPORT_DATE"] = pd.to_datetime(result["REPORT_DATE"]).strftime("%Y-%m-%d")
+        if date_col in result.columns:
+            result[date_col] = pd.to_datetime(result[date_col]).dt.strftime("%Y-%m-%d")
 
         return result
 
@@ -563,7 +571,7 @@ class ValueInvestment:
             end_year: End year
 
         Returns:
-            Merged DataFrame with all financial data
+            Merged DataFrame with all financial data (one row per year)
         """
         # Fetch individual sheets (each is cached separately)
         balance = self._provider.get_balance_sheet(symbol, end_year)
@@ -575,16 +583,56 @@ class ValueInvestment:
         profit = DataMapper.map_income_statement(profit)
         cashflow = DataMapper.map_cash_flow(cashflow)
 
+        # Filter to keep only annual reports (one row per year)
+        def filter_annual(df: pd.DataFrame) -> pd.DataFrame:
+            """Filter to keep only annual reports (12-31) and deduplicate by year"""
+            if df.empty:
+                return df
+            
+            # Ensure year column exists
+            date_col = None
+            if 'report_date' in df.columns:
+                date_col = 'report_date'
+            elif 'REPORT_DATE' in df.columns:
+                date_col = 'REPORT_DATE'
+            
+            if date_col is None:
+                return df
+            
+            # Convert to string for filtering
+            df = df.copy()
+            df['_date_str'] = df[date_col].astype(str)
+            
+            # Filter for annual reports (ending with 1231)
+            annual_mask = df['_date_str'].str.endswith('1231')
+            
+            # If report_type column exists, prefer report_type=1 (consolidated)
+            # Note: report_type may be string or int, handle both
+            if 'report_type' in df.columns:
+                consolidated_mask = df['report_type'].astype(str) == '1'
+                annual_mask = annual_mask & consolidated_mask
+            
+            df = df.loc[annual_mask].copy()
+            
+            # Extract year
+            df['year'] = pd.to_datetime(df[date_col]).dt.year
+            
+            # Deduplicate: keep latest row per year (by ann_date if available, else by row order)
+            if 'ann_date' in df.columns:
+                df = df.sort_values('ann_date', ascending=False)
+            df = df.drop_duplicates(subset=['year'], keep='first')
+            
+            # Clean up temp column
+            df = df.drop(columns=['_date_str'], errors='ignore')
+            
+            return df
+
+        balance = filter_annual(balance)
+        profit = filter_annual(profit)
+        cashflow = filter_annual(cashflow)
+
         if balance.empty:
             return profit if not profit.empty else cashflow
-
-        # Ensure year column exists (support both cases)
-        for df in [balance, profit, cashflow]:
-            if 'year' not in df.columns:
-                if 'REPORT_DATE' in df.columns:
-                    df['year'] = pd.to_datetime(df['REPORT_DATE']).dt.year
-                elif 'report_date' in df.columns:
-                    df['year'] = pd.to_datetime(df['report_date']).dt.year
 
         # Merge on year
         merged = balance.copy()
@@ -632,7 +680,11 @@ class ValueInvestment:
         name = stock_code
         try:
             info = self._provider.get_stock_info(stock_code)
-            if 'item' in info.columns:
+            # Tushare format: has 'name' column directly
+            if 'name' in info.columns and len(info) > 0:
+                name = f"{info['name'].iloc[0]} ({stock_code})"
+            # Akshare format: 'item' and 'value' columns
+            elif 'item' in info.columns:
                 for _, row in info.iterrows():
                     item = str(row['item'])
                     if '简称' in item or '名称' in item:

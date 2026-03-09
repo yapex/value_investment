@@ -18,6 +18,17 @@ if TYPE_CHECKING:
 class AShareProvider(BaseProvider):
     """Akshare data provider for A股 (Chinese A-shares)"""
 
+    def __init__(self, cache, market: str = "A", **kwargs):
+        """Initialize AShareProvider
+        
+        Args:
+            cache: Cache instance
+            market: Market type (default: "A")
+            **kwargs: Additional arguments passed to BaseProvider
+        """
+        super().__init__(cache, **kwargs)
+        self._market = market
+
     def get_stock_info(self, stock_code: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get A股 stock info"""
         import akshare as ak  # type: ignore[import-untyped]

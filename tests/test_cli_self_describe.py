@@ -113,13 +113,20 @@ class TestCLIFieldsCommand:
 
 
 class TestCLIIndicatorsCommand:
-    """Test `indicators` command (renamed from list-indicators)"""
+    """Test `indicators` command (requires market argument)"""
 
-    def test_indicators_lists_all(self):
-        """indicators command should list all available indicators"""
+    def test_indicators_requires_market(self):
+        """indicators command should require market argument"""
         from value_investment.cli import app
 
         result = runner.invoke(app, ["indicators"])
+        assert result.exit_code != 0
+
+    def test_indicators_lists_a_stock(self):
+        """indicators command should list A股 indicators"""
+        from value_investment.cli import app
+
+        result = runner.invoke(app, ["indicators", "A"])
         assert result.exit_code == 0
 
         output = result.stdout.strip()
@@ -131,11 +138,38 @@ class TestCLIIndicatorsCommand:
         # Should contain known indicators
         assert "ROE" in indicators or any("ROE" in i for i in indicators)
 
+    def test_indicators_lists_hk(self):
+        """indicators command should list 港股 indicators"""
+        from value_investment.cli import app
+
+        result = runner.invoke(app, ["indicators", "HK"])
+        assert result.exit_code == 0
+
+        output = result.stdout.strip()
+        indicators = output.split("\n")
+
+        # Should have some indicators including HK-specific ones
+        assert len(indicators) > 0
+        assert any(i.startswith("hk_") for i in indicators)
+
+    def test_indicators_lists_us(self):
+        """indicators command should list 美股 indicators"""
+        from value_investment.cli import app
+
+        result = runner.invoke(app, ["indicators", "US"])
+        assert result.exit_code == 0
+
+        output = result.stdout.strip()
+        indicators = output.split("\n")
+
+        # Should have some indicators
+        assert len(indicators) > 0
+
     def test_indicators_one_per_line(self):
         """indicators command should output one indicator per line"""
         from value_investment.cli import app
 
-        result = runner.invoke(app, ["indicators"])
+        result = runner.invoke(app, ["indicators", "A"])
         assert result.exit_code == 0
 
         output = result.stdout.strip()

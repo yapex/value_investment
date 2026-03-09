@@ -19,7 +19,7 @@ class TestRegisterDefaults:
         register_defaults()
 
         # Verify some indicators registered
-        revenue = registry.get("revenue")
+        revenue = registry.get("total_revenue")
         assert revenue is not None
         assert revenue.type == IndicatorType.RAW
 
@@ -28,7 +28,7 @@ class TestRegisterDefaults:
         from value_investment.indicators.registry import IndicatorRegistry
 
         registry = IndicatorRegistry.get_instance()
-        revenue = registry.get("revenue")
+        revenue = registry.get("total_revenue")
 
         if revenue:
             assert "A股" in revenue.market_fields

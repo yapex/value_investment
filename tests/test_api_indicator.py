@@ -32,10 +32,10 @@ class TestAPIIndicator:
         assert result is None or result.name == "roe"
 
     def test_get_indicator_unknown(self):
-        """get_indicator should return None for unknown indicator"""
-        from value_investment.api import ValueInvestment
+        """get_indicator should raise IndicatorNotFoundError for unknown indicator"""
+        from value_investment.api import ValueInvestment, IndicatorNotFoundError
 
         api = ValueInvestment()
 
-        result = api.get_indicator("nonexistent_indicator")
-        assert result is None
+        with pytest.raises(IndicatorNotFoundError):
+            api.get_indicator("nonexistent_indicator")

@@ -244,8 +244,18 @@ class TestAkshareProviderStockInfo:
         assert cached.iloc[0]["value"] == "600519"
 
 
+@pytest.mark.skip(reason="A 股历史数据已迁移到 tushare，这些测试针对旧的 akshare 实现")
 class TestAkshareProviderHistorical:
-    """Test historical data fetching"""
+    """Test historical data fetching (A 股) - DEPRECATED: A 股已迁移到 tushare
+    
+    这些测试针对旧的 akshare A 股历史数据实现。
+    根据新的架构：
+    - A 股：tushare (财务 + 交易数据)
+    - 港股：akshare (财务) + yfinance (交易)
+    - 美股：akshare (财务) + yfinance (交易)
+    
+    AkshareProvider 仍用于港股/美股财务数据，但 A 股历史交易数据测试应废弃。
+    """
 
     @pytest.fixture
     def temp_cache_dir(self):

@@ -38,8 +38,8 @@ def test_api_get_financial_data_uses_field_mapping():
     })
 
     mock_provider.get_balance_sheet.return_value = balance_df
-    mock_provider.get_profit_sheet.return_value = profit_df
-    mock_provider.get_cashflow_sheet.return_value = cashflow_df
+    mock_provider.get_income_statement.return_value = profit_df
+    mock_provider.get_cash_flow_statement.return_value = cashflow_df
 
     # Patch the provider in ValueInvestment
     with patch.object(ValueInvestment, '__init__', lambda self, **kwargs: None):

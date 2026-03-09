@@ -7,8 +7,7 @@ import pandas as pd
 class TestAnalyzeWithReport:
     """Test analyze() method with report parameter"""
 
-    @patch('value_investment.api.AkshareProvider')
-    def test_analyze_report_false_default(self, mock_provider):
+    def test_analyze_report_false_default(self):
         """By default, report should be False (no report generated)"""
         from value_investment.api import ValueInvestment
         
@@ -35,8 +34,7 @@ class TestAnalyzeWithReport:
         assert "warnings" not in result, "Without report=True, warnings field should not exist"
         assert "notes" not in result, "Without report=True, notes field should not exist"
 
-    @patch('value_investment.api.AkshareProvider')
-    def test_analyze_report_true_contains_warnings(self, mock_provider):
+    def test_analyze_report_true_contains_warnings(self):
         """When report=True, result should contain warnings and notes"""
         from value_investment.api import ValueInvestment
         
@@ -64,8 +62,7 @@ class TestAnalyzeWithReport:
         assert isinstance(result["warnings"], list), "warnings should be a list"
         assert isinstance(result["notes"], list), "notes should be a list"
 
-    @patch('value_investment.api.AkshareProvider')
-    def test_analyze_report_true_contains_report_field(self, mock_provider):
+    def test_analyze_report_true_contains_report_field(self):
         """When report=True, result should contain Markdown report"""
         from value_investment.api import ValueInvestment
         
@@ -94,8 +91,7 @@ class TestAnalyzeWithReport:
         # Report should contain key sections
         assert "测试股票" in result["report"] or "600519" in result["report"], "Report should contain stock name or code"
 
-    @patch('value_investment.api.AkshareProvider')
-    def test_analyze_report_true_calls_detector(self, mock_provider):
+    def test_analyze_report_true_calls_detector(self):
         """When report=True, detector.detect_warnings should be called"""
         from value_investment.api import ValueInvestment
         from value_investment.analysis import detector

@@ -55,3 +55,6 @@ Thumbs.db
 
 # Environment variables (contains sensitive data)
 .env
+
+# Pi agent config
+.pi/

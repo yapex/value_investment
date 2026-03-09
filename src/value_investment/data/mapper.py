@@ -540,8 +540,11 @@ FINANCIAL_INDICATOR_MAPPING = {
 # ============================================================================
 
 QUARTERLY_MAPPING = {
-    # ----- IFRS标准字段 (通用) -----
+    # ----- 日期字段 -----
     '报告期': 'report_date',
+    'end_date': 'report_date',  # Tushare 报告期截止日
+
+    # ----- 利润表字段 -----
     '净利润': 'net_profit',
     'NETPROFIT': 'net_profit',
     '扣非净利润': 'deducted_net_profit',

@@ -357,7 +357,7 @@ class PEPercentileIndicator(BaseIndicator):
     """
 
     name = "PEPct"
-    needs = ['quarterly', 'prices', 'stock_info']
+    needs = ['quarterly', 'prices', 'stock_info', 'daily_basic']
     description = "PE历史百分位"
     type = IndicatorType.CALCULATED
 
@@ -367,25 +367,25 @@ class PEPercentileIndicator(BaseIndicator):
         quarterly = kwargs.get('quarterly')  # Injected from registry
         prices = kwargs.get('prices')  # Injected from registry
         stock_info = kwargs.get('stock_info')  # Injected from registry
+        daily_basic = kwargs.get('daily_basic')  # Injected from registry
         stock_code = kwargs.get('stock_code')
         years = kwargs.get('years', 10)
 
         # Check if required dependencies are provided (use .empty for DataFrame check)
         if (quarterly is None or (hasattr(quarterly, 'empty') and quarterly.empty) or
             prices is None or (hasattr(prices, 'empty') and prices.empty) or
-            stock_info is None or (hasattr(stock_info, 'empty') and stock_info.empty) or
             not stock_code):
             return IndicatorResult(
                 value=0.0,
                 unit="",
-                description="PEPct (需要quarterly, prices和stock_info依赖)",
+                description="PEPct (需要quarterly, prices依赖)",
                 years=[],
                 values=[]
             )
 
         try:
             # 1. 尝试使用PE-TTM计算（A股）
-            ttm_result = self._calculate_pe_ttm_percentile_with_data(quarterly, prices, stock_info, stock_code, years)
+            ttm_result = self._calculate_pe_ttm_percentile_with_data(quarterly, prices, stock_info, daily_basic, stock_code, years)
             if ttm_result:
                 return ttm_result
 
@@ -402,7 +402,7 @@ class PEPercentileIndicator(BaseIndicator):
             )
 
     # New methods that use injected data instead of provider
-    def _calculate_pe_ttm_percentile_with_data(self, quarterly_data, prices_data, stock_info, stock_code: str, years: int) -> "IndicatorResult | None":
+    def _calculate_pe_ttm_percentile_with_data(self, quarterly_data, prices_data, stock_info, daily_basic, stock_code: str, years: int) -> "IndicatorResult | None":
         """使用PE-TTM计算百分位（使用注入的数据）"""
         from datetime import datetime
 
@@ -411,9 +411,7 @@ class PEPercentileIndicator(BaseIndicator):
         if quarterly_data.empty or prices_data.empty:
             return None
 
-        # 检测是否为港股（港股有 date_type_code 字段，且没有 operating_income 字段）
-        # 美股有 date_type_code 和 operating_income 字段
-        # A股没有 date_type_code 字段
+        # 检测市场类型
         has_date_type_code = 'date_type_code' in quarterly_data.columns
         has_operating_income = 'operating_income' in quarterly_data.columns
 
@@ -425,8 +423,9 @@ class PEPercentileIndicator(BaseIndicator):
         # A股或美股处理逻辑 - 提取净利润列
         # 优先使用内部标准字段名，其次兼容原始字段名
         # 美股使用 parent_net_profit
+        # Tushare 使用 deducted_net_profit（扣非净利润）
         net_profit_col = None
-        for col in ['net_profit', 'parent_net_profit']:
+        for col in ['net_profit', 'parent_net_profit', 'deducted_net_profit']:
             if col in quarterly_data.columns:
                 net_profit_col = col
                 break
@@ -436,7 +435,7 @@ class PEPercentileIndicator(BaseIndicator):
 
         # 提取报告期和净利润
         report_col = None
-        for col in ['report_date']:
+        for col in ['report_date', 'end_date']:
             if col in quarterly_data.columns:
                 report_col = col
                 break
@@ -479,27 +478,33 @@ class PEPercentileIndicator(BaseIndicator):
         if len(ttm_list) < 4:
             return None
 
-        # 获取股本数据（从stock_info依赖）
+        # 获取总股本
         total_shares = None
 
-        if stock_info is not None and not (hasattr(stock_info, 'empty') and stock_info.empty):
-            try:
-                for item_col in ['item', 'Item']:
-                    if item_col in stock_info.columns:
-                        for _, row in stock_info.iterrows():
-                            item = str(row.get(item_col, ''))
-                            value = row.get('value', 0)
-                            # A股: 总股本
-                            if '总股本' in item:
-                                total_shares = float(value)
-                                break
-                            # 美股: actual_issue_total_shares_num (实际发行股本数)
-                            # 苹果的 actual_issue_total_shares_num = 4600000 表示约 46 亿股
-                            if 'actual_issue_total_shares_num' in item:
-                                total_shares = float(value) * 10000  # 转换为股
-                                break
-            except Exception:
-                pass
+        # 方案1：从 daily_basic 获取（推荐）
+        if daily_basic is not None and not (hasattr(daily_basic, 'empty') and daily_basic.empty):
+            if 'total_shares' in daily_basic.columns:
+                total_shares = float(daily_basic['total_shares'].iloc[0])
+
+        # 方案2：从 stock_info 获取（兼容港股/Akshare）
+        if not total_shares or total_shares <= 0:
+            if stock_info is not None and not (hasattr(stock_info, 'empty') and stock_info.empty):
+                try:
+                    for item_col in ['item', 'Item']:
+                        if item_col in stock_info.columns:
+                            for _, row in stock_info.iterrows():
+                                item = str(row.get(item_col, ''))
+                                value = row.get('value', 0)
+                                # A股: 总股本
+                                if '总股本' in item:
+                                    total_shares = float(value)
+                                    break
+                                # 美股: actual_issue_total_shares_num (实际发行股本数)
+                                if 'actual_issue_total_shares_num' in item:
+                                    total_shares = float(value) * 10000
+                                    break
+                except Exception:
+                    pass
 
         if not total_shares or total_shares <= 0:
             return None
@@ -508,7 +513,9 @@ class PEPercentileIndicator(BaseIndicator):
         # 确保有date列
         prices = prices_data.copy()
         if 'date' not in prices.columns:
-            if '日期' in prices.columns:
+            if 'trade_date' in prices.columns:
+                prices['date'] = pd.to_datetime(prices['trade_date'], errors='coerce')
+            elif '日期' in prices.columns:
                 prices['date'] = pd.to_datetime(prices['日期'])
             elif 'REPORT_DATE' in prices.columns:
                 prices['date'] = pd.to_datetime(prices['REPORT_DATE'])
@@ -624,7 +631,7 @@ class PEPercentileIndicator(BaseIndicator):
 
         # 2. 提取报告期和净利润
         report_col = None
-        for col in ['report_date']:
+        for col in ['report_date', 'end_date']:
             if col in quarterly_data.columns:
                 report_col = col
                 break

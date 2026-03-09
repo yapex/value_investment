@@ -26,10 +26,17 @@ class DataProvider:
             'financial_indicator': lambda: self._map_financial_indicator(
                 self._provider.get_financial_indicator(stock_code)
             ),
+            'daily_basic': lambda: self._get_daily_basic(stock_code),
         }
         if data_type not in fetchers:
             raise ValueError(f"Unknown data type: {data_type}")
         return fetchers[data_type]()
+
+    def _get_daily_basic(self, stock_code: str):
+        """Get daily basic data (市值、股本等)"""
+        if hasattr(self._provider, 'get_daily_basic'):
+            return self._provider.get_daily_basic(stock_code)
+        return None
 
     def _map_financial_indicator(self, df):
         """Apply field mapping to financial_indicator data"""

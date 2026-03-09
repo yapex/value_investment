@@ -19,20 +19,6 @@ description: Use when analyzing A股/港股/美股基本面，需要查询股票
 
 ## ⚠️ 执行要点
 
-**代理问题排查（重要）：**
-
-如果命令超时或无响应，可能是系统代理配置导致：
-
-```bash
-# 临时禁用代理执行
-HTTP_PROXY="" HTTPS_PROXY="" http_proxy="" https_proxy="" v-invest <command>
-
-# 或使用 env -u
-env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY v-invest info 600519
-```
-
-**原因**：nanobot gateway 启动时设置 `http_proxy=http://127.0.0.1:8118`，akshare 库依赖的 urllib3 会自动使用代理。代理服务器未运行时所有网络请求超时。
-
 ```bash
 v-invest info 600519
 ```

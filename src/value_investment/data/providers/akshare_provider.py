@@ -439,6 +439,7 @@ class AkshareProvider(BaseProvider):
         self,
         symbol: str,
         end_year: int | None = None,
+        start_year: int | None = None,
         force_refresh: bool = False,
     ) -> pd.DataFrame:
         """
@@ -447,6 +448,7 @@ class AkshareProvider(BaseProvider):
         Args:
             symbol: Stock code
             end_year: End year (optional, defaults to current year)
+            start_year: Start year (optional, ignored for akshare)
             force_refresh: If True, force refresh from data source
 
         Returns:
@@ -472,6 +474,7 @@ class AkshareProvider(BaseProvider):
         self,
         symbol: str,
         end_year: int | None = None,
+        start_year: int | None = None,
         force_refresh: bool = False,
     ) -> pd.DataFrame:
         """
@@ -480,6 +483,7 @@ class AkshareProvider(BaseProvider):
         Args:
             symbol: Stock code
             end_year: End year (optional, defaults to current year)
+            start_year: Start year (optional, ignored for akshare)
             force_refresh: If True, force refresh from data source
 
         Returns:
@@ -501,10 +505,21 @@ class AkshareProvider(BaseProvider):
         else:
             raise NotImplementedError(f"Profit sheet for {self._market} not implemented yet")
 
+    # Alias for base_provider interface
+    def get_income_statement(
+        self,
+        stock_code: str,
+        end_year: int | None = None,
+        start_year: int | None = None,
+    ) -> pd.DataFrame:
+        """Alias for get_profit_sheet to match base_provider interface"""
+        return self.get_profit_sheet(stock_code, end_year, start_year)
+
     def get_cashflow_sheet(
         self,
         symbol: str,
         end_year: int | None = None,
+        start_year: int | None = None,
         force_refresh: bool = False,
     ) -> pd.DataFrame:
         """
@@ -513,6 +528,7 @@ class AkshareProvider(BaseProvider):
         Args:
             symbol: Stock code
             end_year: End year (optional, defaults to current year)
+            start_year: Start year (optional, ignored for akshare)
             force_refresh: If True, force refresh from data source
 
         Returns:
@@ -533,6 +549,16 @@ class AkshareProvider(BaseProvider):
             return self._filter_by_year(df, end_year)
         else:
             raise NotImplementedError(f"Cash flow sheet for {self._market} not implemented yet")
+
+    # Alias for base_provider interface
+    def get_cash_flow_statement(
+        self,
+        stock_code: str,
+        end_year: int | None = None,
+        start_year: int | None = None,
+    ) -> pd.DataFrame:
+        """Alias for get_cashflow_sheet to match base_provider interface"""
+        return self.get_cashflow_sheet(stock_code, end_year, start_year)
 
     def _filter_by_year(
         self,

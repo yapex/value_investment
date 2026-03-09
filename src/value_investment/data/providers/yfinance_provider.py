@@ -154,13 +154,13 @@ class YFinanceProvider(BaseProvider):
         except Exception as e:
             print(f"YFinance info error for {stock_code}: {e}")
             return pd.DataFrame()
-    
+
     # Override abstract method with not implemented
-    def get_balance_sheet(self, stock_code: str, end_year: int) -> pd.DataFrame:
+    def get_balance_sheet(self, stock_code: str, end_year: int, start_year: int | None = None) -> pd.DataFrame:
         """YFinance does not support reliable balance sheet data
-        
+
         Use akshare for港股/美股 financial statements.
-        
+
         Raises:
             NotImplementedError: Always raised
         """
@@ -168,16 +168,17 @@ class YFinanceProvider(BaseProvider):
             "YFinance provider does not support balance sheet data. "
             "Use akshare provider for financial statements."
         )
-    
+
     def get_income_statement(
         self,
         stock_code: str,
         end_year: int,
+        start_year: int | None = None,
     ) -> pd.DataFrame:
         """YFinance does not support reliable income statement data
-        
+
         Use akshare for港股/美股 financial statements.
-        
+
         Raises:
             NotImplementedError: Always raised
         """
@@ -185,16 +186,17 @@ class YFinanceProvider(BaseProvider):
             "YFinance provider does not support income statement data. "
             "Use akshare provider for financial statements."
         )
-    
+
     def get_cash_flow_statement(
         self,
         stock_code: str,
         end_year: int,
+        start_year: int | None = None,
     ) -> pd.DataFrame:
         """YFinance does not support reliable cash flow statement data
-        
+
         Use akshare for港股/美股 financial statements.
-        
+
         Raises:
             NotImplementedError: Always raised
         """

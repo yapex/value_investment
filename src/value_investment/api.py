@@ -194,6 +194,7 @@ class ValueInvestment:
         end_year: int | None = None,
         force_refresh: bool = False,
         fields: list[str] | None = None,
+        years: int = 10,
     ):
         """
         Get balance sheet
@@ -204,11 +205,15 @@ class ValueInvestment:
             force_refresh: If True, force refresh from data source
             fields: List of fields to return (optional). If not provided, returns all fields.
                    REPORT_DATE is always included if fields is provided.
+            years: Number of years to fetch (default: 10)
 
         Returns:
             DataFrame with balance sheet data
         """
-        df = self._provider.get_balance_sheet(symbol, end_year)
+        if end_year is None:
+            end_year = datetime.now().year
+        start_year = end_year - years
+        df = self._provider.get_balance_sheet(symbol, end_year, start_year)
         return self._filter_fields(df, fields)
 
     def get_profit_sheet(
@@ -217,6 +222,7 @@ class ValueInvestment:
         end_year: int | None = None,
         force_refresh: bool = False,
         fields: list[str] | None = None,
+        years: int = 10,
     ):
         """
         Get profit sheet (income statement)
@@ -227,11 +233,15 @@ class ValueInvestment:
             force_refresh: If True, force refresh from data source
             fields: List of fields to return (optional). If not provided, returns all fields.
                    REPORT_DATE is always included if fields is provided.
+            years: Number of years to fetch (default: 10)
 
         Returns:
             DataFrame with profit sheet data
         """
-        df = self._provider.get_income_statement(symbol, end_year)
+        if end_year is None:
+            end_year = datetime.now().year
+        start_year = end_year - years
+        df = self._provider.get_income_statement(symbol, end_year, start_year)
         return self._filter_fields(df, fields)
 
     def get_cashflow_sheet(
@@ -240,6 +250,7 @@ class ValueInvestment:
         end_year: int | None = None,
         force_refresh: bool = False,
         fields: list[str] | None = None,
+        years: int = 10,
     ):
         """
         Get cash flow sheet
@@ -250,11 +261,15 @@ class ValueInvestment:
             force_refresh: If True, force refresh from data source
             fields: List of fields to return (optional). If not provided, returns all fields.
                    REPORT_DATE is always included if fields is provided.
+            years: Number of years to fetch (default: 10)
 
         Returns:
             DataFrame with cash flow sheet data
         """
-        df = self._provider.get_cash_flow_statement(symbol, end_year)
+        if end_year is None:
+            end_year = datetime.now().year
+        start_year = end_year - years
+        df = self._provider.get_cash_flow_statement(symbol, end_year, start_year)
         return self._filter_fields(df, fields)
 
     def get_financial_indicator(self, symbol: str, force_refresh: bool = False):

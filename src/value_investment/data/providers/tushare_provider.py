@@ -75,18 +75,22 @@ class TushareProvider(BaseProvider):
         # Return as-is if format is unknown
         return stock_code
     
-    def get_balance_sheet(self, stock_code: str, end_year: int) -> pd.DataFrame:
+    def get_balance_sheet(self, stock_code: str, end_year: int, start_year: int | None = None) -> pd.DataFrame:
         """Get balance sheet data
 
         Args:
             stock_code: Stock code (6-digit like "600519" or ts_code like "600519.SH")
             end_year: End year (e.g., 2023)
+            start_year: Start year (optional, defaults to end_year - 15)
 
         Returns:
             DataFrame with balance sheet data (standard field names)
         """
+        if start_year is None:
+            start_year = end_year - 15
+
         ts_code = self._to_ts_code(stock_code)
-        cache_key = self._get_cache_key("balance", stock_code, str(end_year))
+        cache_key = self._get_cache_key("balance", stock_code, str(start_year), str(end_year))
         cached = self._get_from_cache(cache_key)
         if cached is not None:
             return cached
@@ -94,7 +98,7 @@ class TushareProvider(BaseProvider):
         # Fetch from tushare (不指定 fields，返回所有字段)
         df = self._api.balancesheet(
             ts_code=ts_code,
-            start_date=f"{end_year - 5}0101",
+            start_date=f"{start_year}0101",
             end_date=f"{end_year}1231",
         )
 
@@ -107,19 +111,23 @@ class TushareProvider(BaseProvider):
             return result
 
         return pd.DataFrame()
-    
-    def get_income_statement(self, stock_code: str, end_year: int) -> pd.DataFrame:
+
+    def get_income_statement(self, stock_code: str, end_year: int, start_year: int | None = None) -> pd.DataFrame:
         """Get income statement data
 
         Args:
             stock_code: Stock code (6-digit like "600519" or ts_code like "600519.SH")
             end_year: End year
+            start_year: Start year (optional, defaults to end_year - 15)
 
         Returns:
             DataFrame with income statement data
         """
+        if start_year is None:
+            start_year = end_year - 15
+
         ts_code = self._to_ts_code(stock_code)
-        cache_key = self._get_cache_key("income", stock_code, str(end_year))
+        cache_key = self._get_cache_key("income", stock_code, str(start_year), str(end_year))
         cached = self._get_from_cache(cache_key)
         if cached is not None:
             return cached
@@ -127,7 +135,7 @@ class TushareProvider(BaseProvider):
         # Fetch from tushare (不指定 fields，返回所有字段)
         df = self._api.income(
             ts_code=ts_code,
-            start_date=f"{end_year - 5}0101",
+            start_date=f"{start_year}0101",
             end_date=f"{end_year}1231",
         )
 
@@ -140,19 +148,23 @@ class TushareProvider(BaseProvider):
             return result
 
         return pd.DataFrame()
-    
-    def get_cash_flow_statement(self, stock_code: str, end_year: int) -> pd.DataFrame:
+
+    def get_cash_flow_statement(self, stock_code: str, end_year: int, start_year: int | None = None) -> pd.DataFrame:
         """Get cash flow statement data
 
         Args:
             stock_code: Stock code (6-digit like "600519" or ts_code like "600519.SH")
             end_year: End year
+            start_year: Start year (optional, defaults to end_year - 15)
 
         Returns:
             DataFrame with cash flow statement data
         """
+        if start_year is None:
+            start_year = end_year - 15
+
         ts_code = self._to_ts_code(stock_code)
-        cache_key = self._get_cache_key("cashflow", stock_code, str(end_year))
+        cache_key = self._get_cache_key("cashflow", stock_code, str(start_year), str(end_year))
         cached = self._get_from_cache(cache_key)
         if cached is not None:
             return cached
@@ -160,7 +172,7 @@ class TushareProvider(BaseProvider):
         # Fetch from tushare (不指定 fields，返回所有字段)
         df = self._api.cashflow(
             ts_code=ts_code,
-            start_date=f"{end_year - 5}0101",
+            start_date=f"{start_year}0101",
             end_date=f"{end_year}1231",
         )
 

@@ -50,12 +50,13 @@ def balance(
     market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
     refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
     fields: str | None = typer.Option(None, "--fields", "-f", help="Comma-separated fields to return"),
+    years: int = typer.Option(10, "--years", "-y", help="Number of years to fetch"),
 ):
     """Get balance sheet"""
     try:
         vi = ValueInvestment(market=_get_market(market, symbol))
         field_list = [f.strip() for f in fields.split(",")] if fields else None
-        df = vi.get_balance_sheet(symbol, end_year, force_refresh=refresh, fields=field_list)
+        df = vi.get_balance_sheet(symbol, end_year, force_refresh=refresh, fields=field_list, years=years)
         print(df.to_markdown(index=False))
     except ValueError as e:
         typer.echo(f"Error: {e}", err=True)
@@ -69,12 +70,13 @@ def income(
     market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
     refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
     fields: str | None = typer.Option(None, "--fields", "-f", help="Comma-separated fields to return"),
+    years: int = typer.Option(10, "--years", "-y", help="Number of years to fetch"),
 ):
     """Get profit sheet (income statement)"""
     try:
         vi = ValueInvestment(market=_get_market(market, symbol))
         field_list = [f.strip() for f in fields.split(",")] if fields else None
-        df = vi.get_profit_sheet(symbol, end_year, force_refresh=refresh, fields=field_list)
+        df = vi.get_profit_sheet(symbol, end_year, force_refresh=refresh, fields=field_list, years=years)
         print(df.to_markdown(index=False))
     except ValueError as e:
         typer.echo(f"Error: {e}", err=True)
@@ -88,12 +90,13 @@ def cashflow(
     market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
     refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
     fields: str | None = typer.Option(None, "--fields", "-f", help="Comma-separated fields to return"),
+    years: int = typer.Option(10, "--years", "-y", help="Number of years to fetch"),
 ):
     """Get cash flow sheet"""
     try:
         vi = ValueInvestment(market=_get_market(market, symbol))
         field_list = [f.strip() for f in fields.split(",")] if fields else None
-        df = vi.get_cashflow_sheet(symbol, end_year, force_refresh=refresh, fields=field_list)
+        df = vi.get_cashflow_sheet(symbol, end_year, force_refresh=refresh, fields=field_list, years=years)
         print(df.to_markdown(index=False))
     except ValueError as e:
         typer.echo(f"Error: {e}", err=True)

@@ -16,6 +16,7 @@ dependencies = [
     "pytest-dotenv>=0.5.2",
     "dependency-injector>=4.48.3",
     "tabulate>=0.9.0",  # DataFrame.to_markdown() 需要
+    "matplotlib>=3.10.8",
 ]
 
 [project.scripts]

@@ -171,47 +171,52 @@ class BaseProvider(ABC):
         return ":".join(str(p) for p in parts)
     
     @abstractmethod
-    def get_balance_sheet(self, stock_code: str, end_year: int) -> pd.DataFrame:
+    def get_balance_sheet(self, stock_code: str, end_year: int, start_year: int | None = None) -> pd.DataFrame:
         """Get balance sheet data
-        
+
         Args:
             stock_code: Stock code
             end_year: End year
-            
+            start_year: Start year (optional, defaults to end_year - 15)
+
         Returns:
             DataFrame with balance sheet data (standard field names)
         """
         pass
-    
+
     # Optional methods with default implementations
-    
+
     def get_income_statement(
         self,
         stock_code: str,
         end_year: int,
+        start_year: int | None = None,
     ) -> pd.DataFrame:
         """Get income statement data
-        
+
         Args:
             stock_code: Stock code
             end_year: End year
-            
+            start_year: Start year (optional, defaults to end_year - 15)
+
         Returns:
             DataFrame with income statement data (standard field names)
         """
         raise NotImplementedError("Provider does not support income statements")
-    
+
     def get_cash_flow_statement(
         self,
         stock_code: str,
         end_year: int,
+        start_year: int | None = None,
     ) -> pd.DataFrame:
         """Get cash flow statement data
-        
+
         Args:
             stock_code: Stock code
             end_year: End year
-            
+            start_year: Start year (optional, defaults to end_year - 15)
+
         Returns:
             DataFrame with cash flow statement data (standard field names)
         """

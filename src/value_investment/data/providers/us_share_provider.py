@@ -83,7 +83,7 @@ class USShareProvider(BaseProvider):
         return cast(pd.DataFrame, result)
 
     def get_balance_sheet(
-        self, stock_code: str, end_year: int | None = None, force_refresh: bool = False
+        self, stock_code: str, end_year: int | None = None, start_year: int | None = None, force_refresh: bool = False
     ) -> pd.DataFrame:
         import akshare as ak  # type: ignore[import-untyped]
 
@@ -105,7 +105,7 @@ class USShareProvider(BaseProvider):
         return self._filter_by_year(cast(pd.DataFrame, df), end_year)
 
     def get_income_statement(
-        self, stock_code: str, end_year: int | None = None, force_refresh: bool = False
+        self, stock_code: str, end_year: int | None = None, start_year: int | None = None, force_refresh: bool = False
     ) -> pd.DataFrame:
         import akshare as ak  # type: ignore[import-untyped]
 
@@ -127,7 +127,7 @@ class USShareProvider(BaseProvider):
         return self._filter_by_year(cast(pd.DataFrame, df), end_year)
 
     def get_cash_flow_statement(
-        self, stock_code: str, end_year: int | None = None, force_refresh: bool = False
+        self, stock_code: str, end_year: int | None = None, start_year: int | None = None, force_refresh: bool = False
     ) -> pd.DataFrame:
         import akshare as ak  # type: ignore[import-untyped]
 

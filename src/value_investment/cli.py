@@ -109,56 +109,26 @@ def indicator(
 ):
     """Get indicator values (unified interface for RAW and CALCULATED)"""
     vi = ValueInvestment(market=_get_market(market, stock_code))
-    try:
-        import warnings
-        import pandas as pd
-        
-        # Parse indicator names
-        if names:
-            indicator_names = [n.strip() for n in names.split(",")]
-            if len(indicator_names) == 1:
-                indicator_names = indicator_names[0]
-        else:
-            indicator_names = None
-        
-        # Get indicator values using unified interface
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            result = vi.indicator(indicator_names, stock_code, years)
-            
-            # Show warning if getting all indicators
-            if w:
-                for warning in w:
-                    print(f"⚠️  Warning: {warning.message}")
-        
-        # Handle different result types
-        if isinstance(result, pd.DataFrame):
-            # All indicators - show as table
-            print(f"=== All Indicators for {stock_code} ===")
-            print(result.T.to_markdown(headers="keys"))
-        elif isinstance(result, dict):
-            # Single or multiple indicators
-            print(f"=== Indicators for {stock_code} ===")
-            for name, value in result.items():
-                if value is not None:
-                    # Try to get unit from metadata
-                    try:
-                        from value_investment.indicators.registry import IndicatorRegistry
-                        registry = IndicatorRegistry.get_instance()
-                        meta = registry.get(name)
-                        unit = getattr(meta, 'unit', '') if meta else ''
-                        print(f"{name}: {value} {unit}".strip())
-                    except:
-                        print(f"{name}: {value}")
-                else:
-                    print(f"{name}: N/A")
-        else:
-            print(f"Result: {result}")
-            
-    except Exception as e:
-        print(f"Error: {e}")
-        import traceback
-        traceback.print_exc()
+    
+    # Parse indicator names
+    if names:
+        indicator_names = [n.strip() for n in names.split(",")]
+        if len(indicator_names) == 1:
+            indicator_names = indicator_names[0]
+    else:
+        indicator_names = None
+    
+    # Get indicator values
+    result = vi.indicator(indicator_names, stock_code, years)
+    
+    # Format output as Markdown
+    if isinstance(result, pd.DataFrame):
+        print(f"### 指标数据 - {stock_code}\n")
+        print(result.T.to_markdown(headers="keys"))
+    elif isinstance(result, dict):
+        print(f"### 指标 - {stock_code}\n")
+        items = [{"指标": k, "值": v if v is not None else "N/A"} for k, v in result.items()]
+        print(pd.DataFrame(items).to_markdown(index=False))
 
 
 @app.command()
@@ -169,21 +139,19 @@ def finind(
 ):
     """Get financial indicators directly from data source (no calculation needed)"""
     vi = ValueInvestment(market=_get_market(market, stock_code))
-
-    try:
-        df = vi.get_financial_indicator(stock_code, force_refresh=refresh)
-        if df is None or df.empty:
-            print(f"No financial indicators found for {stock_code}")
-            return
-
-        # Print each indicator
-        print(f"=== Financial Indicators for {stock_code} ===")
-        for col in df.columns:
-            val = df[col].iloc[0]
-            if pd.notna(val):
-                print(f"{col}: {val}")
-    except Exception as e:
-        print(f"Error: {e}")
+    
+    df = vi.get_financial_indicator(stock_code, force_refresh=refresh)
+    
+    if df is None or df.empty:
+        print(f"### 财务指标 - {stock_code}\n\n无数据")
+        return
+    
+    # Take first row and convert to DataFrame for display
+    row = df.iloc[0].dropna()
+    items = [{"指标": idx, "值": val} for idx, val in row.items()]
+    
+    print(f"### 财务指标 - {stock_code}\n")
+    print(pd.DataFrame(items).to_markdown(index=False))
 
 
 @app.command()
@@ -198,20 +166,19 @@ def analyze(
 
     # Handle empty results
     if result["table"].empty and not result["summary"]:
-        print(f"=== {stock_code} 财务分析 ===")
-        print("无财务数据")
+        print(f"### {stock_code} 财务分析\n\n无财务数据")
         return
 
-    # Output
-    print(f"\n### {result['name']} 财务分析 ({result['year_range']})")
-    print()
+    # Output as Markdown
+    print(f"### {result['name']} 财务分析 ({result['year_range']})\n")
+    
     if not result["table"].empty:
         print(result["table"].to_markdown(index=False))
-
+    
     if result["summary"]:
         print()
         for item in result["summary"]:
-            print(f"- {item['label']}: {item['value']}")
+            print(f"- **{item['label']}**: {item['value']}")
 
 
 @app.command("indicators")

@@ -8,6 +8,8 @@ from typing import Any
 import diskcache
 import pandas as pd
 
+from value_investment.core.constants import DEFAULT_CACHE_TTL
+
 
 class SmartCache:
     """
@@ -19,7 +21,7 @@ class SmartCache:
     - LRU eviction
     """
 
-    def __init__(self, cache_dir: str = "./.cache", default_ttl: int = 86400):
+    def __init__(self, cache_dir: str = "./.cache", default_ttl: int = DEFAULT_CACHE_TTL):
         self.cache_dir = Path(cache_dir) if cache_dir else Path("./.cache")
         self.default_ttl = default_ttl
         self._cache = diskcache.Cache(str(self.cache_dir))
@@ -109,7 +111,7 @@ class SmartCache:
         # Remove temporary column
         df_copy = df_copy.drop(columns=["_date_temp"])
 
-        return df_copy
+        return pd.DataFrame(df_copy)
 
     def get_or_fetch_with_range(
         self,
@@ -238,7 +240,7 @@ class SmartCache:
 
     def list_keys(self) -> list[str]:
         """List all cached keys"""
-        return list(self._cache.iterkeys())
+        return [str(k) for k in self._cache.iterkeys()]
 
     def close(self) -> None:
         """Close the cache"""

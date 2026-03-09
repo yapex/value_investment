@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any
 
+from value_investment.core.constants import DATE_FORMAT_COMPACT
 from value_investment.data.mapper import DataMapper
 
 
@@ -14,7 +15,7 @@ class DataProvider:
     def get(self, data_type: str, stock_code: str, **kwargs) -> Any:
         # Set default end_date if not provided
         if data_type == 'prices' and 'end_date' not in kwargs:
-            kwargs['end_date'] = datetime.now().strftime('%Y%m%d')
+            kwargs['end_date'] = datetime.now().strftime(DATE_FORMAT_COMPACT)
 
         fetchers = {
             'quarterly': lambda: self._map_quarterly(

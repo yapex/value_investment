@@ -5,6 +5,12 @@ from typing import TYPE_CHECKING, Any, cast
 import akshare as ak  # type: ignore[import-untyped]
 import pandas as pd
 
+from value_investment.core.constants import (
+    A_SHARE_CODE_PREFIXES,
+    DATE_FORMAT,
+    HUNDRED_MILLION,
+    HISTORICAL_DATA_TTL,
+)
 from value_investment.data.mapper import DataMapper
 from value_investment.data.providers.base_provider import (
     BaseProvider,
@@ -75,7 +81,7 @@ class AkshareProvider(BaseProvider):
 
         # A股: 6-digit codes starting with 0, 3, 6
         if code.isdigit() and len(code) == 6:
-            if code[0] in ("0", "3", "6"):
+            if code[0] in A_SHARE_CODE_PREFIXES:
                 return "A股"
 
         # 港股: 5-digit codes
@@ -274,7 +280,7 @@ class AkshareProvider(BaseProvider):
                 "amount": "成交量",
             })
             # Convert date column to string for consistent format
-            data["日期"] = pd.to_datetime(data["日期"]).dt.strftime("%Y-%m-%d")
+            data["日期"] = pd.to_datetime(data["日期"]).dt.strftime(DATE_FORMAT)
             return data
 
         # Use smart cache with range filtering
@@ -284,7 +290,7 @@ class AkshareProvider(BaseProvider):
             fetch_func=fetch_full_data,
             start_date=start_date_normalized,
             end_date=end_date_normalized,
-            ttl=86400 * 365,  # Cache for 1 year
+            ttl=HISTORICAL_DATA_TTL,  # Cache for 1 year
             force_refresh=force_refresh,
         )
 
@@ -362,7 +368,7 @@ class AkshareProvider(BaseProvider):
                 "volume": "成交量",
             })
             # Convert date column to string for consistent format
-            data["日期"] = pd.to_datetime(data["日期"]).dt.strftime("%Y-%m-%d")
+            data["日期"] = pd.to_datetime(data["日期"]).dt.strftime(DATE_FORMAT)
             return data
 
         # Use smart cache with range filtering
@@ -372,7 +378,7 @@ class AkshareProvider(BaseProvider):
             fetch_func=fetch_full_data,
             start_date=start_date_normalized,
             end_date=end_date_normalized,
-            ttl=86400 * 365,  # Cache for 1 year
+            ttl=HISTORICAL_DATA_TTL,  # Cache for 1 year
             force_refresh=force_refresh,
         )
 
@@ -419,7 +425,7 @@ class AkshareProvider(BaseProvider):
             # Convert date column to string for consistent format
             # column name is 'date' not '日期'
             data = data.rename(columns={'date': '日期'})
-            data["日期"] = pd.to_datetime(data["日期"]).dt.strftime("%Y-%m-%d")
+            data["日期"] = pd.to_datetime(data["日期"]).dt.strftime(DATE_FORMAT)
             return data
 
         # Use smart cache with range filtering
@@ -429,7 +435,7 @@ class AkshareProvider(BaseProvider):
             fetch_func=fetch_full_data,
             start_date=start_date_normalized,
             end_date=end_date_normalized,
-            ttl=86400 * 365,  # Cache for 1 year
+            ttl=HISTORICAL_DATA_TTL,  # Cache for 1 year
             force_refresh=force_refresh,
         )
 
@@ -882,7 +888,7 @@ class AkshareProvider(BaseProvider):
             return pd.DataFrame()
 
         # 缓存1年
-        self._cache.set(cache_key, data, ttl=86400 * 365)
+        self._cache.set(cache_key, data, ttl=HISTORICAL_DATA_TTL)
         return data
 
     def _get_a_financial_indicator(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
@@ -909,7 +915,7 @@ class AkshareProvider(BaseProvider):
         # Apply DataMapper to standardize fields
         data = DataMapper.to_standard_format(data)
 
-        self._cache.set(cache_key, data, ttl=86400 * 365)
+        self._cache.set(cache_key, data, ttl=HISTORICAL_DATA_TTL)
         return data
 
     def _get_a_quarterly_indicator(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
@@ -931,7 +937,7 @@ class AkshareProvider(BaseProvider):
         data = self._convert_a_financial_strings(data)
 
         # 缓存1年
-        self._cache.set(cache_key, data, ttl=86400 * 365)
+        self._cache.set(cache_key, data, ttl=HISTORICAL_DATA_TTL)
         return data
 
     def _convert_a_financial_strings(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -956,7 +962,7 @@ class AkshareProvider(BaseProvider):
             try:
                 # Handle Chinese number suffixes
                 if "亿" in val_str:
-                    return float(val_str.replace("亿", "")) * 1e8
+                    return float(val_str.replace("亿", "")) * HUNDRED_MILLION
                 elif "万" in val_str:
                     return float(val_str.replace("万", "")) * 1e4
                 elif "%" in val_str:
@@ -1091,7 +1097,7 @@ class AkshareProvider(BaseProvider):
         data = DataMapper.map_financial_indicator(data, market="US")
 
         # Cache 1 year
-        self._cache.set(cache_key, data, ttl=86400 * 365)
+        self._cache.set(cache_key, data, ttl=HISTORICAL_DATA_TTL)
         return data
 
     def _get_us_quarterly_indicator(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
@@ -1124,5 +1130,5 @@ class AkshareProvider(BaseProvider):
         data = DataMapper.map_quarterly(data, market="US")
 
         # Cache 1 year
-        self._cache.set(cache_key, data, ttl=86400 * 365)
+        self._cache.set(cache_key, data, ttl=HISTORICAL_DATA_TTL)
         return data

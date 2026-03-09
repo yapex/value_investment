@@ -2,6 +2,8 @@
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from value_investment.core.constants import DEFAULT_CACHE_TTL
+
 
 class Settings(BaseSettings):
     """Application settings
@@ -21,7 +23,7 @@ class Settings(BaseSettings):
     
     # Cache settings
     cache_dir: str = Field(default="./.cache", description="Cache directory path")
-    cache_ttl: int = Field(default=86400, description="Cache TTL in seconds (default: 24h)")
+    cache_ttl: int = Field(default=DEFAULT_CACHE_TTL, description="Cache TTL in seconds (default: 24h)")
     
     # Market settings
     default_market: str = Field(default="A", description="Default market: A, HK, or US")

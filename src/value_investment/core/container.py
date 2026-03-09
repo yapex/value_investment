@@ -7,6 +7,7 @@ from dependency_injector.wiring import Provide, inject  # type: ignore
 from value_investment.core.settings import Settings
 from value_investment.core.config import DataSourcesConfig
 from value_investment.core.defaults import DEFAULT_DATASOURCES
+from value_investment.core.constants import DEFAULT_CACHE_TTL
 from value_investment.data.cache import SmartCache
 from value_investment.indicators.factory import IndicatorFactory
 
@@ -30,7 +31,7 @@ class Container(containers.DeclarativeContainer):
     # Configuration with defaults
     config = providers.Configuration()
     config.cache_dir.from_value("./.cache")
-    config.cache_ttl.from_value(86400)
+    config.cache_ttl.from_value(DEFAULT_CACHE_TTL)
     
     # Cache (singleton)
     cache = providers.Singleton(

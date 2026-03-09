@@ -2,6 +2,7 @@
 
 import pandas as pd
 
+from value_investment.core.constants import BILLION, HUNDRED_MILLION
 from value_investment.indicators.base import BaseIndicator, IndicatorResult, IndicatorType
 
 
@@ -161,7 +162,7 @@ class LatestMarketCapIndicator(BaseIndicator):
             return IndicatorResult(
                 value=market_cap,
                 unit="",
-                description=f"最新市值 (股价={latest_price:.2f}, 股本={total_shares/1e8:.2f}亿)",
+                description=f"最新市值 (股价={latest_price:.2f}, 股本={total_shares/HUNDRED_MILLION:.2f}亿)",
                 years=[],
                 values=[]
             )
@@ -178,7 +179,7 @@ class LatestMarketCapIndicator(BaseIndicator):
     def get_required_fields(self) -> list[str]:
         return []
 
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str | None:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -275,7 +276,7 @@ class ImpliedGrowthIndicator(BaseIndicator):
         return IndicatorResult(
             value=implied_growth * 100,  # Convert to percentage
             unit="%",
-            description=f"市场隐含增长率 (市值={market_cap/1e9:.0f}亿, WACC={wacc})",
+            description=f"市场隐含增长率 (市值={market_cap/BILLION:.0f}亿, WACC={wacc})",
             years=[int(data['year'].iloc[0])] if 'year' in data.columns else [],
             values=[]
         )
@@ -336,7 +337,7 @@ class ImpliedGrowthIndicator(BaseIndicator):
     def get_required_fields(self) -> list[str]:
         return ['free_cash_flow', 'operating_cash_flow']
 
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str | None:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -401,7 +402,7 @@ class PEPercentileIndicator(BaseIndicator):
             )
 
     # New methods that use injected data instead of provider
-    def _calculate_pe_ttm_percentile_with_data(self, quarterly_data, prices_data, stock_info, stock_code: str, years: int):
+    def _calculate_pe_ttm_percentile_with_data(self, quarterly_data, prices_data, stock_info, stock_code: str, years: int) -> "IndicatorResult | None":
         """使用PE-TTM计算百分位（使用注入的数据）"""
         from datetime import datetime
 
@@ -564,7 +565,7 @@ class PEPercentileIndicator(BaseIndicator):
         pe_min = min(pe_ttm_list)
         pe_max = max(pe_ttm_list)
 
-        year_labels = [f"{int(d)}Q{int((d % 1) * 4 + 1)}" for d in valid_dates]
+        year_labels = [int(d) for d in valid_dates]
 
         return IndicatorResult(
             value=percentile,
@@ -574,13 +575,19 @@ class PEPercentileIndicator(BaseIndicator):
             values=pe_ttm_list
         )
 
-    def _calculate_annual_pe_percentile_with_data(self, quarterly_data, prices_data, stock_info, stock_code: str, years: int):
+    def _calculate_annual_pe_percentile_with_data(self, quarterly_data, prices_data, stock_info, stock_code: str, years: int) -> "IndicatorResult":
         """使用年度PE计算百分位（使用注入的数据）
 
         注：由于PE-TTM方法已实现，此方法作为后备。目前依赖注入的prices数据暂不支持此方法。
         """
-        # 返回None以触发调用方使用PE-TTM方法的结果
-        return None
+        # 返回默认结果，调用方应使用PE-TTM方法的结果
+        return IndicatorResult(
+            value=0.0,
+            unit="%",
+            description="年度PE百分位计算暂未实现，请使用PE-TTM方法",
+            years=[],
+            values=[]
+        )
 
     def _calculate_pe_ttm_percentile(self, provider, stock_code: str, years: int):
         """使用PE-TTM计算百分位（支持A股和港股）"""
@@ -758,7 +765,7 @@ class PEPercentileIndicator(BaseIndicator):
         pe_max = max(pe_ttm_list)
 
         # 整理年份输出
-        year_labels = [f"{int(d)}Q{int((d % 1) * 4 + 1)}" for d in valid_dates]
+        year_labels = [int(d) for d in valid_dates]
 
         return IndicatorResult(
             value=percentile,
@@ -1029,7 +1036,7 @@ class PEPercentileIndicator(BaseIndicator):
         pe_max = max(pe_ttm_list)
 
         # 整理年份输出
-        year_labels = [f"{int(d)}H" for d in valid_dates]
+        year_labels = [int(d) for d in valid_dates]
 
         return IndicatorResult(
             value=percentile,

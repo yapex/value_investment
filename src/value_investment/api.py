@@ -7,6 +7,13 @@ from datetime import datetime
 
 import pandas as pd
 
+from value_investment.core.constants import (
+    A_SHARE_CODE_PREFIXES,
+    BILLION,
+    DATE_FORMAT,
+    DATE_FORMAT_COMPACT,
+    HUNDRED_MILLION,
+)
 from value_investment.core.container import Container, get_financial_provider, get_market_provider
 from value_investment.core.dependencies import DataProvider, DependencyRegistry
 from value_investment.data.mapper import DataMapper
@@ -113,7 +120,7 @@ class ValueInvestment:
 
         # A 股：6-digit codes starting with 0, 3, 6
         if code.isdigit() and len(code) == 6:
-            if code[0] in ("0", "3", "6"):
+            if code[0] in A_SHARE_CODE_PREFIXES:
                 return "A"
 
         # 港股：5-digit codes
@@ -468,7 +475,7 @@ class ValueInvestment:
             pass
 
         # 计算日期范围，用于获取多年历史数据（如 prices 依赖）
-        end_date = datetime.now().strftime('%Y%m%d')
+        end_date = datetime.now().strftime(DATE_FORMAT_COMPACT)
         start_year = datetime.now().year - years
         start_date = f'{start_year}0101'
 
@@ -568,7 +575,7 @@ class ValueInvestment:
 
         # 格式化日期为 YYYY-MM-DD
         if date_col in result.columns:
-            result[date_col] = pd.to_datetime(result[date_col]).dt.strftime("%Y-%m-%d")
+            result[date_col] = pd.to_datetime(result[date_col]).dt.strftime(DATE_FORMAT)
 
         return result
 
@@ -834,8 +841,8 @@ class ValueInvestment:
                             elif result.unit == "ratio":
                                 row[label] = f"{value:.2f}"
                             elif result.unit == "CNY":
-                                if abs(value) > 1e9:
-                                    row[label] = f"{value/1e9:.2f}十亿"
+                                if abs(value) > BILLION:
+                                    row[label] = f"{value/BILLION:.2f}十亿"
                                 else:
                                     row[label] = f"{value:.2f}"
                                 continue
@@ -865,8 +872,8 @@ class ValueInvestment:
                 if result.unit == "%":
                     summary.append({"label": label, "value": f"{result.value:.1f}%"})
                 elif result.unit == "CNY":
-                    if abs(result.value) > 1e9:
-                        summary.append({"label": label, "value": f"{result.value/1e9:.2f}十亿"})
+                    if abs(result.value) > BILLION:
+                        summary.append({"label": label, "value": f"{result.value/BILLION:.2f}十亿"})
                     else:
                         summary.append({"label": label, "value": f"{result.value:.2f}"})
                 else:

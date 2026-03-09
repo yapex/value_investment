@@ -14,6 +14,7 @@ Usage:
 import pandas as pd
 import yfinance as yf  # type: ignore
 
+from value_investment.core.constants import HISTORICAL_DATA_TTL
 from value_investment.data.providers.base_provider import (
     BaseProvider,
     get_ttl_until_next_midnight,
@@ -34,7 +35,7 @@ class YFinanceProvider(BaseProvider):
     """
 
     # 缓存 TTL 常量
-    HISTORICAL_DATA_TTL = 86400  # 1 天
+    HISTORICAL_DATA_TTL = HISTORICAL_DATA_TTL
 
     def __init__(self, cache, field_mappings=None, **kwargs):
         """Initialize YFinance provider

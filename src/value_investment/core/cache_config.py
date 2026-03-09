@@ -1,5 +1,12 @@
 from dataclasses import dataclass
 
+from value_investment.core.constants import (
+    ONE_DAY_SECONDS,
+    ONE_YEAR_SECONDS,
+    SIX_MONTHS_SECONDS,
+    TWO_YEARS_SECONDS,
+)
+
 
 @dataclass
 class CacheStrategy:
@@ -10,20 +17,20 @@ class CacheStrategy:
     @classmethod
     def for_data_type(cls, data_type: str) -> 'CacheStrategy':
         strategies = {
-            'stock_info': cls(ttl=86400),  # 1 day - expires next morning
-            'historical': cls(ttl=86400 * 365),  # 1 year
-            'quarterly': cls(ttl=86400 * 180),  # 6 months
-            'financial': cls(ttl=86400 * 365 * 2),  # 2 years - expires June next year
+            'stock_info': cls(ttl=ONE_DAY_SECONDS),  # 1 day - expires next morning
+            'historical': cls(ttl=ONE_YEAR_SECONDS),  # 1 year
+            'quarterly': cls(ttl=SIX_MONTHS_SECONDS),  # 6 months
+            'financial': cls(ttl=TWO_YEARS_SECONDS),  # 2 years - expires June next year
         }
         return strategies.get(data_type, cls(ttl=0))
 
 @dataclass
 class CacheConfig:
     """Cache configuration - centralizes TTL settings"""
-    stock_info_ttl: int = 86400
-    historical_ttl: int = 86400 * 365
-    financial_ttl: int = 86400 * 365 * 2
-    quarterly_ttl: int = 86400 * 180
+    stock_info_ttl: int = ONE_DAY_SECONDS
+    historical_ttl: int = ONE_YEAR_SECONDS
+    financial_ttl: int = TWO_YEARS_SECONDS
+    quarterly_ttl: int = SIX_MONTHS_SECONDS
 
     def get_ttl(self, data_type: str) -> int:
         """Get TTL for data type"""

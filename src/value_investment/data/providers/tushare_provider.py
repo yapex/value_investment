@@ -14,6 +14,11 @@ Usage:
 import pandas as pd
 import tushare as ts  # type: ignore
 
+from value_investment.core.constants import (
+    HISTORICAL_DATA_TTL,
+    SHANGHAI_SUFFIX,
+    SHENZHEN_SUFFIX,
+)
 from value_investment.data.providers.base_provider import (
     BaseProvider,
     get_ttl_until_june_next_year,
@@ -33,7 +38,7 @@ class TushareProvider(BaseProvider):
     """
 
     # 缓存 TTL 常量
-    HISTORICAL_DATA_TTL = 86400  # 1 天
+    HISTORICAL_DATA_TTL = HISTORICAL_DATA_TTL
 
     def __init__(self, cache, field_mappings=None, token=""):
         """Initialize Tushare provider
@@ -68,9 +73,9 @@ class TushareProvider(BaseProvider):
         # 6-digit code conversion
         if len(stock_code) == 6 and stock_code.isdigit():
             if stock_code.startswith(("0", "3")):
-                return f"{stock_code}.SZ"  # 深圳
+                return f"{stock_code}{SHENZHEN_SUFFIX}"  # 深圳
             elif stock_code.startswith("6"):
-                return f"{stock_code}.SH"  # 上海
+                return f"{stock_code}{SHANGHAI_SUFFIX}"  # 上海
 
         # Return as-is if format is unknown
         return stock_code
@@ -321,7 +326,7 @@ class TushareProvider(BaseProvider):
 
         if result is not None and not result.empty:
             # 缓存1年
-            ttl = 86400 * 365
+            ttl = HISTORICAL_DATA_TTL
             self._set_to_cache(cache_key, result, ttl=ttl)
             return result
 

@@ -1,6 +1,8 @@
 """Market enum and detection functions for multi-market support"""
 from enum import Enum
 
+from value_investment.core.constants import A_SHARE_CODE_PREFIXES
+
 
 class Market(str, Enum):
     """Supported markets for financial analysis"""
@@ -26,7 +28,7 @@ def detect_market(code: str) -> str | None:
 
     # A股: 6-digit codes starting with 0, 3, 6
     if code.isdigit() and len(code) == 6:
-        if code[0] in ("0", "3", "6"):
+        if code[0] in A_SHARE_CODE_PREFIXES:
             return Market.A.value
 
     # 港股: 5-digit codes

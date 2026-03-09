@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 
+from value_investment.core.constants import DATE_FORMAT, HISTORICAL_DATA_TTL
 from value_investment.data.providers.base_provider import (
     BaseProvider,
     get_ttl_until_june_next_year,
@@ -72,13 +73,13 @@ class USShareProvider(BaseProvider):
                 return pd.DataFrame()
 
             data = data.rename(columns={'date': '日期'})
-            data["日期"] = pd.to_datetime(data["日期"]).dt.strftime("%Y-%m-%d")
+            data["日期"] = pd.to_datetime(data["日期"]).dt.strftime(DATE_FORMAT)
             return data
 
         result = self._cache.get_or_fetch_with_range(
             key=cache_key, date_column="日期", fetch_func=fetch_full_data,
             start_date=start_date_normalized, end_date=end_date_normalized,
-            ttl=86400 * 365, force_refresh=force_refresh,
+            ttl=HISTORICAL_DATA_TTL, force_refresh=force_refresh,
         )
         return cast(pd.DataFrame, result)
 

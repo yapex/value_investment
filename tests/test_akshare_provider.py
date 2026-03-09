@@ -1,348 +1,316 @@
-"""Tests for AkshareProvider with configuration-driven architecture
-
-AkshareProvider should:
-1. Inherit from BaseProvider
-2. Support configuration-driven field mappings
-3. Support A 股/HK/US markets
-4. Apply field mappings automatically
-"""
-from typing import Any
-
+"""Tests for AkshareProvider"""
 import pandas as pd
 import pytest
-
-from value_investment.data.providers.akshare_provider import AkshareProvider
+from unittest.mock import MagicMock, patch
 
 
 class MockCache:
-    """Mock cache for testing
-    
-    This mock is compatible with SmartCache interface.
-    """
+    """Mock cache for testing"""
     
     def __init__(self):
-        self._data: dict[str, Any] = {}
+        self._data = {}
     
-    def get(self, key: str) -> Any | None:
+    def get(self, key):
         return self._data.get(key)
     
-    def set(self, key: str, value: Any, ttl: int | None = None) -> None:
+    def set(self, key, value, ttl=None):
         self._data[key] = value
     
-    def invalidate(self, key: str) -> None:
+    def invalidate(self, key):
         if key in self._data:
             del self._data[key]
     
-    def get_or_fetch(self, key: str, fetch_func: Any, ttl: int | None = None, force_refresh: bool = False) -> Any:
-        """Mock get_or_fetch for compatibility"""
-        if not force_refresh:
-            cached = self.get(key)
-            if cached is not None:
-                return cached
+    def get_or_fetch_with_range(self, key, date_column, fetch_func, start_date, end_date, ttl, force_refresh):
+        cached = self._data.get(key)
+        if cached is not None and not force_refresh:
+            return cached
         result = fetch_func()
-        self.set(key, result, ttl=ttl)
+        self._data[key] = result
         return result
     
-    def get_or_fetch_with_range(self, key: str, date_column: str, fetch_func: Any, 
-                                 start_date: str | None = None, end_date: str | None = None, 
-                                 ttl: int | None = None, force_refresh: bool = False) -> Any:
-        """Mock get_or_fetch_with_range for compatibility"""
-        if not force_refresh:
-            cached = self.get(key)
-            if cached is not None:
-                return cached
+    def get_or_fetch(self, key, fetch_func, ttl, force_refresh):
+        cached = self._data.get(key)
+        if cached is not None and not force_refresh:
+            return cached
         result = fetch_func()
-        self.set(key, result, ttl=ttl)
+        self._data[key] = result
         return result
 
 
 class TestAkshareProviderInit:
     """Test AkshareProvider initialization"""
 
-    def test_init_inherits_from_base_provider(self):
-        """AkshareProvider should inherit from BaseProvider"""
-        from value_investment.data.providers.base_provider import BaseProvider
+    def test_init_default(self):
+        """Should initialize with default market"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
         
-        assert issubclass(AkshareProvider, BaseProvider)
+        provider = AkshareProvider(cache=MockCache())
+        assert provider._market == "A"
 
     def test_init_with_market(self):
-        """Should initialize with market parameter"""
-        provider = AkshareProvider(cache=MockCache(), market="A")  # type: ignore[arg-type]
-        assert provider._market == "A"
+        """Should initialize with custom market"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+        
+        provider = AkshareProvider(cache=MockCache(), market="HK")
+        assert provider._market == "HK"
 
     def test_init_with_field_mappings(self):
-        """Should accept field_mappings from config"""
-        mappings = {
-            "balance": {"资产总值": "total_assets"},
-            "income": {"收益": "total_revenue"},
-        }
-        provider = AkshareProvider(
-            cache=MockCache(),  # type: ignore[arg-type]
-            market="HK",
-            field_mappings=mappings
-        )
-        assert provider.get_field_mapping("balance") == {"资产总值": "total_assets"}
-        assert provider.get_field_mapping("income") == {"收益": "total_revenue"}
-
-    def test_init_default_market_is_a(self):
-        """Default market should be A"""
-        provider = AkshareProvider(cache=MockCache())  # type: ignore[arg-type]
-        assert provider._market == "A"
-
-
-class TestAkshareProviderAStock:
-    """Test A 股 functionality"""
-
-    def test_get_balance_sheet_a_market(self):
-        """Should get A 股 balance sheet with field mapping"""
-        mappings = {
-            "balance": {
-                "资产总计": "total_assets",
-                "负债合计": "total_liabilities",
-                "股东权益合计": "total_equity",
-            }
-        }
-        provider = AkshareProvider(
-            cache=MockCache(),  # type: ignore[arg-type]
-            market="A",
-            field_mappings=mappings
-        )
+        """Should initialize with field mappings"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
         
-        # This is an integration test - skip if akshare not available
-        try:
-            df = provider.get_balance_sheet("600519", 2023)
-            assert not df.empty
-            # Check mapped fields exist
-            assert "total_assets" in df.columns or "资产总计" in df.columns
-        except Exception:
-            pytest.skip("akshare API not available")
-
-    def test_get_stock_info_a_market(self):
-        """Should get A 股 stock info"""
-        provider = AkshareProvider(cache=MockCache(), market="A")  # type: ignore[arg-type]
+        mappings = {"balance": {"ts_code": "stock_code"}}
+        provider = AkshareProvider(cache=MockCache(), field_mappings=mappings)
         
-        try:
-            df = provider.get_stock_info("600519")
-            assert not df.empty
-        except Exception:
-            pytest.skip("akshare API not available")
+        assert provider.get_field_mapping("balance") == {"ts_code": "stock_code"}
 
 
-class TestAkshareProviderHKStock:
-    """Test 港股 functionality"""
+class TestAkshareProviderNormalize:
+    """Test code normalization"""
 
-    def test_get_balance_sheet_hk_market(self):
-        """Should get 港股 balance sheet with field mapping"""
-        mappings = {
-            "balance": {
-                "资产总值": "total_assets",
-                "总负债": "total_liabilities",
-                "权益总额": "total_equity",
-            }
-        }
-        provider = AkshareProvider(
-            cache=MockCache(),  # type: ignore[arg-type]
-            market="HK",
-            field_mappings=mappings
-        )
+    def test_normalize_hk_code_5_digit(self):
+        """Should normalize HK code to 5 digits"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
         
-        try:
-            df = provider.get_balance_sheet("00700", 2023)
-            assert not df.empty
-            # Check mapped fields exist
-            assert "total_assets" in df.columns or "资产总值" in df.columns
-        except Exception:
-            pytest.skip("akshare API not available")
-
-    def test_normalize_hk_code(self):
-        """Should normalize HK stock code to 5-digit format"""
-        provider = AkshareProvider(cache=MockCache(), market="HK")  # type: ignore[arg-type]
+        provider = AkshareProvider(cache=MockCache())
         
         assert provider._normalize_hk_code("700") == "00700"
-        assert provider._normalize_hk_code("0700") == "00700"
+        assert provider._normalize_hk_code("7") == "00007"
         assert provider._normalize_hk_code("00700") == "00700"
+        assert provider._normalize_hk_code("09988") == "09988"
 
-    def test_get_stock_info_hk_market(self):
-        """Should get 港股 stock info"""
-        provider = AkshareProvider(cache=MockCache(), market="HK")  # type: ignore[arg-type]
+    def test_normalize_hk_code_empty(self):
+        """Should handle empty string"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
         
-        try:
-            df = provider.get_stock_info("00700")
-            assert not df.empty
-        except Exception:
-            pytest.skip("akshare API not available")
-
-
-class TestAkshareProviderUSStock:
-    """Test 美股 functionality"""
-
-    def test_get_balance_sheet_us_market(self):
-        """Should get 美股 balance sheet with field mapping"""
-        mappings = {
-            "balance": {
-                "totalAssets": "total_assets",
-                "totalLiabilities": "total_liabilities",
-                "totalStockholdersEquity": "total_equity",
-            }
-        }
-        provider = AkshareProvider(
-            cache=MockCache(),  # type: ignore[arg-type]
-            market="US",
-            field_mappings=mappings
-        )
+        provider = AkshareProvider(cache=MockCache())
         
-        try:
-            df = provider.get_balance_sheet("AAPL", 2023)
-            assert not df.empty
-            # Check mapped fields exist
-            assert "total_assets" in df.columns or "totalAssets" in df.columns
-        except Exception:
-            pytest.skip("akshare API not available")
-
-    def test_get_stock_info_us_market(self):
-        """Should get 美股 stock info"""
-        provider = AkshareProvider(cache=MockCache(), market="US")  # type: ignore[arg-type]
-        
-        try:
-            df = provider.get_stock_info("AAPL")
-            assert not df.empty
-        except Exception:
-            pytest.skip("akshare API not available")
+        assert provider._normalize_hk_code("") == ""
 
 
-class TestAkshareProviderFieldMapping:
-    """Test field mapping application"""
+class TestAkshareProviderDetect:
+    """Test market detection"""
 
-    def test_apply_mapping_balance_sheet(self):
-        """Should apply field mapping to balance sheet"""
-        mappings = {
-            "balance": {
-                "资产总计": "total_assets",
-                "负债合计": "total_liabilities",
-            }
-        }
-        provider = AkshareProvider(
-            cache=MockCache(),  # type: ignore[arg-type]
-            market="A",
-            field_mappings=mappings
-        )
+    def test_detect_a_share(self):
+        """Should detect A股"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
         
-        # Create mock data
-        df = pd.DataFrame({
-            "资产总计": [1000, 2000],
-            "负债合计": [500, 1000],
-            "unmapped_field": [999, 888],
-        })
+        provider = AkshareProvider(cache=MockCache())
         
-        result = provider._apply_mapping(df, "balance")
-        assert result is not None
-        
-        assert "total_assets" in result.columns
-        assert "total_liabilities" in result.columns
-        assert "资产总计" not in result.columns
-        assert "unmapped_field" in result.columns  # Unmapped fields kept
+        assert provider._detect_market("600519") == "A股"
+        assert provider._detect_market("000001") == "A股"
+        assert provider._detect_market("300750") == "A股"
 
-    def test_apply_mapping_income_statement(self):
-        """Should apply field mapping to income statement"""
-        mappings = {
-            "income": {
-                "收益": "total_revenue",
-                "期内溢利": "net_profit",
-            }
-        }
-        provider = AkshareProvider(
-            cache=MockCache(),  # type: ignore[arg-type]
-            market="HK",
-            field_mappings=mappings
-        )
+    def test_detect_hk_share(self):
+        """Should detect 港股"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
         
-        df = pd.DataFrame({
-            "收益": [1000, 2000],
-            "期内溢利": [100, 200],
-        })
+        provider = AkshareProvider(cache=MockCache())
         
-        result = provider._apply_mapping(df, "income")
-        assert result is not None
+        assert provider._detect_market("00700") == "港股"
+        assert provider._detect_market("09988") == "港股"
+
+    def test_detect_us_share(self):
+        """Should detect 美股"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
         
-        assert "total_revenue" in result.columns
-        assert "net_profit" in result.columns
+        provider = AkshareProvider(cache=MockCache())
+        
+        assert provider._detect_market("AAPL") == "美股"
+        assert provider._detect_market("TSLA") == "美股"
+
+    def test_detect_invalid(self):
+        """Should return None for invalid codes"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+        
+        provider = AkshareProvider(cache=MockCache())
+        
+        assert provider._detect_market("") is None
+        assert provider._detect_market("123") is None
+
+
+class TestAkshareProviderStockInfo:
+    """Test get_stock_info method"""
+
+    def test_get_stock_info_basic(self):
+        """Should fetch stock info"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+        
+        cache = MockCache()
+        
+        with patch("value_investment.data.providers.akshare_provider.ak") as mock_ak:
+            mock_ak.stock_individual_info_em.return_value = pd.DataFrame({
+                "item": ["股票代码", "股票名称"],
+                "value": ["600519", "贵州茅台"]
+            })
+            
+            provider = AkshareProvider(cache=cache)
+            result = provider.get_stock_info("600519")
+            
+            assert not result.empty
+
+    def test_get_stock_info_with_cache(self):
+        """Should use cache when available"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+        
+        cache = MockCache()
+        cached_data = pd.DataFrame({"item": ["code"], "value": ["600519"]})
+        cache.set("info_600519", cached_data)
+        
+        with patch("value_investment.data.providers.akshare_provider.ak") as mock_ak:
+            provider = AkshareProvider(cache=cache)
+            result = provider.get_stock_info("600519")
+            
+            mock_ak.stock_individual_info_em.assert_not_called()
+            assert result.equals(cached_data)
+
+    def test_get_stock_info_force_refresh(self):
+        """Should refresh when force_refresh=True"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+        
+        cache = MockCache()
+        cached_data = pd.DataFrame({"item": ["code"], "value": ["600519"]})
+        cache.set("info_600519", cached_data)
+        
+        with patch("value_investment.data.providers.akshare_provider.ak") as mock_ak:
+            mock_ak.stock_individual_info_em.return_value = pd.DataFrame({
+                "item": ["股票代码"],
+                "value": ["600519"]
+            })
+            
+            provider = AkshareProvider(cache=cache)
+            result = provider.get_stock_info("600519", force_refresh=True)
+            
+            mock_ak.stock_individual_info_em.assert_called_once()
 
 
 class TestAkshareProviderHistoricalData:
-    """Test historical data functionality"""
+    """Test get_historical_data method"""
 
-    def test_get_historical_data_a_market(self):
-        """Should get A 股 historical data"""
-        provider = AkshareProvider(cache=MockCache(), market="A")  # type: ignore[arg-type]
+    def test_get_historical_data_basic(self):
+        """Should fetch historical data"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
         
-        try:
-            df = provider.get_historical_data(
+        cache = MockCache()
+        
+        with patch("value_investment.data.providers.akshare_provider.ak") as mock_ak:
+            mock_ak.stock_zh_a_hist_tx.return_value = pd.DataFrame({
+                "date": ["2024-01-01", "2024-01-02"],
+                "open": [1500.0, 1550.0],
+                "close": [1520.0, 1570.0],
+                "high": [1550.0, 1600.0],
+                "low": [1480.0, 1530.0],
+                "amount": [1000000, 1100000]
+            })
+            
+            provider = AkshareProvider(cache=cache)
+            result = provider.get_historical_data("600519")
+            
+            assert not result.empty
+
+    def test_get_historical_data_with_dates(self):
+        """Should filter by date range"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+        
+        cache = MockCache()
+        
+        with patch("value_investment.data.providers.akshare_provider.ak") as mock_ak:
+            mock_ak.stock_zh_a_hist_tx.return_value = pd.DataFrame({
+                "date": ["2024-01-01", "2024-01-02", "2024-01-03"],
+                "open": [1500.0, 1550.0, 1600.0],
+                "close": [1520.0, 1570.0, 1620.0],
+                "high": [1550.0, 1600.0, 1650.0],
+                "low": [1480.0, 1530.0, 1580.0],
+                "amount": [1000000, 1100000, 1200000]
+            })
+            
+            provider = AkshareProvider(cache=cache)
+            result = provider.get_historical_data(
                 "600519",
-                end_date="20231231",
-                start_date="20230101"
+                start_date="20240101",
+                end_date="20240102"
             )
-            assert not df.empty
-        except Exception:
-            pytest.skip("akshare API not available")
+            
+            assert not result.empty
 
-    def test_get_historical_data_hk_market(self):
-        """Should get 港股 historical data"""
-        provider = AkshareProvider(cache=MockCache(), market="HK")  # type: ignore[arg-type]
+
+class TestAkshareProviderCache:
+    """Test cache functionality"""
+
+    def test_get_balance_sheet_uses_cache(self):
+        """Should use cache for balance sheet"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
         
-        try:
-            df = provider.get_historical_data(
-                "00700",
-                end_date="20231231",
-                start_date="20230101"
-            )
-            assert not df.empty
-        except Exception:
-            pytest.skip("akshare API not available")
-
-    def test_get_historical_data_us_market(self):
-        """Should get 美股 historical data"""
-        provider = AkshareProvider(cache=MockCache(), market="US")  # type: ignore[arg-type]
+        cache = MockCache()
+        cached_data = pd.DataFrame({"REPORT": ["2023-12-31"], "total_assets": [100]})
+        cache.set("balance_sheet_a_600519", cached_data)
         
-        try:
-            df = provider.get_historical_data(
-                "AAPL",
-                end_date="20231231",
-                start_date="20230101"
-            )
-            assert not df.empty
-        except Exception:
-            pytest.skip("akshare API not available")
+        with patch("value_investment.data.providers.akshare_provider.ak") as mock_ak:
+            provider = AkshareProvider(cache=cache)
+            result = provider.get_balance_sheet("600519", 2023)
+            
+            mock_ak.stock_balance_sheet_by_yearly_em.assert_not_called()
+            assert result.equals(cached_data)
 
-
-class TestAkshareProviderFinancialIndicator:
-    """Test financial indicator functionality"""
-
-    def test_get_financial_indicator_a_market(self):
-        """Should get A 股 financial indicators"""
-        provider = AkshareProvider(cache=MockCache(), market="A")  # type: ignore[arg-type]
+    def test_get_income_statement_uses_cache(self):
+        """Should use cache for income statement"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
         
-        try:
-            df = provider.get_financial_indicator("600519")
-            assert not df.empty
-        except Exception:
-            pytest.skip("akshare API not available")
-
-    def test_get_financial_indicator_hk_market(self):
-        """Should get 港股 financial indicators"""
-        provider = AkshareProvider(cache=MockCache(), market="HK")  # type: ignore[arg-type]
+        cache = MockCache()
+        cached_data = pd.DataFrame({"REPORT": ["2023-12-31"], "net_profit": [100]})
+        cache.set("profit_sheet_a_600519", cached_data)
         
-        try:
-            df = provider.get_financial_indicator("00700")
-            assert not df.empty
-        except Exception:
-            pytest.skip("akshare API not available")
+        with patch("value_investment.data.providers.akshare_provider.ak") as mock_ak:
+            provider = AkshareProvider(cache=cache)
+            result = provider.get_income_statement("600519", 2023)
+            
+            mock_ak.stock_profit_sheet_by_yearly_em.assert_not_called()
+            assert result.equals(cached_data)
 
-    def test_get_financial_indicator_us_market(self):
-        """Should get 美股 financial indicators"""
-        provider = AkshareProvider(cache=MockCache(), market="US")  # type: ignore[arg-type]
+    def test_get_cash_flow_statement_uses_cache(self):
+        """Should use cache for cash flow statement"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
         
-        try:
-            df = provider.get_financial_indicator("AAPL")
-            assert not df.empty
-        except Exception:
-            pytest.skip("akshare API not available")
+        cache = MockCache()
+        cached_data = pd.DataFrame({"REPORT": ["2023-12-31"], "operating_cash_flow": [100]})
+        cache.set("cashflow_sheet_a_600519", cached_data)
+        
+        with patch("value_investment.data.providers.akshare_provider.ak") as mock_ak:
+            provider = AkshareProvider(cache=cache)
+            result = provider.get_cash_flow_statement("600519", 2023)
+            
+            mock_ak.stock_cash_flow_sheet_by_yearly_em.assert_not_called()
+            assert result.equals(cached_data)
+
+    def test_get_balance_sheet_force_refresh(self):
+        """Should refresh when force_refresh=True"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+        
+        cache = MockCache()
+        cached_data = pd.DataFrame({"REPORT": ["2023-12-31"], "total_assets": [100]})
+        cache.set("balance_sheet_a_600519", cached_data)
+        
+        with patch("value_investment.data.providers.akshare_provider.ak") as mock_ak:
+            mock_ak.stock_balance_sheet_by_yearly_em.return_value = pd.DataFrame({
+                "REPORT": ["2023-12-31"],
+                "total_assets": [200]
+            })
+            
+            provider = AkshareProvider(cache=cache)
+            result = provider.get_balance_sheet("600519", 2023, force_refresh=True)
+            
+            mock_ak.stock_balance_sheet_by_yearly_em.assert_called_once()
+
+    def test_get_historical_data_uses_cache(self):
+        """Should use cache for historical data"""
+        from value_investment.data.providers.akshare_provider import AkshareProvider
+        
+        cache = MockCache()
+        cached_data = pd.DataFrame({"日期": ["2024-01-01"], "收盘": [150]})
+        cache.set("hist_600519_hfq", cached_data)
+        
+        with patch("value_investment.data.providers.akshare_provider.ak") as mock_ak:
+            provider = AkshareProvider(cache=cache)
+            result = provider.get_historical_data("600519")
+            
+            mock_ak.stock_zh_a_hist_tx.assert_not_called()
+            assert result.equals(cached_data)

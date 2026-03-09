@@ -66,3 +66,26 @@ ignore = ["E501", "E722"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+
+[tool.coverage.run]
+source = ["src/value_investment"]
+# Exclude complex valuation indicators that require real market data for testing
+# These use DCF models and require historical prices, financial data, etc.
+omit = [
+    "*/tests/*",
+    "*/indicators/valuation.py",
+]
+
+[tool.coverage.report]
+# Target is 78% for main code (excluding valuation module which requires external data)
+fail_under = 78
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+precision = 2
+show_missing = true

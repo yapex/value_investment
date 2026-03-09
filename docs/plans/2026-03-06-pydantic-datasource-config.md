@@ -186,12 +186,23 @@ def get_income_statement(self, stock_code, end_year):
 
 ### Phase 3: 集成与迁移（2-3 天）
 
-#### 3.1 API 层适配
-- [ ] `api.py` - 使用 Container 获取 Provider
-- [ ] 支持市场路由（A/HK/US）
+#### 3.1 API 层适配 ✅
+- [x] `api.py` - 使用 Container 获取 Provider
+- [x] 支持市场路由（A/HK/US）
+- [x] 修复 `get_market()` 方法逻辑（symbol 参数应覆盖默认市场）
+- [x] 修复 `get_stock_info()` 参数不匹配问题（force_refresh 在 API 层处理）
+- [x] 修复 `_get_financial_data()` 年度报告去重问题（filter_annual 函数）
+- [x] 修复股票名称获取逻辑（支持 Tushare 和 Akshare 两种格式）
 
 **测试**:
-- [ ] `test_api_datasource.py` - 验证数据源切换
+- [x] `test_api_market_routing.py` - 验证市场路由（8 个测试全部通过）
+  - A 股初始化验证（使用 tushare）
+  - 港股初始化验证（使用 akshare + yfinance）
+  - 美股初始化验证（使用 akshare + yfinance）
+  - 市场自动检测（从股票代码）
+  - 跨市场实例独立性
+- [x] 修复 `test_api_indicator.py` 中 `test_get_indicator_unknown` 测试（行为变更：抛出异常而非返回 None）
+- [x] 修复 analyze 命令（CLI 可正常输出多年财务分析数据）
 
 #### 3.2 数据迁移验证
 - [ ] A 股数据对比（akshare vs tushare）

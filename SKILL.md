@@ -29,7 +29,6 @@ description: Use when analyzing A股/港股/美股基本面，需要查询股票
 | 财务指标 | `v-invest finind 600519 -m A` |
 | 单个指标 | `v-invest indicator ROIC -s 00700 -m HK` |
 | PE百分位 | `v-invest indicator PEPct -s 600519 -m A -y 10` |
-| 完整分析 | `v-invest analyze 600519` |
 | **可用字段** | `v-invest fields A balance` |
 | **可用指标** | `v-invest indicators A` |
 

@@ -157,33 +157,6 @@ def finind(
     print(pd.DataFrame(items).to_markdown(index=False))
 
 
-@app.command()
-def analyze(
-    stock_code: str = typer.Argument(..., help="Stock code"),
-    years: int = typer.Option(10, "--years", "-y", help="Number of years"),
-    market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
-):
-    """Perform complete analysis"""
-    vi = ValueInvestment(market=_get_market(market, stock_code))
-    result = vi.analyze(stock_code, years, cagr_metrics=["revenue", "net_profit"])
-
-    # Handle empty results
-    if result["table"].empty and not result["summary"]:
-        print(f"### {stock_code} 财务分析\n\n无财务数据")
-        return
-
-    # Output as Markdown
-    print(f"### {result['name']} 财务分析 ({result['year_range']})\n")
-    
-    if not result["table"].empty:
-        print(result["table"].to_markdown(index=False))
-    
-    if result["summary"]:
-        print()
-        for item in result["summary"]:
-            print(f"- **{item['label']}**: {item['value']}")
-
-
 @app.command("indicators")
 def list_indicators(
     market: str = typer.Argument(..., help="Market: A, HK, US"),

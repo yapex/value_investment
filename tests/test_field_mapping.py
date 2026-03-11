@@ -33,7 +33,44 @@ class TestFieldMapping:
         assert get_mapped_field("unknown_indicator", "A股") is None
 
 
-class TestDataMapperHKSpecific:
+class TestCrossMarketIntegration:
+    """Test DataMapper for 跨市场集成测试 - Task 10"""
+
+    def test_cross_market_common_fields(self):
+        """验证跨市场共同字段"""
+        from value_investment.api import ValueInvestment
+        
+        vi_a = ValueInvestment(market='A')
+        data_a = vi_a.get_financial_indicator('600519')
+        
+        vi_hk = ValueInvestment(market='HK')
+        data_hk = vi_hk.get_financial_indicator('00700')
+        
+        # 验证两个市场都有数据
+        assert not data_a.empty, "A股数据不应为空"
+        assert not data_hk.empty, "港股数据不应为空"
+        
+        # 验证字段数量
+        assert len(data_a.columns) >= 50, f"A股应有50+字段，实际: {len(data_a.columns)}"
+        assert len(data_hk.columns) >= 10, f"港股应有10+字段，实际: {len(data_hk.columns)}"
+        
+        # 验证共同核心字段
+        common_fields = ['roe', 'roa', 'basic_eps', 'net_profit_margin']
+        for field in common_fields:
+            assert field in data_a.columns, f"A股缺少字段: {field}"
+            assert field in data_hk.columns, f"港股缺少字段: {field}"
+
+    def test_hk_specific_fields_available(self):
+        """验证港股特有字段可用"""
+        from value_investment.api import ValueInvestment
+        
+        vi_hk = ValueInvestment(market='HK')
+        data_hk = vi_hk.get_financial_indicator('00700')
+        
+        # 验证港股特有字段
+        hk_specific = ['hk_dividend_yield_ttm', 'hk_market_cap', 'pe_ratio', 'pb_ratio']
+        for field in hk_specific:
+            assert field in data_hk.columns, f"港股缺少特有字段: {field}"
     """Test DataMapper for 港股 fields - Task 8: 港股特有指标"""
 
     def test_hk_dividend_yield_mapping(self):

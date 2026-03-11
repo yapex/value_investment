@@ -33,7 +33,39 @@ class TestFieldMapping:
         assert get_mapped_field("unknown_indicator", "A股") is None
 
 
-class TestDataMapperHKBalanceSheet:
+class TestDataMapperHKCashflow:
+    """Test DataMapper for 港股 fields - Task 3: 现金流量表核心字段"""
+
+    def test_hk_operating_cash_flow_mapping(self):
+        """港股 '经营业务现金净额' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("经营业务现金净额", "港股")
+        assert result == "operating_cash_flow"
+
+    def test_hk_investing_cash_flow_mapping(self):
+        """港股 '投资业务现金净额' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("投资业务现金净额", "港股")
+        assert result == "investing_cash_flow"
+
+    def test_hk_financing_cash_flow_mapping(self):
+        """港股 '融资业务现金净额' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("融资业务现金净额", "港股")
+        assert result == "financing_cash_flow"
+
+    def test_hk_standard_cashflow_fields_passthrough(self):
+        """港股返回标准字段名时应保持不变"""
+        from value_investment.data.mapper import DataMapper
+        
+        # 港股 API 返回标准字段名
+        standard_fields = ["operating_cash_flow", "investing_cash_flow", "financing_cash_flow"]
+        for field in standard_fields:
+            result = DataMapper.get_standard_field(field, "港股")
+            assert result == field, f"港股字段 {field} 应该透传"
     """Test DataMapper for 港股 fields - Task 2: 资产负债表核心字段"""
 
     def test_hk_total_assets_mapping(self):

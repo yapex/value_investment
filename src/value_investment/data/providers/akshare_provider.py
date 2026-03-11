@@ -1101,21 +1101,116 @@ class AkshareProvider(BaseProvider):
         return df
 
     def _get_hk_financial_indicator(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
-        """Get 港股 financial indicators"""
+        """Get 港股 financial indicators
+        
+        聚合多个数据源:
+        1. stock_hk_financial_indicator_em - 基础指标
+        2. stock_financial_hk_report_em - 三表数据
+        """
         # Normalize HK stock code to 5-digit format
         hk_code = self._normalize_hk_code(symbol)
-        cache_key = f"indicator_hk_{hk_code}"
+        cache_key = f"indicator_hk_{hk_code}_enriched"
         ttl = get_ttl_until_june_next_year(datetime.now().year)
 
         def fetch():
+            # 1. 获取基础财务指标
             data = ak.stock_hk_financial_indicator_em(symbol=hk_code)
             if data is None or (hasattr(data, 'empty') and data.empty):
                 return pd.DataFrame()
+            
             # Apply field mapping using DataMapper (HK market)
             data = DataMapper.map_financial_indicator(data, market='HK')
+            
+            # 2. 从三表补充更多指标
+            data = self._enrich_hk_indicators_from_statements(data, hk_code)
+            
             return data
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
+
+    def _enrich_hk_indicators_from_statements(self, df: pd.DataFrame, hk_code: str) -> pd.DataFrame:
+        """从港股三表补充财务指标"""
+        if df.empty:
+            return df
+        
+        try:
+            # 获取资产负债表
+            balance_df = ak.stock_financial_hk_report_em(
+                stock=hk_code, symbol="资产负债表", indicator="年度"
+            )
+            
+            # 获取利润表
+            income_df = ak.stock_financial_hk_report_em(
+                stock=hk_code, symbol="利润表", indicator="年度"
+            )
+            
+            if balance_df is None or (hasattr(balance_df, 'empty') and balance_df.empty):
+                return df
+            if income_df is None or (hasattr(income_df, 'empty') and income_df.empty):
+                return df
+            
+            # 转换长表为宽表
+            balance_wide = self._transform_hk_financial_data(balance_df)
+            income_wide = self._transform_hk_financial_data(income_df)
+            
+            if balance_wide.empty or income_wide.empty:
+                return df
+            
+            # 获取最新一年的数据
+            if 'year' not in balance_wide.columns or balance_wide.empty:
+                return df
+            if 'year' not in income_wide.columns or income_wide.empty:
+                return df
+                
+            latest_year = min(
+                balance_wide['year'].max() if 'year' in balance_wide.columns else datetime.now().year,
+                income_wide['year'].max() if 'year' in income_wide.columns else datetime.now().year
+            )
+            
+            latest_balance = balance_wide[balance_wide['year'] == latest_year].iloc[0]
+            latest_income = income_wide[income_wide['year'] == latest_year].iloc[0]
+            
+            # 计算补充指标
+            # 总资产 = 流动资产合计 + 非流动资产合计
+            current_assets = latest_balance.get('流动资产合计', 0) or 0
+            non_current_assets = latest_balance.get('非流动资产合计', 0) or 0
+            total_assets = current_assets + non_current_assets
+            
+            # 总负债 = 流动负债合计 + 非流动负债合计
+            current_liabilities = latest_balance.get('流动负债合计', 0) or 0
+            non_current_liabilities = latest_balance.get('非流动负债合计', 0) or 0
+            total_liabilities = current_liabilities + non_current_liabilities
+            
+            # 毛利率 = 毛利 / 营收 * 100
+            # 港股利润表中: 营业额 或 营运收入
+            gross_profit = latest_income.get('毛利', 0) or latest_income.get('营业毛利', 0) or 0
+            revenue = latest_income.get('营业额', 0) or latest_income.get('营运收入', 0) or latest_income.get('营业总收入', 0) or 0
+            
+            if revenue and revenue > 0 and gross_profit:
+                df.at[0, 'gross_profit_margin'] = round(gross_profit / revenue * 100, 2)
+            
+            # 资产负债率 = 总负债 / 总资产 * 100
+            if total_assets and total_assets > 0 and total_liabilities:
+                df.at[0, 'debt_ratio'] = round(total_liabilities / total_assets * 100, 2)
+            
+            # 流动比率 = 流动资产 / 流动负债
+            if current_liabilities and current_liabilities > 0:
+                df.at[0, 'current_ratio'] = round(current_assets / current_liabilities, 2)
+            
+            # 速动比率 = (流动资产 - 存货) / 流动负债
+            # 港股可能有存货字段
+            inventory = latest_balance.get('存货', 0) or 0
+            if current_liabilities and current_liabilities > 0:
+                quick_assets = current_assets - inventory
+                df.at[0, 'quick_ratio'] = round(quick_assets / current_liabilities, 2)
+                    
+        except Exception as e:
+            # 如果补充失败，返回原始数据
+            import traceback
+            traceback.print_exc()
+            pass
+        
+        return df
 
     def _get_us_financial_indicator(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get US stock financial indicators"""

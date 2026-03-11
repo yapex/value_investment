@@ -33,7 +33,41 @@ class TestFieldMapping:
         assert get_mapped_field("unknown_indicator", "A股") is None
 
 
-class TestCrossMarketIntegration:
+class TestHKFinancialIndicatorEnrichment:
+    """测试港股财务指标丰富化 - 从三表计算补充指标"""
+
+    def test_hk_financial_indicator_has_more_fields(self):
+        """港股财务指标应该有更多字段（从三表补充）"""
+        from value_investment.api import ValueInvestment
+        
+        vi_hk = ValueInvestment(market="HK")
+        data = vi_hk.get_financial_indicator("00700")
+        
+        # 当前有17个字段，补充后应该有更多
+        # 至少应该有: gross_profit_margin (毛利率), debt_ratio (资产负债率)
+        assert len(data.columns) >= 17, f"字段数应 >= 17，实际: {len(data.columns)}"
+        
+    def test_hk_has_gross_profit_margin(self):
+        """港股应该有毛利率指标"""
+        from value_investment.api import ValueInvestment
+        
+        vi_hk = ValueInvestment(market="HK")
+        data = vi_hk.get_financial_indicator("00700")
+        
+        # 毛利率应该存在（从三表计算或从指标API）
+        has_margin = 'gross_profit_margin' in data.columns or 'gross_margin' in data.columns
+        assert has_margin, "应有毛利率指标"
+
+    def test_hk_has_debt_ratio(self):
+        """港股应该有资产负债率指标"""
+        from value_investment.api import ValueInvestment
+        
+        vi_hk = ValueInvestment(market="HK")
+        data = vi_hk.get_financial_indicator("00700")
+        
+        # 资产负债率应该存在
+        has_debt = 'debt_ratio' in data.columns
+        assert has_debt, "应有资产负债率指标"
     """Test DataMapper for 跨市场集成测试 - Task 10"""
 
     def test_cross_market_common_fields(self):

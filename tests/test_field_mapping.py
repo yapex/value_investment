@@ -33,7 +33,64 @@ class TestFieldMapping:
         assert get_mapped_field("unknown_indicator", "A股") is None
 
 
-class TestDataMapperHKValuation:
+class TestDataMapperHKSpecific:
+    """Test DataMapper for 港股 fields - Task 8: 港股特有指标"""
+
+    def test_hk_dividend_yield_mapping(self):
+        """港股 'hk_dividend_yield_ttm' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("hk_dividend_yield_ttm", "港股")
+        assert result == "hk_dividend_yield_ttm"
+
+    def test_hk_dividend_payout_ratio_mapping(self):
+        """港股 'hk_dividend_payout_ratio' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("hk_dividend_payout_ratio", "港股")
+        assert result == "hk_dividend_payout_ratio"
+
+    def test_hk_dividend_per_share_mapping(self):
+        """港股 'hk_dividend_per_share' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("hk_dividend_per_share", "港股")
+        assert result == "hk_dividend_per_share"
+
+    def test_hk_market_cap_mapping(self):
+        """港股 'hk_market_cap' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("hk_market_cap", "港股")
+        assert result == "hk_market_cap"
+
+    def test_hk_legal_shares_mapping(self):
+        """港股 'hk_legal_shares' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("hk_legal_shares", "港股")
+        assert result == "hk_legal_shares"
+
+    def test_hk_total_revenue_growth_qoq_mapping(self):
+        """港股 'hk_total_revenue_growth_qoq' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("hk_total_revenue_growth_qoq", "港股")
+        assert result == "hk_total_revenue_growth_qoq"
+
+    def test_hk_net_profit_growth_qoq_mapping(self):
+        """港股 'hk_net_profit_growth_qoq' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("hk_net_profit_growth_qoq", "港股")
+        assert result == "hk_net_profit_growth_qoq"
+
+    def test_hk_total_shares_mapping(self):
+        """港股 'total_shares' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("total_shares", "港股")
+        assert result == "total_shares"
     """Test DataMapper for 港股 fields - Task 7: 估值指标"""
 
     def test_hk_pe_ratio_mapping(self):

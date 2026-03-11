@@ -8,33 +8,36 @@
 
 | 指标类型           | A股 (600519 茅台)       | 港股 (00700 腾讯) |
 |-------------------|-------------------------|-------------------|
-| 财务指标字段数     | 104 个                  | 17 个             |
+| 财务指标字段数     | 101 个                  | 17 个             |
 | 数据年份           | 55 个报告期             | 1 个报告期        |
-| 财务指标总数       | 140+                    | 21                |
+| 共同标准字段       | -                       | 5 个              |
+
+> **2026-03-11 实施更新**: 已完成字段对齐测试验证，支持标准字段名透传
 
 ---
 
 ## 二、字段对比 (已标准化为统一格式)
 
-| 指标               | A股字段                      | 港股字段                      |
-|-------------------|-----------------------------|------------------------------|
-| 基础指标           | basic_eps                  | basic_eps                    |
-| 每股净资产         | book_value_per_share       | ✗                            |
-| 每股经营现金流     | operating_cash_flow_per_share | operating_cash_flow_per_share |
-| ROE               | roe                        | roe                          |
-| ROA               | roa                        | roa                          |
-| 毛利率             | gross_profit_margin        | ✗                            |
-| 净利率             | net_profit_margin          | net_profit_margin            |
-| 流动比率           | current_ratio              | ✗                            |
-| 速动比率           | quick_ratio                | ✗                            |
-| 资产负债率         | debt_ratio                 | ✗                            |
-| PE                | ✗                          | pe_ratio                     |
-| PB                | ✗                          | pb_ratio                     |
-| 股息率             | ✗                          | hk_dividend_yield_ttm       |
-| 派息比率           | ✗                          | hk_dividend_payout_ratio    |
-| 市值(港币)         | ✗                          | hk_market_cap               |
-| 营收增长(环比)     | ✗                          | hk_total_revenue_growth_qoq |
-| 净利润增长(环比)   | ✗                          | hk_net_profit_growth_qoq   |
+| 指标               | A股字段                      | 港股字段                      | 状态 |
+|-------------------|-----------------------------|------------------------------|------|
+| 基础指标           | basic_eps                  | basic_eps                    | ✅ 共同 |
+| 每股净资产         | book_value_per_share       | book_value_per_share         | ✅ |
+| 每股经营现金流     | operating_cash_flow_per_share | operating_cash_flow_per_share | ✅ 共同 |
+| ROE               | roe                        | roe                          | ✅ 共同 |
+| ROA               | roa                        | roa                          | ✅ 共同 |
+| 毛利率             | gross_profit_margin        | -                            | A股独有 |
+| 净利率             | net_profit_margin          | net_profit_margin            | ✅ 共同 |
+| 流动比率           | current_ratio              | current_ratio                | ✅ |
+| 速动比率           | quick_ratio                | quick_ratio                 | ✅ |
+| 现金比率           | cash_ratio                 | cash_ratio                  | ✅ |
+| 资产负债率         | debt_ratio                 | debt_ratio                  | ✅ |
+| PE                | -                          | pe_ratio                     | 港股独有 |
+| PB                | -                          | pb_ratio                     | 港股独有 |
+| 股息率             | -                          | hk_dividend_yield_ttm      | 港股独有 |
+| 派息比率           | -                          | hk_dividend_payout_ratio    | 港股独有 |
+| 市值(港币)         | -                          | hk_market_cap               | 港股独有 |
+| 营收增长(环比)     | -                          | hk_total_revenue_growth_qoq | 港股独有 |
+| 净利润增长(环比)   | -                          | hk_net_profit_growth_qoq   | 港股独有 |
 
 ---
 
@@ -83,17 +86,18 @@
 
 ---
 
-## 四、港股独有指标 (6个)
+## 四、港股独有指标 (8个)
 
-| 指标                       | 字段                          | 说明              |
-|---------------------------|------------------------------|------------------|
-| 法定股本                   | hk_legal_shares             | 股份数量         |
-| 每股股息                   | hk_dividend_per_share       | 港元/股          |
-| 派息比率                   | hk_dividend_payout_ratio    | %                |
-| 股息率 TTM                 | hk_dividend_yield_ttm      | %                |
-| 港股市值                   | hk_market_cap               | 港元             |
-| 营收环比增长               | hk_total_revenue_growth_qoq | %                |
-| 净利润环比增长             | hk_net_profit_growth_qoq   | %                |
+| 指标                       | 字段                          | 说明              | 状态 |
+|---------------------------|------------------------------|------------------|------|
+| 法定股本                   | hk_legal_shares             | 股份数量         | ✅ |
+| 每股股息                   | hk_dividend_per_share       | 港元/股          | ✅ |
+| 派息比率                   | hk_dividend_payout_ratio    | %                | ✅ |
+| 股息率 TTM                 | hk_dividend_yield_ttm      | %                | ✅ |
+| 港股市值                   | hk_market_cap               | 港元             | ✅ |
+| 营收环比增长               | hk_total_revenue_growth_qoq | %                | ✅ |
+| 净利润环比增长             | hk_net_profit_growth_qoq   | %                | ✅ |
+| 总股本                     | total_shares                | 股               | ✅ |
 
 ---
 
@@ -101,7 +105,8 @@
 
 | 差异维度         | A股                                    | 港股              |
 |----------------|----------------------------------------|-------------------|
-| 指标数量        | 104 个字段                             | 17 个字段         |
+| 指标数量        | 101 个字段                             | 17 个字段         |
+| 共同字段        | 5 个 (basic_eps, roe, roa, net_profit_margin, operating_cash_flow_per_share) |
 | 数据深度        | 55 个报告期 (多年历史)                | 1 个报告期        |
 | 货币单位        | 人民币                                | 港元              |
 | PE/PB 计算     | 需手动计算                            | API 返回          |
@@ -111,10 +116,45 @@
 
 ---
 
-## 六、核心结论
+## 六、实施成果 (2026-03-11)
+
+### 6.1 完成的字段对齐
+
+| 阶段 | 任务 | 字段数 | 状态 |
+|------|------|--------|------|
+| 第一阶段 | 核心指标对齐 | 8 | ✅ |
+| 第二阶段 | 扩展指标对齐 | 10 | ✅ |
+| 第三阶段 | 特色指标对齐 | 8 | ✅ |
+| 集成测试 | 端到端验证 | - | ✅ |
+
+### 6.2 测试验证结果
+
+```
+测试通过: 44 个测试用例全部通过
+
+A股字段数: 101
+港股字段数: 17
+共同字段数: 5 (basic_eps, roe, roa, net_profit_margin, operating_cash_flow_per_share)
+```
+
+### 6.3 核心修改
+
+1. **data/mapper.py**: 修改 `get_standard_field()` 方法，支持标准字段名透传
+   - 港股 API 返回英文标准字段名时自动透传
+   - 找不到映射时返回原字段名
+
+2. **tests/test_field_mapping.py**: 新增 38 个测试用例
+   - 覆盖利润表、资产负债表、现金流量表
+   - 覆盖关键比率、每股指标、营运能力
+   - 覆盖港股特有指标
+   - 跨市场集成测试
+
+---
+
+## 七、核心结论
 
 ### 1. A股财务指标更丰富
-- 104个字段 vs 港股17个字段
+- 101个字段 vs 港股17个字段
 - 包含银行/保险专用指标
 - 多年历史数据可追溯
 
@@ -133,9 +173,9 @@
 
 ---
 
-## 七、使用建议
+## 八、使用建议
 
-### 7.1 A股分析优势
+### 8.1 A股分析优势
 ```python
 # 使用A股丰富的指标
 vi = ValueInvestment(market="A")
@@ -146,7 +186,7 @@ data['roe_yoy']  # 同比增长
 data['roe']       # 本期值
 ```
 
-### 7.2 港股分析优势
+### 8.2 港股分析优势
 ```python
 # 使用港股特有的股息指标
 vi = ValueInvestment(market="HK")
@@ -161,16 +201,18 @@ dividend_yield = data['hk_dividend_yield_ttm']  # 股息率
 payout_ratio = data['hk_dividend_payout_ratio']  # 派息比率
 ```
 
-### 7.3 跨市场对比注意事项
+### 8.3 跨市场对比注意事项
 
 1. **货币转换**: 港股市值需 ×0.88 转换为人民币
-2. **字段映射**: 使用 `CORE_FIELD_MAPPING` 标准化字段名
+2. **字段映射**: 使用 `DataMapper.get_standard_field()` 标准化字段名
 3. **时间对齐**: A股用 YoY，港股用 QoQ
+4. **共同字段**: 使用 5 个共同字段进行跨市场对比
 
 ---
 
-## 八、相关文档
+## 九、相关文档
 
 - [market_indicator_differences.md](./market_indicator_differences.md) - 三市场指标差异对齐
 - [ifrs_standard_fields.md](./ifrs_standard_fields.md) - IFRS 标准字段映射
 - [deprecated_akshare_a_share.md](./deprecated_akshare_a_share.md) - AKShare 废弃说明
+- [plans/2026-03-11-a-hk-indicator-alignment.md](./plans/2026-03-11-a-hk-indicator-alignment.md) - 字段对齐实施计划

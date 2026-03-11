@@ -33,7 +33,22 @@ class TestFieldMapping:
         assert get_mapped_field("unknown_indicator", "A股") is None
 
 
-class TestDataMapperHKOperating:
+class TestDataMapperHKValuation:
+    """Test DataMapper for 港股 fields - Task 7: 估值指标"""
+
+    def test_hk_pe_ratio_mapping(self):
+        """港股 'pe_ratio' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("pe_ratio", "港股")
+        assert result == "pe_ratio"
+
+    def test_hk_pb_ratio_mapping(self):
+        """港股 'pb_ratio' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("pb_ratio", "港股")
+        assert result == "pb_ratio"
     """Test DataMapper for 港股 fields - Task 6: 营运能力指标"""
 
     def test_hk_current_ratio_mapping(self):

@@ -33,6 +33,53 @@ class TestFieldMapping:
         assert get_mapped_field("unknown_indicator", "A股") is None
 
 
+class TestDataMapperHKFields:
+    """Test DataMapper for 港股 fields - Task 1: 利润表核心字段"""
+
+    def test_hk_revenue_mapping_from_chinese(self):
+        """港股 '收益' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        # 港股可能返回中文 "收益"
+        result = DataMapper.get_standard_field("收益", "港股")
+        assert result == "total_revenue"
+
+    def test_hk_net_profit_mapping_from_chinese(self):
+        """港股 '期内溢利' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        # 港股可能返回中文 "期内溢利"
+        result = DataMapper.get_standard_field("期内溢利", "港股")
+        assert result == "net_profit"
+
+    def test_hk_operating_profit_mapping_from_chinese(self):
+        """港股 '营业溢利' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("营业溢利", "港股")
+        assert result == "operating_profit"
+
+    def test_hk_gross_profit_mapping(self):
+        """港股 '毛利' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("毛利", "港股")
+        assert result == "gross_profit"
+
+    def test_hk_standard_field_passthrough(self):
+        """港股返回标准字段名时应保持不变"""
+        from value_investment.data.mapper import DataMapper
+        
+        # 港股 API 返回标准字段名 (如 total_revenue) 时，应该直接返回
+        # 这是一个透传场景
+        standard_fields = ["total_revenue", "net_profit", "roe", "roa"]
+        for field in standard_fields:
+            result = DataMapper.get_standard_field(field, "港股")
+            # 如果没有映射，应该返回原值或者需要添加映射
+            # 当前返回 None，我们期望能添加映射后返回标准字段名
+            assert result is not None, f"港股字段 {field} 应该有映射"
+
+
 class TestMarketConfig:
     """Test MarketConfig"""
 

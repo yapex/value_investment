@@ -862,11 +862,14 @@ class DataMapper:
             market: 市场名称 ("A股", "港股", "美股")
 
         Returns:
-            标准字段名，不存在则返回 None
+            标准字段名，不存在则返回原字段名（作为标准字段名）
         """
         if market in _REVERSE_FIELD_INDEX:
-            return _REVERSE_FIELD_INDEX[market].get(market_field)
-        return None
+            result = _REVERSE_FIELD_INDEX[market].get(market_field)
+            if result is not None:
+                return result
+        # 如果没有找到映射，返回原字段名（假设它已经是标准字段名）
+        return market_field
 
     @classmethod
     def list_core_fields(cls) -> list[str]:

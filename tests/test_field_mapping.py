@@ -33,7 +33,29 @@ class TestFieldMapping:
         assert get_mapped_field("unknown_indicator", "A股") is None
 
 
-class TestDataMapperHKRatios:
+class TestDataMapperHKPerShare:
+    """Test DataMapper for 港股 fields - Task 5: 每股指标"""
+
+    def test_hk_basic_eps_mapping(self):
+        """港股 'basic_eps' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("basic_eps", "港股")
+        assert result == "basic_eps"
+
+    def test_hk_book_value_per_share_mapping(self):
+        """港股 'book_value_per_share' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("book_value_per_share", "港股")
+        assert result == "book_value_per_share"
+
+    def test_hk_operating_cash_flow_per_share_mapping(self):
+        """港股 'operating_cash_flow_per_share' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("operating_cash_flow_per_share", "港股")
+        assert result == "operating_cash_flow_per_share"
     """Test DataMapper for 港股 fields - Task 4: 关键比率字段"""
 
     def test_hk_roe_mapping(self):

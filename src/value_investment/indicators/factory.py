@@ -10,16 +10,13 @@ from value_investment.indicators.cashflow import (
 )
 from value_investment.indicators.efficiency import (
     AccountsReceivableRatioIndicator,
-    AssetTurnoverIndicator,
     ExpenseRatioIndicator,
     FeeRateIndicator,
     FeeToGrossProfitRatioIndicator,
     FixedAssetTurnoverIndicator,
-    InventoryTurnoverIndicator,
     PayableTurnoverIndicator,
     ProductionAssetRatioIndicator,
     ReceivablesToAssetsRatioIndicator,
-    ReceivableTurnoverIndicator,
     ReturnOnProductionAssetsIndicator,
 )
 from value_investment.indicators.growth import (
@@ -30,22 +27,10 @@ from value_investment.indicators.growth import (
     ROICIndicator,
     TotalAssetGrowthIndicator,
 )
-from value_investment.indicators.market_cap import MarketCapIndicator
-from value_investment.indicators.profitability import (
-    GrossMarginIndicator,
-    NetProfitMarginIndicator,
-    OperatingProfitMarginIndicator,
-    ROAIndicator,
-    ROEIndicator,
-)
+from value_investment.indicators.profitability import OperatingProfitMarginIndicator
 from value_investment.indicators.safety import (
     CashToDebtIndicator,
     DebtRatioTotalIndicator,
-)
-from value_investment.indicators.solvency import (
-    CurrentRatioIndicator,
-    DebtRatioIndicator,
-    QuickRatioIndicator,
 )
 from value_investment.indicators.valuation import (
     ImpliedGrowthIndicator,
@@ -55,7 +40,6 @@ from value_investment.indicators.valuation import (
 
 if TYPE_CHECKING:
     from value_investment.data.providers.akshare_provider import AkshareProvider
-
 
 class IndicatorFactory:
     """Factory for creating and managing indicators"""
@@ -69,17 +53,9 @@ class IndicatorFactory:
         """Register all default indicators"""
 
         indicators = [
-            ROEIndicator(),
-            ROAIndicator(),
-            GrossMarginIndicator(),
-            NetProfitMarginIndicator(),
+            # Profitability
             OperatingProfitMarginIndicator(),
-            CurrentRatioIndicator(),
-            AssetTurnoverIndicator(),
-            InventoryTurnoverIndicator(),
-            QuickRatioIndicator(),
-            DebtRatioIndicator(),
-            ReceivableTurnoverIndicator(),
+            # Efficiency
             PayableTurnoverIndicator(),
             ExpenseRatioIndicator(),
             FeeRateIndicator(),
@@ -89,24 +65,37 @@ class IndicatorFactory:
             ProductionAssetRatioIndicator(),
             ReturnOnProductionAssetsIndicator(),
             ReceivablesToAssetsRatioIndicator(),
+            # Cashflow
             CfoToNetprofitIndicator(),
             FcfToRevenueIndicator(),
             CfoToNetprofitSumIndicator(),
+            # Valuation
             LatestMarketCapIndicator(),
-            MarketCapIndicator(),
             ROICIndicator(),
             CAGRIndicator(),
+            ImpliedGrowthIndicator(),
+            PEPercentileIndicator(),
+            # Growth
             RevenueGrowthIndicator(),
             OperatingProfitGrowthIndicator(),
             NetAssetGrowthIndicator(),
             TotalAssetGrowthIndicator(),
-            ImpliedGrowthIndicator(),
+            # Safety
             CashToDebtIndicator(),
             DebtRatioTotalIndicator(),
-            PEPercentileIndicator(),
         ]
-        for indicator in indicators:
+        for indicator in self._deduplicate(indicators):
             self.register(indicator)
+
+    def _deduplicate(self, indicators: list) -> list:
+        """Remove duplicate indicators by name"""
+        seen = set()
+        result = []
+        for ind in indicators:
+            if ind.name not in seen:
+                seen.add(ind.name)
+                result.append(ind)
+        return result
 
     def register(self, indicator: BaseIndicator) -> None:
         """Register an indicator"""

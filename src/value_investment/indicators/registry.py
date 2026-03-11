@@ -376,52 +376,9 @@ DEFAULT_RAW_INDICATORS = _build_core_indicators() + HK_SPECIFIC_INDICATORS + TUS
 
 # Default calculated financial indicators (SIMPLE)
 DEFAULT_CALCULATED_INDICATORS = [
-    # Profitability indicators
-    {
-        "name": "gross_margin",
-        "display_name": "毛利率",
-        "type": IndicatorType.CALCULATED,
-        "description": "毛利率 (毛利润/营业收入)",
-        "unit": "%",
-        "market_fields": {
-            "A股": "销售毛利率 (%)",
-            "港股": "毛利率",
-        },
-    },
-    # Efficiency indicators
-    {
-        "name": "receivable_turnover",
-        "display_name": "应收账款周转率",
-        "type": IndicatorType.CALCULATED,
-        "description": "应收账款周转率 (营业收入/平均应收账款)",
-        "unit": "ratio",
-        "market_fields": {
-            "A股": "应收账款周转率 (次)",
-            "港股": "应收账款周转率",
-        },
-    },
-    {
-        "name": "asset_turnover",
-        "display_name": "总资产周转率",
-        "type": IndicatorType.CALCULATED,
-        "description": "总资产周转率 (营业收入/平均总资产)",
-        "unit": "ratio",
-        "market_fields": {
-            "A股": "总资产周转率 (次)",
-            "港股": "总资产周转率",
-        },
-    },
-    {
-        "name": "payable_turnover",
-        "display_name": "应付账款周转率",
-        "type": IndicatorType.CALCULATED,
-        "description": "应付账款周转率 (营业成本/平均应付账款)",
-        "unit": "ratio",
-        "market_fields": {
-            "A股": "应付账款周转率",
-            "港股": "应付账款周转率",
-        },
-    },
+    # Note: gross_margin, receivable_turnover, asset_turnover, payable_turnover
+    # are available as RAW indicators from CORE_FIELD_MAPPING
+
     # Cash flow indicators
     {
         "name": "cfo_to_netprofit_sum",

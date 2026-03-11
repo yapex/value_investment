@@ -1,4 +1,9 @@
-"""Akshare data provider"""
+"""Akshare data provider
+
+注意: A股相关的功能已被废弃，请使用 TushareProvider。
+港股和美股功能仍然可用。
+"""
+import warnings
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, cast
 
@@ -23,7 +28,11 @@ if TYPE_CHECKING:
 
 
 class AkshareProvider(BaseProvider):
-    """Akshare data provider for A股/港股/美股"""
+    """Akshare data provider for A股/港股/美股
+
+    注意: A股相关的功能已被废弃，请使用 TushareProvider。
+    港股和美股功能仍然可用。
+    """
 
     def __init__(
         self,
@@ -40,7 +49,16 @@ class AkshareProvider(BaseProvider):
             market: Market type - "A" (A 股), "HK" (港股), "US" (美股)
             field_mappings: Field name mappings from config (optional)
             **kwargs: Additional provider-specific arguments
+
+        注意: market="A" 已被废弃，请使用 TushareProvider。
         """
+        if market == "A":
+            warnings.warn(
+                "AkshareProvider 的 A 股功能已被废弃。请使用 TushareProvider 作为 A 股数据源。"
+                "将在未来版本中移除。",
+                DeprecationWarning,
+                stacklevel=2
+            )
         super().__init__(cache, field_mappings, **kwargs)
         self._market = market
 
@@ -115,7 +133,10 @@ class AkshareProvider(BaseProvider):
             raise ValueError(f"Unsupported market: {self._market}")
 
     def _get_a_stock_info(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
-        """Get A股 stock info"""
+        """Get A股 stock info
+
+        .. deprecated:: A股功能已被废弃，请使用 TushareProvider
+        """
         cache_key = f"info_{symbol}"
 
         # Force refresh: invalidate cache first
@@ -217,10 +238,19 @@ class AkshareProvider(BaseProvider):
 
         Returns:
             DataFrame with historical prices
+
+        注意: 港股历史数据建议使用 YFinanceProvider
         """
         if self._market == "A":
             return self._get_a_historical_data(symbol, end_date, start_date, adjust, force_refresh=force_refresh)
         elif self._market == "HK":
+            warnings.warn(
+                "港股历史交易数据建议使用 YFinanceProvider。"
+                "AKShare 的港股历史数据接口不够稳定。"
+                "建议迁移到 yfinance (例如: provider = YFinanceProvider(cache))",
+                DeprecationWarning,
+                stacklevel=2
+            )
             return self._get_hk_historical_data(symbol, end_date, start_date, adjust, force_refresh=force_refresh)
         elif self._market == "US":
             return self._get_us_historical_data(symbol, end_date, start_date, force_refresh=force_refresh)
@@ -236,6 +266,8 @@ class AkshareProvider(BaseProvider):
         force_refresh: bool = False,
     ) -> pd.DataFrame:
         """Get A股 historical data with smart cache (full data cached, filtered on retrieval)
+
+        .. deprecated:: A股功能已被废弃，请使用 TushareProvider
 
         Args:
             symbol: Stock code
@@ -338,6 +370,10 @@ class AkshareProvider(BaseProvider):
         force_refresh: bool = False,
     ) -> pd.DataFrame:
         """Get 港股 historical data with smart cache (full data cached, filtered on retrieval)
+
+        .. deprecated::
+            港股历史交易数据应使用 yfinance (YFinanceProvider)。
+            AKShare 的港股历史数据接口不够稳定，建议迁移到 yfinance。
 
         Args:
             symbol: Stock code
@@ -892,7 +928,10 @@ class AkshareProvider(BaseProvider):
         return data
 
     def _get_a_financial_indicator(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
-        """Get A股 financial indicators"""
+        """Get A股 financial indicators
+
+        .. deprecated:: A股功能已被废弃，请使用 TushareProvider
+        """
         cache_key = f"indicator_a_{symbol}"
 
         # Force refresh: invalidate cache first
@@ -919,7 +958,10 @@ class AkshareProvider(BaseProvider):
         return data
 
     def _get_a_quarterly_indicator(self, symbol: str, force_refresh: bool = False) -> pd.DataFrame:
-        """Get A股 quarterly financial indicators (单季度数据)"""
+        """Get A股 quarterly financial indicators (单季度数据)
+
+        .. deprecated:: A股功能已被废弃，请使用 TushareProvider
+        """
         cache_key = f"quarterly_a_{symbol}"
 
         # Force refresh: invalidate cache first
@@ -941,7 +983,10 @@ class AkshareProvider(BaseProvider):
         return data
 
     def _convert_a_financial_strings(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Convert string values with Chinese units (亿, 万) to numeric"""
+        """Convert string values with Chinese units (亿, 万) to numeric
+
+        .. deprecated:: A股功能已被废弃，请使用 TushareProvider
+        """
         if df.empty:
             return df
 
@@ -981,6 +1026,8 @@ class AkshareProvider(BaseProvider):
 
     def _calculate_pe_pb_for_a(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         """Calculate PE and PB for A股 using latest market cap
+
+        .. deprecated:: A股功能已被废弃，请使用 TushareProvider
 
         PE = 市值 / 净利润
         PB = 市值 / 股东权益 = 股价 / 每股净资产

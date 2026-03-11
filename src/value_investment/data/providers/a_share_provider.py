@@ -1,4 +1,11 @@
-"""A股 data provider"""
+"""A股 data provider
+
+DEPRECATED: 此模块基于 AKShare 实现，已被废弃。
+请使用 tushare_provider.TushareProvider 作为 A 股数据源替代。
+
+此模块将在未来版本中移除。
+"""
+import warnings
 from datetime import datetime
 from typing import TYPE_CHECKING, cast
 
@@ -17,21 +24,39 @@ if TYPE_CHECKING:
 
 
 class AShareProvider(BaseProvider):
-    """Akshare data provider for A股 (Chinese A-shares)"""
+    """Akshare data provider for A股 (Chinese A-shares)
+
+    .. deprecated::
+        此类基于 AKShare 实现，已被废弃。
+        请使用 TushareProvider 作为 A 股数据源替代。
+        将在未来版本中移除。
+    """
 
     def __init__(self, cache, market: str = "A", **kwargs):
         """Initialize AShareProvider
-        
+
         Args:
             cache: Cache instance
             market: Market type (default: "A")
             **kwargs: Additional arguments passed to BaseProvider
+
+        .. deprecated::
+            此类已被废弃，请使用 TushareProvider。
         """
+        warnings.warn(
+            "AShareProvider 基于 AKShare 实现，已被废弃。请使用 TushareProvider 作为 A 股数据源。"
+            "将在未来版本中移除。",
+            DeprecationWarning,
+            stacklevel=2
+        )
         super().__init__(cache, **kwargs)
         self._market = market
 
     def get_stock_info(self, stock_code: str, force_refresh: bool = False) -> pd.DataFrame:
-        """Get A股 stock info"""
+        """Get A股 stock info
+
+        .. deprecated:: 使用 TushareProvider.get_stock_info() 替代
+        """
         import akshare as ak  # type: ignore[import-untyped]
 
         cache_key = f"info_{stock_code}"
@@ -55,7 +80,10 @@ class AShareProvider(BaseProvider):
         adjust: str = "hfq",
         force_refresh: bool = False,
     ) -> pd.DataFrame:
-        """Get A股 historical data"""
+        """Get A股 historical data
+
+        .. deprecated:: 使用 TushareProvider.get_historical_data() 替代
+        """
         import akshare as ak  # type: ignore[import-untyped]
 
         end_date_normalized = self._normalize_date(end_date) if end_date else None
@@ -94,6 +122,10 @@ class AShareProvider(BaseProvider):
     def get_balance_sheet(
         self, stock_code: str, end_year: int | None = None, start_year: int | None = None, force_refresh: bool = False
     ) -> pd.DataFrame:
+        """Get A股 balance sheet
+
+        .. deprecated:: 使用 TushareProvider.get_balance_sheet() 替代
+        """
         import akshare as ak  # type: ignore[import-untyped]
 
         if end_year is None:
@@ -114,6 +146,10 @@ class AShareProvider(BaseProvider):
     def get_income_statement(
         self, stock_code: str, end_year: int | None = None, start_year: int | None = None, force_refresh: bool = False
     ) -> pd.DataFrame:
+        """Get A股 income statement
+
+        .. deprecated:: 使用 TushareProvider.get_income_statement() 替代
+        """
         import akshare as ak  # type: ignore[import-untyped]
 
         if end_year is None:
@@ -134,6 +170,10 @@ class AShareProvider(BaseProvider):
     def get_cash_flow_statement(
         self, stock_code: str, end_year: int | None = None, start_year: int | None = None, force_refresh: bool = False
     ) -> pd.DataFrame:
+        """Get A股 cash flow statement
+
+        .. deprecated:: 使用 TushareProvider.get_cash_flow_statement() 替代
+        """
         import akshare as ak  # type: ignore[import-untyped]
 
         if end_year is None:

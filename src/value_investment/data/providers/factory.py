@@ -1,4 +1,7 @@
-"""Provider factory for creating market-specific providers"""
+"""Provider factory for creating market-specific providers
+
+注意: A股的 AShareProvider 已被废弃，请使用 TushareProvider。
+"""
 from typing import TYPE_CHECKING
 
 from value_investment.data.providers.a_share_provider import AShareProvider
@@ -10,10 +13,13 @@ if TYPE_CHECKING:
 
 
 class ProviderFactory:
-    """Factory for creating market-specific stock data providers"""
+    """Factory for creating market-specific stock data providers
+
+    注意: A股的 AShareProvider 已被废弃，请使用 TushareProvider。
+    """
 
     _PROVIDER_MAP = {
-        "A": AShareProvider,
+        "A": AShareProvider,  # DEPRECATED: Use TushareProvider for A-shares
         "HK": HKShareProvider,
         "US": USShareProvider,
     }
@@ -32,6 +38,8 @@ class ProviderFactory:
 
         Raises:
             ValueError: If market is not supported
+
+        注意: market="A" 的 AShareProvider 已被废弃，请使用 TushareProvider。
         """
         provider_class = cls._PROVIDER_MAP.get(market.upper())
         if provider_class is None:

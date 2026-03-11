@@ -365,18 +365,34 @@ class ValueInvestment:
             # Get metadata to determine type
             registry = IndicatorRegistry.get_instance()
             meta = registry.get(name)
-            
-            if meta is None:
-                all_indicators = [ind.name for ind in registry.list_all()]
-                raise IndicatorNotFoundError(name, all_indicators)
-            
+
             from value_investment.indicators.base import IndicatorType
-            
+
+            # If not in registry, check factory
+            if meta is None:
+                try:
+                    factory_indicator = self._factory.get(name)
+                    # Create temporary meta for factory indicator
+                    meta = type('Meta', (), {
+                        'name': name,
+                        'type': IndicatorType.CALCULATED,
+                    })()
+                except ValueError:
+                    all_indicators = [ind.name for ind in registry.list_all()]
+                    raise IndicatorNotFoundError(name, all_indicators)
+
             if meta.type == IndicatorType.RAW:
                 # RAW indicator: get from financial_indicator
                 df = self.get_financial_indicator(stock_code, force_refresh=kwargs.get('force_refresh', False))
-                if name in df.columns:
-                    val = df[name].iloc[0] if len(df) > 0 else None
+                
+                # Get the source field name for this market
+                source_field = meta.get_field_for_market(self._market)
+                
+                # Try source field first, then standard name
+                lookup_field = source_field if source_field and source_field in df.columns else name
+                
+                if lookup_field in df.columns:
+                    val = df[lookup_field].iloc[0] if len(df) > 0 else None
                     result[name] = val
                 else:
                     result[name] = None

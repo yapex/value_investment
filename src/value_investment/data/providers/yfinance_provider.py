@@ -46,7 +46,32 @@ class YFinanceProvider(BaseProvider):
             **kwargs: Additional arguments (ignored, for compatibility)
         """
         super().__init__(cache, field_mappings, **kwargs)
-    
+
+    def _normalize_stock_code(self, stock_code: str) -> str:
+        """Normalize stock code for yfinance
+
+        Args:
+            stock_code: Stock code (e.g., "00700", "0700.HK", "AAPL")
+
+        Returns:
+            Normalized code (e.g., "0700.HK", "AAPL")
+        """
+        # 如果已经是 yfinance 格式（包含 .HK 或 .US 等），直接返回
+        if "." in stock_code:
+            return stock_code
+
+        # 纯数字代码，判断是否为港股
+        if stock_code.isdigit():
+            # 去掉前导零，保留至少 4 位
+            code_num = stock_code.lstrip("0") or "0"
+            # 补齐到 4 位
+            if len(code_num) < 4:
+                code_num = code_num.zfill(4)
+            return f"{code_num}.HK"
+
+        # 美股代码，直接返回
+        return stock_code
+
     def get_historical_data(
         self,
         stock_code: str,
@@ -58,7 +83,7 @@ class YFinanceProvider(BaseProvider):
 
         Args:
             stock_code: Stock code
-                - HK stocks: "0005.HK"
+                - HK stocks: "00700", "0700", or "0700.HK"
                 - US stocks: "AAPL"
             start_date: Start date (YYYYMMDD)
             end_date: End date (YYYYMMDD)
@@ -69,8 +94,11 @@ class YFinanceProvider(BaseProvider):
             DataFrame with historical data (open, high, low, close, volume)
             Standard field names if field_mappings provided
         """
+        # Normalize stock code for yfinance
+        normalized_code = self._normalize_stock_code(stock_code)
+
         cache_key = self._get_cache_key(
-            "market", stock_code,
+            "market", normalized_code,
             start_date or "all",
             end_date or "latest",
             adjust or "none"
@@ -81,7 +109,7 @@ class YFinanceProvider(BaseProvider):
 
         try:
             # Create ticker
-            ticker = yf.Ticker(stock_code)
+            ticker = yf.Ticker(normalized_code)
 
             # Fetch history
             # yfinance expects YYYY-MM-DD format
@@ -115,25 +143,28 @@ class YFinanceProvider(BaseProvider):
 
         except Exception as e:
             # Log error and return empty DataFrame
-            print(f"YFinance error for {stock_code}: {e}")
+            print(f"YFinance error for {stock_code} (normalized: {normalized_code}): {e}")
             return pd.DataFrame()
     
     def get_stock_info(self, stock_code: str) -> pd.DataFrame:
         """Get stock basic information
 
         Args:
-            stock_code: Stock code
+            stock_code: Stock code (e.g., "00700", "AAPL")
 
         Returns:
             DataFrame with stock info (symbol, name, market cap, etc.)
         """
-        cache_key = self._get_cache_key("info", stock_code)
+        # Normalize stock code for yfinance
+        normalized_code = self._normalize_stock_code(stock_code)
+
+        cache_key = self._get_cache_key("info", normalized_code)
         cached = self._get_from_cache(cache_key)
         if cached is not None:
             return cached
 
         try:
-            ticker = yf.Ticker(stock_code)
+            ticker = yf.Ticker(normalized_code)
             info = ticker.info
 
             if not info:
@@ -153,7 +184,7 @@ class YFinanceProvider(BaseProvider):
             return pd.DataFrame()
 
         except Exception as e:
-            print(f"YFinance info error for {stock_code}: {e}")
+            print(f"YFinance info error for {stock_code} (normalized: {normalized_code}): {e}")
             return pd.DataFrame()
 
     # Override abstract method with not implemented

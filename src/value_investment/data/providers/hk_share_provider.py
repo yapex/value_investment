@@ -1,4 +1,8 @@
-"""港股 data provider"""
+"""港股 data provider
+
+注意: 历史交易数据建议使用 YFinanceProvider，AKShare 的港股历史数据接口不够稳定。
+"""
+import warnings
 from datetime import datetime
 from typing import TYPE_CHECKING, cast
 
@@ -16,11 +20,14 @@ if TYPE_CHECKING:
 
 
 class HKShareProvider(BaseProvider):
-    """Akshare data provider for 港股 (Hong Kong stocks)"""
+    """Akshare data provider for 港股 (Hong Kong stocks)
+
+    注意: 历史交易数据建议使用 YFinanceProvider，AKShare 的港股历史数据接口不够稳定。
+    """
 
     def __init__(self, cache, market: str = "HK", **kwargs):
         """Initialize HKShareProvider
-        
+
         Args:
             cache: Cache instance
             market: Market type (default: "HK")
@@ -81,7 +88,19 @@ class HKShareProvider(BaseProvider):
         adjust: str = "hfq",
         force_refresh: bool = False,
     ) -> pd.DataFrame:
-        """Get 港股 historical data"""
+        """Get 港股 historical data
+
+        .. deprecated::
+            港股历史交易数据应使用 yfinance (YFinanceProvider)。
+            AKShare 的港股历史数据接口不够稳定，建议迁移到 yfinance。
+        """
+        warnings.warn(
+            "港股历史交易数据建议使用 YFinanceProvider。"
+            "AKShare 的港股历史数据接口不够稳定。"
+            "建议迁移到 yfinance (例如: provider = YFinanceProvider(cache))",
+            DeprecationWarning,
+            stacklevel=2
+        )
         import akshare as ak  # type: ignore[import-untyped]
 
         end_date_normalized = self._normalize_date(end_date) if end_date else None

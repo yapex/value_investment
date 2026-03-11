@@ -152,12 +152,12 @@ CORE_FIELD_MAPPING: dict[str, dict[str, str]] = {
         "美股": "returnOnAssets",
     },
     "gross_margin": {
-        "A股": "销售毛利率(%)",
+        "A股": "gross_profit_margin",
         "港股": "毛利率",
         "美股": "grossMargin",
     },
     "net_profit_margin": {
-        "A股": "销售净利率(%)",
+        "A股": "销售净利率",
         "港股": "销售净利率(%)",
         "美股": "netProfitMargin",
     },

@@ -33,7 +33,60 @@ class TestFieldMapping:
         assert get_mapped_field("unknown_indicator", "A股") is None
 
 
-class TestDataMapperHKFields:
+class TestDataMapperHKBalanceSheet:
+    """Test DataMapper for 港股 fields - Task 2: 资产负债表核心字段"""
+
+    def test_hk_total_assets_mapping(self):
+        """港股 '资产总值' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("资产总值", "港股")
+        assert result == "total_assets"
+
+    def test_hk_total_equity_mapping(self):
+        """港股 '权益总额' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("权益总额", "港股")
+        assert result == "total_equity"
+
+    def test_hk_total_liabilities_mapping(self):
+        """港股 '总负债' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("总负债", "港股")
+        assert result == "total_liabilities"
+
+    def test_hk_current_assets_mapping(self):
+        """港股 '流动资产合计' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("流动资产合计", "港股")
+        assert result == "current_assets"
+
+    def test_hk_current_liabilities_mapping(self):
+        """港股 '流动负债合计' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("流动负债合计", "港股")
+        assert result == "current_liabilities"
+
+    def test_hk_cash_equivalents_mapping(self):
+        """港股 '现金及等价物' 字段应能转换为标准字段名"""
+        from value_investment.data.mapper import DataMapper
+        
+        result = DataMapper.get_standard_field("现金及等价物", "港股")
+        assert result == "cash_and_equivalents"
+
+    def test_hk_standard_balance_fields_passthrough(self):
+        """港股返回标准字段名时应保持不变"""
+        from value_investment.data.mapper import DataMapper
+        
+        # 港股 API 返回标准字段名
+        standard_fields = ["total_assets", "total_equity", "total_liabilities"]
+        for field in standard_fields:
+            result = DataMapper.get_standard_field(field, "港股")
+            assert result == field, f"港股字段 {field} 应该透传"
     """Test DataMapper for 港股 fields - Task 1: 利润表核心字段"""
 
     def test_hk_revenue_mapping_from_chinese(self):

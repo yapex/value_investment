@@ -8,11 +8,11 @@
 
 | 指标类型           | A股 (600519 茅台)       | 港股 (00700 腾讯) |
 |-------------------|-------------------------|-------------------|
-| 财务指标字段数     | 101 个                  | 17 个             |
+| 财务指标字段数     | 104 个                  | **21** 个             |
 | 数据年份           | 55 个报告期             | 1 个报告期        |
 | 共同标准字段       | -                       | 5 个              |
 
-> **2026-03-11 实施更新**: 已完成字段对齐测试验证，支持标准字段名透传
+> **2026-03-11 实施更新**: 港股新增4个计算指标（毛利率、资产负债率、流动比率、速动比率），字段数从17增加到21
 
 ---
 
@@ -25,12 +25,12 @@
 | 每股经营现金流     | operating_cash_flow_per_share | operating_cash_flow_per_share | ✅ 共同 |
 | ROE               | roe                        | roe                          | ✅ 共同 |
 | ROA               | roa                        | roa                          | ✅ 共同 |
-| 毛利率             | gross_profit_margin        | -                            | A股独有 |
+| 毛利率             | gross_profit_margin        | gross_profit_margin          | ✅ 新增 |
 | 净利率             | net_profit_margin          | net_profit_margin            | ✅ 共同 |
-| 流动比率           | current_ratio              | current_ratio                | ✅ |
-| 速动比率           | quick_ratio                | quick_ratio                 | ✅ |
+| 流动比率           | current_ratio              | current_ratio                | ✅ 新增 |
+| 速动比率           | quick_ratio                | quick_ratio                  | ✅ 新增 |
 | 现金比率           | cash_ratio                 | cash_ratio                  | ✅ |
-| 资产负债率         | debt_ratio                 | debt_ratio                  | ✅ |
+| 资产负债率         | debt_ratio                 | debt_ratio                   | ✅ 新增 |
 | PE                | -                          | pe_ratio                     | 港股独有 |
 | PB                | -                          | pb_ratio                     | 港股独有 |
 | 股息率             | -                          | hk_dividend_yield_ttm      | 港股独有 |

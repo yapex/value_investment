@@ -320,6 +320,12 @@ class TushareProvider(BaseProvider):
         if df is None or df.empty:
             return pd.DataFrame()
 
+        # 过滤 update_flag：优先使用 update_flag=1（更新过的数据）
+        if 'update_flag' in df.columns:
+            # 对于每个 end_date，优先选择 update_flag=1 的记录
+            # 如果没有 update_flag=1，则使用 update_flag=0 的记录
+            df = df.sort_values('update_flag', ascending=False).drop_duplicates(subset=['end_date'], keep='first')
+
         # Apply field mapping using DataMapper (A 股市场)
         from value_investment.data.mapper import DataMapper
         result = DataMapper.map_financial_indicator(df, market='A')
@@ -368,6 +374,10 @@ class TushareProvider(BaseProvider):
 
         if df is None or df.empty:
             return pd.DataFrame()
+
+        # 过滤 update_flag：优先使用 update_flag=1（更新过的数据）
+        if 'update_flag' in df.columns:
+            df = df.sort_values('update_flag', ascending=False).drop_duplicates(subset=['end_date'], keep='first')
 
         # 过滤出季度数据（end_date 不是 1231 的）
         # end_date 格式为 YYYYMMDD，年度报告是 YYYY1231

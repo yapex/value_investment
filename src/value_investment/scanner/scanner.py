@@ -188,8 +188,13 @@ class Scanner:
                 )
 
                 if df is not None and not df.empty:
+                    # 过滤 update_flag：优先使用 update_flag=1（更新过的数据）
+                    if 'update_flag' in df.columns:
+                        df = df.sort_values('update_flag', ascending=False).drop_duplicates(subset=['end_date'], keep='first')
+
                     # 只保留年报数据
                     annual = df[df['end_date'].astype(str).str.endswith('1231')].copy()
+
                     if not annual.empty:
                         # 添加标准化股票代码
                         annual['stock_code'] = ts_code.replace('.SH', '').replace('.SZ', '')

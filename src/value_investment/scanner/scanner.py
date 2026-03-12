@@ -59,9 +59,9 @@ class Scanner:
         )
 
         if df is not None and not df.empty:
-            # 缓存到次日
-            from value_investment.data.providers.base_provider import get_ttl_until_next_midnight
-            self._cache.set(cache_key, df, ttl=get_ttl_until_next_midnight())
+            # 缓存 1 年 - 上市公司列表非常稳定，新股上市不频繁
+            one_year_seconds = 365 * 24 * 60 * 60
+            self._cache.set(cache_key, df, ttl=one_year_seconds)
 
         return df
 

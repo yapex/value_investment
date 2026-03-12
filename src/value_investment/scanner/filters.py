@@ -45,5 +45,48 @@ def consecutive_years(
         if (values >= min_value).all():
             results.append(code)
 
-    result: pd.DataFrame = df[df['stock_code'].isin(results)].copy()
-    return result
+    result = df[df['stock_code'].isin(results)].copy()
+    return result  # type: ignore[no-any-return]
+
+
+def latest_year(
+    df: pd.DataFrame,
+    field: str,
+    min_value: float = None,
+    max_value: float = None
+) -> pd.DataFrame:
+    """最近一年满足条件的股票
+
+    Args:
+        df: 财务数据 DataFrame
+        field: 要检查的字段名
+        min_value: 最小值（可选）
+        max_value: 最大值（可选）
+
+    Returns:
+        符合条件的股票数据 DataFrame
+
+    Example:
+        >>> # 最近一年 ROE >= 15%
+        >>> result = filters.latest_year(financials, field='roe', min_value=15)
+        >>>
+        >>> # 最近一年负债率 <= 60%
+        >>> result = filters.latest_year(financials, field='debt_ratio', max_value=60)
+    """
+    df = df.copy()
+    df['end_date'] = pd.to_datetime(df['end_date'])
+
+    valid_codes = []
+
+    for code, group in df.groupby('stock_code'):
+        latest = group.nlargest(1, 'end_date')
+        value = latest[field].iloc[0]
+
+        meets_min = (min_value is None) or (value >= min_value)
+        meets_max = (max_value is None) or (value <= max_value)
+
+        if meets_min and meets_max:
+            valid_codes.append(code)
+
+    result = df[df['stock_code'].isin(valid_codes)].copy()
+    return result  # type: ignore[no-any-return]

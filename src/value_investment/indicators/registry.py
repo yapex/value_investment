@@ -340,7 +340,7 @@ TUSHARE_A_INDICATORS = [
     {"name": "roe_diluted", "display_name": "净资产收益率 (扣非)", "field_names": ["roe_dt"], "market_fields": {"A股": "roe_dt"}, "description": "净资产收益率 (扣非)", "unit": "%"},
     {"name": "roa", "display_name": "总资产报酬率", "field_names": ["roa"], "market_fields": {"A股": "roa"}, "description": "总资产报酬率", "unit": "%"},
     {"name": "roic", "display_name": "投入资本回报率", "field_names": ["roic"], "market_fields": {"A股": "roic"}, "description": "投入资本回报率", "unit": "%"},
-    {"name": "gross_profit_margin", "display_name": "销售毛利率", "field_names": ["gross_margin"], "market_fields": {"A股": "gross_margin"}, "description": "销售毛利率", "unit": "%"},
+    {"name": "gross_profit_margin", "display_name": "销售毛利率", "field_names": ["grossprofit_margin"], "market_fields": {"A股": "grossprofit_margin"}, "description": "销售毛利率", "unit": "%"},
     {"name": "net_profit_margin", "display_name": "销售净利率", "field_names": ["netprofit_margin"], "market_fields": {"A股": "netprofit_margin"}, "description": "销售净利率", "unit": "%"},
     {"name": "current_ratio", "display_name": "流动比率", "field_names": ["current_ratio"], "market_fields": {"A股": "current_ratio"}, "description": "流动比率", "unit": "ratio"},
     {"name": "quick_ratio", "display_name": "速动比率", "field_names": ["quick_ratio"], "market_fields": {"A股": "quick_ratio"}, "description": "速动比率", "unit": "ratio"},

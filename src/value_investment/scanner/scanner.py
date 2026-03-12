@@ -3,6 +3,7 @@
 为 Agent 提供简单易用的 API 来获取全市场股票数据并进行筛选。
 """
 import os
+from datetime import datetime
 from typing import List, Optional
 import pandas as pd
 import tushare as ts
@@ -59,9 +60,9 @@ class Scanner:
         )
 
         if df is not None and not df.empty:
-            # 缓存 1 年 - 上市公司列表非常稳定，新股上市不频繁
-            from value_investment.core.constants import ONE_YEAR_SECONDS
-            self._cache.set(cache_key, df, ttl=ONE_YEAR_SECONDS)
+            # 缓存到次年 6 月底 - 与财务数据缓存统一过期时间，避免碎片化
+            from value_investment.data.providers.base_provider import get_ttl_until_june_next_year
+            self._cache.set(cache_key, df, ttl=get_ttl_until_june_next_year(datetime.now().year))
 
         return df
 

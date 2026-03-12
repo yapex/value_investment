@@ -67,6 +67,12 @@ v-invest finind 600519 -m A                          # A股（在 finind 中）
 
 ---
 
+## 分析框架
+
+- **ROE 深度分析** → 参见 [REFERENCES/ROE_ANALYSIS_FRAMEWORK.md](./REFERENCES/ROE_ANALYSIS_FRAMEWORK.md)
+
+---
+
 ## Agent 查询流程
 
 1. `v-invest indicators <market>` 确认可用指标

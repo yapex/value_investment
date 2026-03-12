@@ -421,6 +421,95 @@ DEFAULT_CALCULATED_INDICATORS = [
         "unit": "%",
         "market_fields": {},
     },
+    # HK missing indicators - DuPont analysis
+    {
+        "name": "total_assets_turnover",
+        "display_name": "总资产周转率",
+        "type": IndicatorType.CALCULATED,
+        "description": "总资产周转率 = 营业收入 / 总资产",
+        "unit": "次",
+        "market_fields": {},
+    },
+    {
+        "name": "equity_multiplier",
+        "display_name": "权益乘数",
+        "type": IndicatorType.CALCULATED,
+        "description": "权益乘数 = 总资产 / 股东权益 = 1 / (1 - 资产负债率)",
+        "unit": "倍",
+        "market_fields": {},
+    },
+    {
+        "name": "asset_turnover",
+        "display_name": "资产周转率",
+        "type": IndicatorType.CALCULATED,
+        "description": "资产周转率 = 营业收入 / 总资产",
+        "unit": "次",
+        "market_fields": {},
+    },
+    {
+        "name": "total_assets",
+        "display_name": "总资产",
+        "type": IndicatorType.CALCULATED,
+        "description": "总资产",
+        "unit": "元",
+        "market_fields": {},
+    },
+    {
+        "name": "total_equity",
+        "display_name": "股东权益",
+        "type": IndicatorType.CALCULATED,
+        "description": "股东权益",
+        "unit": "元",
+        "market_fields": {},
+    },
+    {
+        "name": "gross_margin",
+        "display_name": "毛利率",
+        "type": IndicatorType.CALCULATED,
+        "description": "毛利率 = 毛利润 / 营业收入 * 100",
+        "unit": "%",
+        "market_fields": {
+            "港股": "gross_profit_margin",  # 港股使用gross_profit_margin
+        },
+    },
+    {
+        "name": "operating_cash_flow",
+        "display_name": "经营现金流",
+        "type": IndicatorType.CALCULATED,
+        "description": "经营现金流 = 每股经营现金流 * 总股本",
+        "unit": "元",
+        "market_fields": {},
+    },
+    {
+        "name": "net_profit_margin",
+        "display_name": "净利润率",
+        "type": IndicatorType.CALCULATED,
+        "description": "净利润率 = 净利润 / 营业收入 * 100",
+        "unit": "%",
+        "market_fields": {
+            "港股": "net_profit_margin",  # 港股直接使用
+        },
+    },
+    {
+        "name": "roe",
+        "display_name": "净资产收益率",
+        "type": IndicatorType.CALCULATED,
+        "description": "ROE = 净利润 / 股东权益 * 100",
+        "unit": "%",
+        "market_fields": {
+            "港股": "roe",  # 港股直接使用
+        },
+    },
+    {
+        "name": "roa",
+        "display_name": "总资产收益率",
+        "type": IndicatorType.CALCULATED,
+        "description": "ROA = 净利润 / 总资产 * 100",
+        "unit": "%",
+        "market_fields": {
+            "港股": "roa",  # 港股直接使用
+        },
+    },
 ]
 
 

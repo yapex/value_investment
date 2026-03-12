@@ -27,6 +27,18 @@ from value_investment.indicators.growth import (
     ROICIndicator,
     TotalAssetGrowthIndicator,
 )
+from value_investment.indicators.calculated import (
+    AssetTurnoverIndicator,
+    EquityMultiplierIndicator,
+    GrossMarginIndicator,
+    NetProfitMarginIndicator,
+    OperatingCashFlowIndicator,
+    ROAIndicator,
+    ROEIndicator,
+    TotalAssetsIndicator,
+    TotalAssetsTurnoverIndicator,
+    TotalEquityIndicator,
+)
 from value_investment.indicators.profitability import OperatingProfitMarginIndicator
 from value_investment.indicators.safety import (
     CashToDebtIndicator,
@@ -55,6 +67,17 @@ class IndicatorFactory:
         indicators = [
             # Profitability
             OperatingProfitMarginIndicator(),
+            # HK Missing Indicators (DuPont Analysis)
+            TotalAssetsTurnoverIndicator(),
+            EquityMultiplierIndicator(),
+            AssetTurnoverIndicator(),
+            TotalAssetsIndicator(),
+            TotalEquityIndicator(),
+            GrossMarginIndicator(),
+            OperatingCashFlowIndicator(),
+            NetProfitMarginIndicator(),
+            ROEIndicator(),
+            ROAIndicator(),
             # Efficiency
             PayableTurnoverIndicator(),
             ExpenseRatioIndicator(),

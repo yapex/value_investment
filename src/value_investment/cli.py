@@ -112,7 +112,7 @@ def indicator(
 ):
     """Get indicator values (unified interface for RAW and CALCULATED)"""
     vi = ValueInvestment(market=_get_market(market, stock_code))
-    
+
     # Parse indicator names
     if names:
         indicator_names = [n.strip() for n in names.split(",")]
@@ -120,10 +120,10 @@ def indicator(
             indicator_names = indicator_names[0]
     else:
         indicator_names = None
-    
+
     # Get indicator values
     result = vi.indicator(indicator_names, stock_code, years)
-    
+
     # Format output as Markdown
     if isinstance(result, pd.DataFrame):
         print(f"### 指标数据 - {stock_code}\n")
@@ -142,17 +142,17 @@ def finind(
 ):
     """Get financial indicators directly from data source (no calculation needed)"""
     vi = ValueInvestment(market=_get_market(market, stock_code))
-    
+
     df = vi.get_financial_indicator(stock_code, force_refresh=refresh)
-    
+
     if df is None or df.empty:
         print(f"### 财务指标 - {stock_code}\n\n无数据")
         return
-    
+
     # Take first row and convert to DataFrame for display
     row = df.iloc[0].dropna()
     items = [{"指标": idx, "值": val} for idx, val in row.items()]
-    
+
     print(f"### 财务指标 - {stock_code}\n")
     print(pd.DataFrame(items).to_markdown(index=False))
 

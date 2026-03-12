@@ -38,7 +38,7 @@ financials = scanner.get_financial_data(
 
 ## 常用过滤模式
 
-### 连续 N 年满足条件
+### 1. 连续 N 年满足条件
 
 **场景**: 连续 5 年 ROE >= 15%
 
@@ -51,13 +51,23 @@ result = filters.consecutive_years(
     min_value=15,
     years=5
 )
+```
 
-# 查看结果
-print(f"符合条件：{result['stock_code'].nunique()} 只")
-print(result[['stock_code', 'end_date', 'roe']].head(10))
+### 2. 最近一年满足条件
+
+**场景**: 最近一年毛利率 >= 30%
+
+```python
+result = filters.latest_year(
+    financials,
+    field='gross_profit_margin',
+    min_value=30
+)
 ```
 
 ## 完整示例
+
+### 示例：筛选连续 5 年毛利率 > 30% 的股票
 
 ```python
 from value_investment import Scanner, filters
@@ -65,43 +75,54 @@ from value_investment import Scanner, filters
 # 初始化
 scanner = Scanner(market="A")
 
-# 获取股票列表（取前 100 只测试）
+# 获取股票列表
 stocks = scanner.get_stock_list()
-test_stocks = stocks['symbol'].head(100).tolist()
-print(f"测试股票：{len(test_stocks)} 只")
 
-# 获取财务数据
+# 定义股票列表（100 家知名公司）
+top_stocks = ['600519', '000858', '000568', ...]  # 省略...
+
+# 获取财务数据（毛利率）
 financials = scanner.get_financial_data(
-    stocks=test_stocks,
-    fields=['roe'],
-    years=5
-)
-print(f"获取到 {financials['stock_code'].nunique()} 只股票的数据")
-
-# 筛选：连续 5 年 ROE >= 15%
-result = filters.consecutive_years(
-    financials,
-    field='roe',
-    min_value=15,
+    stocks=top_stocks,
+    fields=['gross_profit_margin'],  # 使用标准字段名
     years=5
 )
 
-# 显示结果
-print(f"\n符合条件：{result['stock_code'].nunique()} 只")
+# 筛选：最近一年毛利率 > 30%
+step1 = filters.latest_year(financials, field='gross_profit_margin', min_value=30)
 
-if not result.empty:
-    # 合并股票名称
-    result_named = result.merge(
-        stocks[['symbol', 'name']],
-        left_on='stock_code',
-        right_on='symbol'
-    )
-    print("\n符合条件的股票:")
-    for code in result_named['stock_code'].unique():
-        name = result_named[result_named['stock_code'] == code]['name'].iloc[0]
-        roe_values = result_named[result_named['stock_code'] == code]['roe'].tolist()
-        print(f"  - {code} ({name}): ROE = {roe_values}")
+# 筛选：连续 5 年毛利率 > 30%
+result = filters.consecutive_years(step1, field='gross_profit_margin', min_value=30, years=5)
+
+print(f"符合条件：{result['stock_code'].nunique()} 只")
 ```
+
+## 数据处理特性
+
+### 1. 自动去重
+
+系统自动处理 Tushare 数据中的重复记录：
+- 优先使用 `update_flag=1`（后期更新过的数据）
+- 如果没有更新数据，则使用原始数据
+
+### 2. 字段映射
+
+使用标准字段名，系统自动转换为 Tushare 原始字段：
+
+| 标准字段名 | Tushare 字段 |
+|-----------|-------------|
+| `roe` | `roe` |
+| `gross_profit_margin` | `grossprofit_margin` |
+| `net_profit_margin` | `netprofit_margin` |
+| `debt_ratio` | `debt_to_assets` |
+| `current_ratio` | `current_ratio` |
+
+### 3. 缓存策略
+
+| 数据类型 | 缓存时间 |
+|---------|---------|
+| 股票列表 | 1 年 |
+| 财务数据 | 到次年 6 月底 |
 
 ## 性能提示
 
@@ -112,17 +133,18 @@ if not result.empty:
 
 ## 可用字段参考
 
-常用财务指标字段：
-- `roe` - 净资产收益率 (%)
-- `gross_margin` - 毛利率 (%)
-- `net_margin` - 净利率 (%)
-- `debt_ratio` - 资产负债率 (%)
-- `current_ratio` - 流动比率
-- `roe_diluted` - 摊薄 ROE
-- `roa` - 总资产收益率
-- `eps` - 每股收益
+常用财务指标（标准字段名）：
 
-完整字段列表请参考 Tushare `fina_indicator` 接口文档。
+| 标准字段名 | 说明 | 单位 |
+|-----------|------|-----|
+| `roe` | 净资产收益率 | % |
+| `gross_profit_margin` | 销售毛利率 | % |
+| `net_profit_margin` | 销售净利率 | % |
+| `debt_ratio` | 资产负债率 | % |
+| `current_ratio` | 流动比率 | ratio |
+| `quick_ratio` | 速动比率 | ratio |
+| `roa` | 总资产收益率 | % |
+| `roic` | 投入资本回报率 | % |
 
 ## 故障排除
 
@@ -140,7 +162,3 @@ export TUSHARE_TOKEN="your_token_here"
 ### 问题：某些股票没有数据
 
 **解决**: 可能是新股或数据缺失，过滤时会自动跳过。
-```python
-# 检查数据覆盖情况
-print(f"获取到 {financials['stock_code'].nunique()} 只股票的数据")
-```

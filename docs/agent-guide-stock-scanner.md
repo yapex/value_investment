@@ -17,7 +17,11 @@ Scanner 是用于批量获取和筛选股票数据的工具，特点：
 ```python
 from value_investment import Scanner
 
+# A 股市场
 scanner = Scanner(market="A")
+
+# 港股市场
+scanner = Scanner(market="HK")
 ```
 
 ### 2. 获取股票列表

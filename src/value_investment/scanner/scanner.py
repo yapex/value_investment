@@ -28,7 +28,7 @@ class Scanner:
         """初始化 Scanner
 
         Args:
-            market: 市场类型，"A" 表示 A 股
+            market: 市场类型，"A" 表示 A 股，"HK" 表示港股
             cache_dir: 缓存目录路径，默认使用项目缓存
         """
         # 注册默认指标（确保字段映射可用）
@@ -51,13 +51,16 @@ class Scanner:
         # 指标注册表
         self._registry = IndicatorRegistry.get_instance()
 
-        # Tushare API（用于股票列表等非 provider 方法）
-        import os
-        token = os.getenv("TUSHARE_TOKEN", "")
-        if not token:
-            raise ValueError("TUSHARE_TOKEN environment variable is required")
-        ts.set_token(token)
-        self._api = ts.pro_api()
+        # A 股使用 Tushare API（港股使用 AKShareProvider）
+        if market == "A":
+            import os
+            token = os.getenv("TUSHARE_TOKEN", "")
+            if not token:
+                raise ValueError("TUSHARE_TOKEN environment variable is required")
+            ts.set_token(token)
+            self._api = ts.pro_api()
+        else:
+            self._api = None
 
     def get_stock_list(self) -> pd.DataFrame:
         """获取全市场股票列表
@@ -65,6 +68,31 @@ class Scanner:
         Returns:
             DataFrame with columns: ts_code, symbol, name, area, industry, list_date
         """
+        # 港股：使用预设列表
+        if self.market == "HK":
+            from value_investment.scanner.data.hk_shares import TOP_100_HK_SHARES
+            
+            # 将 5 位代码转换为 DataFrame
+            cache_key = "scanner_hk_stocks"
+            cached = self._cache.get(cache_key)
+            if cached is not None:
+                return cached
+            
+            # 创建基础信息 DataFrame
+            df = pd.DataFrame({
+                'ts_code': [f"{code}.HK" for code in TOP_100_HK_SHARES],
+                'symbol': TOP_100_HK_SHARES,
+                'name': ['港股-' + code for code in TOP_100_HK_SHARES],
+                'area': ['香港'] * len(TOP_100_HK_SHARES),
+                'industry': [''] * len(TOP_100_HK_SHARES),
+                'list_date': [''] * len(TOP_100_HK_SHARES),
+            })
+            
+            from value_investment.data.providers.base_provider import get_ttl_until_june_next_year
+            self._cache.set(cache_key, df, ttl=get_ttl_until_june_next_year(datetime.now().year))
+            return df
+
+        # A 股：使用 Tushare API
         cache_key = "scanner_all_stocks"
         cached = self._cache.get(cache_key)
         if cached is not None:
@@ -100,7 +128,11 @@ class Scanner:
         Returns:
             DataFrame with financial data in standard format
         """
-        # 将标准字段名转换为 Tushare 字段名
+        # 港股：使用 AKShareProvider
+        if self.market == "HK":
+            return self._get_hk_financial_data(stocks, fields, years)
+        
+        # A 股：使用 Tushare API
         ts_fields = self._to_ts_fields(fields)
 
         ts_codes = [self._to_ts_code(s) for s in stocks]
@@ -111,6 +143,74 @@ class Scanner:
             df = self._map_to_standard_fields(df, fields)
 
         return df
+    
+    def _get_hk_financial_data(
+        self,
+        stocks: List[str],
+        fields: List[str],
+        years: int
+    ) -> pd.DataFrame:
+        """获取港股财务数据（使用 AKShareProvider）
+        
+        注意：港股的财务指标 API 只返回最新数据，无法获取多年历史数据。
+        这里获取最新数据并添加一个虚拟的 end_date。
+        """
+        from value_investment.data.providers.base_provider import get_ttl_until_june_next_year
+        
+        all_data = []
+        
+        for i, stock_code in enumerate(stocks):
+            if i % 50 == 0 and i > 0:
+                print(f"  已处理 {i}/{len(stocks)} 只")
+            
+            # 标准化为 5 位代码
+            hk_code = self._normalize_hk_code(stock_code)
+            
+            # 检查缓存
+            cache_key = f"scanner_hk_finind_{hk_code}_{years}"
+            cached = self._cache.get(cache_key)
+            
+            if cached is not None:
+                all_data.append(cached)
+                continue
+            
+            try:
+                # 使用 provider 获取财务指标
+                df = self._provider.get_financial_indicator(hk_code)
+                
+                if df is not None and not df.empty:
+                    # 港股只返回最新数据，没有历史数据
+                    # 添加 stock_code 列
+                    df['stock_code'] = hk_code
+                    
+                    # 添加 end_date 列（使用当前年份作为虚拟日期）
+                    current_year = datetime.now().year
+                    df['end_date'] = f"{current_year - 1}1231"  # 使用去年年底（年报发布日期）
+                    
+                    # 移动列顺序：stock_code, end_date, 其他字段
+                    cols = ['stock_code', 'end_date'] + [c for c in df.columns if c not in ['stock_code', 'end_date']]
+                    df = df[cols]
+                    
+                    all_data.append(df)
+                        
+                    # 缓存
+                    self._cache.set(cache_key, df, ttl=get_ttl_until_june_next_year(datetime.now().year))
+                        
+            except Exception as e:
+                print(f"  获取 {hk_code} 失败：{e}")
+                continue
+        
+        if all_data:
+            result = pd.concat(all_data, ignore_index=True)
+            return result
+        return pd.DataFrame()
+    
+    def _normalize_hk_code(self, stock_code: str) -> str:
+        """标准化港股代码为 5 位格式"""
+        digits = ''.join(c for c in stock_code if c.isdigit())
+        if len(digits) < 5:
+            digits = digits.zfill(5)
+        return digits
 
     def _to_ts_fields(self, fields: List[str]) -> List[str]:
         """将标准字段名转换为 Tushare 字段名"""

@@ -41,8 +41,8 @@ dev = [
 [tool.poe.tasks.to_nanobot]
 help = "Copy skill to nanobot skills directory"
 shell = """
-mkdir -p /Volumes/yapex_ssd/yapex-bot/workspace/skills/value_investment && \
-cp -r skills/value_investment/* /Volumes/yapex_ssd/yapex-bot/workspace/skills/value_investment/
+mkdir -p /Volumes/yapex_ssd/yapex-bot/workspace/skills/v-invest && \
+cp -r skills/v-invest/* /Volumes/yapex_ssd/yapex-bot/workspace/skills/v-invest/
 """
 
 

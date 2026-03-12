@@ -30,7 +30,7 @@ class Scanner:
             cache_dir: 缓存目录路径，默认使用项目缓存
         """
         self.market = market
-        self._cache = SmartCache(cache_dir=cache_dir)
+        self._cache = SmartCache(cache_dir=cache_dir or "./.cache")
         self._rate_limiter = RateLimiter(max_calls_per_minute=200)
 
         # 初始化 Tushare

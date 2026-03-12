@@ -1,0 +1,151 @@
+{
+  "active_context": [
+    {
+      "order": 3,
+      "path": "_index.md",
+      "tokens": 864,
+      "type": "summary"
+    },
+    {
+      "order": 2,
+      "path": "architecture/_index.md",
+      "tokens": 626,
+      "type": "summary"
+    },
+    {
+      "order": 2,
+      "path": "automation/_index.md",
+      "tokens": 136,
+      "type": "summary"
+    },
+    {
+      "order": 2,
+      "path": "data/_index.md",
+      "tokens": 130,
+      "type": "summary"
+    },
+    {
+      "order": 2,
+      "path": "documentation/_index.md",
+      "tokens": 163,
+      "type": "summary"
+    },
+    {
+      "importance": 60,
+      "path": "facts/project/annual_reports_directory_structure.md",
+      "tokens": 290,
+      "type": "context"
+    },
+    {
+      "importance": 53,
+      "path": "architecture/overview/project_architecture.md",
+      "tokens": 457,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "architecture/overview/memory_hierarchical_architecture.md",
+      "tokens": 185,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "architecture/skill_system/evolution_mechanism.md",
+      "tokens": 348,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "architecture/skill_system/skill_architecture.md",
+      "tokens": 178,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "automation/macos_input/macos_chinese_input_automation.md",
+      "tokens": 212,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "data/caching_strategy/cache_ttl_strategy.md",
+      "tokens": 300,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "documentation/index/documentation_index.md",
+      "tokens": 205,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "facts/context.md",
+      "tokens": 76,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "facts/conventions/long_running_task_rule.md",
+      "tokens": 242,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "facts/conventions/multi_candidate_handling_rule.md",
+      "tokens": 246,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "facts/conventions/test_file_location_rule.md",
+      "tokens": 181,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "facts/conventions/working_directory_confirmation.md",
+      "tokens": 186,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "facts/personal/context.md",
+      "tokens": 46,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "facts/personal/get_knowledge_base_configuration.md",
+      "tokens": 218,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "facts/personal/work_style_principles.md",
+      "tokens": 188,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "facts/project/context.md",
+      "tokens": 28,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "facts/project/macos_icloud_permission_workaround.md",
+      "tokens": 283,
+      "type": "context"
+    }
+  ],
+  "generated_at": "2026-03-12T05:13:00.314Z",
+  "lane_tokens": {
+    "contexts": 3869,
+    "stubs": 0,
+    "summaries": 1919
+  },
+  "source_fingerprint": "6e0d99735a602b4fbb329784f2966cd8de9db84b1e5b88cd4bb65666f6bebf9d",
+  "total_tokens": 5788,
+  "version": 1
+}

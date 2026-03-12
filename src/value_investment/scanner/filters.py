@@ -45,4 +45,5 @@ def consecutive_years(
         if (values >= min_value).all():
             results.append(code)
 
-    return df[df['stock_code'].isin(results)].copy()
+    result: pd.DataFrame = df[df['stock_code'].isin(results)].copy()
+    return result

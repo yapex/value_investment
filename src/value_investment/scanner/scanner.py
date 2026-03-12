@@ -144,6 +144,49 @@ class Scanner:
 
         return df
     
+    def scan(
+        self,
+        stocks: List[str],
+        fields: List[str],
+        filters: "FilterBuilder",
+        years: int = 5
+    ) -> pd.DataFrame:
+        """获取数据并应用过滤条件
+        
+        这是 get_financial_data + 过滤的便捷方法。
+        
+        Args:
+            stocks: 股票代码列表
+            fields: 需要的字段列表
+            filters: FilterBuilder 构建的过滤条件
+            years: 获取年数，默认 5 年
+            
+        Returns:
+            过滤后的 DataFrame
+            
+        Example:
+            >>> from value_investment.scanner.pipeline import FilterBuilder
+            >>> 
+            >>> # 构建过滤条件
+            >>> fb = FilterBuilder()
+            >>> fb.add_filter('latest_year', field='roe', min_value=15)
+            >>> fb.add_filter('consecutive_years', field='gross_profit_margin', min_value=30, years=5)
+            >>> 
+            >>> # 扫描并过滤
+            >>> scanner = Scanner(market='A')
+            >>> result = scanner.scan(stocks=['600519', '000858'], fields=['roe'], filters=fb)
+        """
+        # 获取财务数据
+        df = self.get_financial_data(stocks, fields, years)
+        
+        if df.empty:
+            return df
+        
+        # 应用过滤条件
+        result = filters.execute(df)
+        
+        return result
+    
     def _get_hk_financial_data(
         self,
         stocks: List[str],

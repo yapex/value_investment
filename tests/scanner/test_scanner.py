@@ -16,6 +16,9 @@ class TestScanner:
         """测试获取股票列表（mock 版本）"""
         scanner = Scanner(market="A")
         
+        # 清除缓存以确保 mock 生效
+        scanner._cache._cache.clear()
+        
         # Mock Tushare API 响应
         mock_df = pd.DataFrame({
             'ts_code': ['600519.SH', '000001.SZ'],

@@ -124,6 +124,52 @@ step1 = filters.latest_year(financials, field='gross_profit_margin', min_value=3
 result = filters.consecutive_years(step1, field='roe', min_value=15, years=5)
 ```
 
+### 4. Pipeline 方式（推荐）
+
+使用 FilterBuilder 构建过滤条件，支持链式调用和配置化：
+
+```python
+from value_investment import Scanner
+from value_investment.scanner import FilterBuilder
+
+# 方式一：链式构建
+fb = (FilterBuilder()
+    .add_filter('latest_year', field='roe', min_value=15)
+    .add_filter('consecutive_years', field='gross_profit_margin', min_value=30, years=5))
+
+# 方式二：从配置加载
+config = [
+    {'type': 'latest_year', 'params': {'field': 'roe', 'min_value': 15}},
+    {'type': 'consecutive_years', 'params': {'field': 'gross_profit_margin', 'min_value': 30}},
+]
+fb = FilterBuilder().add_filters_from_config(config)
+
+# 使用 scan 方法一步完成获取+过滤
+scanner = Scanner(market='A')
+result = scanner.scan(
+    stocks=['600519', '000858'],
+    fields=['roe', 'gross_profit_margin'],
+    filters=fb,
+    years=5
+)
+```
+
+**FilterBuilder 方法：**
+
+| 方法 | 说明 |
+|-----|------|
+| `add_filter(type, **params)` | 添加过滤条件 |
+| `add_filters_from_config(config)` | 从配置列表批量添加 |
+| `add_filters_from_json(json_str)` | 从 JSON 字符串添加 |
+| `execute(df)` | 执行过滤 |
+| `to_config()` | 导出配置 |
+| `to_json()` | 导出 JSON |
+
+**支持的过滤器类型：**
+- `latest_year` - 最近一年满足条件
+- `consecutive_years` - 连续 N 年满足条件
+- `majority_years` - N 年中至少 M 年满足条件
+
 ## 数据处理特性
 
 ### 1. 自动去重

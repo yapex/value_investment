@@ -39,8 +39,12 @@ dev = [
 ]
 
 [tool.poe.tasks.to_nanobot]
-help = "Copy SKILL.md to nanobot skills directory"
-shell = "mkdir -p ~/.nanobot/workspace/skills/value_investment && cp SKILL.md ~/.nanobot/workspace/skills/value_investment/"
+help = "Copy SKILL.md and REFERENCES to nanobot skills directory"
+shell = """
+mkdir -p /Volumes/yapex_ssd/yapex-bot/workspace/skills/value_investment && \
+cp SKILL.md /Volumes/yapex_ssd/yapex-bot/workspace/skills/value_investment/ && \
+cp -r REFERENCES /Volumes/yapex_ssd/yapex-bot/workspace/skills/value_investment/
+"""
 
 
 [tool.pytest.ini_options]

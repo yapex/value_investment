@@ -2,8 +2,10 @@
 
 为 Agent 提供简单易用的 API 来获取全市场股票数据并进行筛选。
 """
+from __future__ import annotations
+
 from datetime import datetime
-from typing import List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 import pandas as pd
 import tushare as ts
 
@@ -148,7 +150,7 @@ class Scanner:
         self,
         stocks: List[str],
         fields: List[str],
-        filters: "FilterBuilder",
+        filters: Any,
         years: int = 5
     ) -> pd.DataFrame:
         """获取数据并应用过滤条件

@@ -62,3 +62,9 @@ Thumbs.db
 
 # Archived docs
 docs/_archived/
+
+# Examples (generated reports)
+docs/examples/
+
+# Original prompt (not needed in repo)
+docs/ROE深度分析提示词.md

@@ -161,6 +161,9 @@ class Scanner:
 
         start_year = end_year - years + 1
 
+        # 将 fields 排序后加入缓存 key，确保相同股票不同字段不会冲突
+        fields_key = "_".join(sorted(fields))
+
         all_data = []
 
         for i, ts_code in enumerate(ts_codes):
@@ -170,7 +173,7 @@ class Scanner:
                 print(f"  已处理 {i}/{len(ts_codes)} 只，剩余配额 {status['remaining']}")
 
             # 检查缓存
-            cache_key = f"scanner_finind_{ts_code}_{start_year}_{end_year}"
+            cache_key = f"scanner_finind_{ts_code}_{fields_key}_{start_year}_{end_year}"
             cached = self._cache.get(cache_key)
 
             if cached is not None:

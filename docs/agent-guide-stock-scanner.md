@@ -232,10 +232,10 @@ export TUSHARE_TOKEN="your_token_here"
 当前已实现功能：
 - ✅ 连续 N 年过滤
 - ✅ 最近一年过滤
+- ✅ 多数年份过滤 (majority_years)
 - ✅ A 股市场支持
 
 计划中功能：
-- ⏳ majority_years 过滤（N 年中至少 M 年满足 + 平均值）
 - ⏳ 更多过滤函数（趋势、稳定性等）
 - ⏳ 港股/美股市场支持
 - ⏳ CLI 集成

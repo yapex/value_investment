@@ -265,7 +265,7 @@ class FilterBuilder:
             
             # 缓存未命中：执行过滤
             filter_func = self.SUPPORTED_FILTERS[filter_type]
-            filtered = filter_func(result, **params)
+            filtered: pd.DataFrame = filter_func(result, **params)
             
             # 缓存结果（保存满足条件的股票代码）
             if not filtered.empty:
@@ -309,7 +309,7 @@ class FilterBuilder:
             
             # 缓存未命中：执行过滤
             filter_func = self.SUPPORTED_FILTERS[filter_type]
-            filtered = filter_func(result, **params)
+            filtered: pd.DataFrame = filter_func(result, **params)
             
             # 缓存结果
             if not filtered.empty:

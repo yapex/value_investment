@@ -11,8 +11,7 @@ from value_investment.data.providers.base_provider import (
 )
 
 if TYPE_CHECKING:
-    import akshare as ak  # type: ignore[import-untyped]
-    from value_investment.data.cache import SmartCache
+    pass
 
 
 class USShareProvider(BaseProvider):

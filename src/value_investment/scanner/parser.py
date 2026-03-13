@@ -13,7 +13,6 @@
 - 带平均值：ROE 5年至少4年 ≥15%, 平均≥15%
 """
 import re
-from typing import Optional
 
 from value_investment.scanner.pipeline import FilterBuilder
 

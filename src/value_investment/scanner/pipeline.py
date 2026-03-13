@@ -15,12 +15,10 @@ from value_investment.scanner.priority_filters import (
     generate_cache_key,
     generate_non_priority_cache_key,
     compute_context_hash,
-    is_priority_filter,
 )
 
 if TYPE_CHECKING:
-    from value_investment.data.cache import SmartCache
-    from value_investment.scanner.scanner import Scanner
+    pass
 
 
 class ICache(Protocol):

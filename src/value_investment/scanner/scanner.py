@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import hashlib
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import Any, List, Optional
 import pandas as pd
 import tushare as ts
 

@@ -9,10 +9,8 @@ import pandas as pd
 
 from value_investment.core.constants import (
     A_SHARE_CODE_PREFIXES,
-    BILLION,
     DATE_FORMAT,
     DATE_FORMAT_COMPACT,
-    HUNDRED_MILLION,
 )
 from value_investment.core.container import Container, get_financial_provider, get_market_provider
 from value_investment.core.dependencies import DataProvider, DependencyRegistry

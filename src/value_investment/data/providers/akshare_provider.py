@@ -4,7 +4,7 @@
 港股和美股功能仍然可用。
 """
 import warnings
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
 
 import akshare as ak  # type: ignore[import-untyped]

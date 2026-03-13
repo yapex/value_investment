@@ -2,10 +2,8 @@
 import importlib
 
 from dependency_injector import containers, providers  # type: ignore
-from dependency_injector.wiring import Provide, inject  # type: ignore
 
 from value_investment.core.settings import Settings
-from value_investment.core.config import DataSourcesConfig
 from value_investment.core.defaults import DEFAULT_DATASOURCES
 from value_investment.core.constants import DEFAULT_CACHE_TTL
 from value_investment.data.cache import SmartCache

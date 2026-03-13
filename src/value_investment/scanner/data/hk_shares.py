@@ -2,9 +2,85 @@
 
 包含约 100 只港股知名公司，按行业分类。
 代码格式为 5 位数字（如 00700 代表腾讯控股）。
-"""
 
-# 港股市场 100 家知名上市公司
+注意：从 v2.0 开始，港股列表改为从 akshare 动态获取，
+TOP_100_HK_SHARES 仅作为备份列表保留。
+"""
+from __future__ import annotations
+
+from typing import cast
+
+import akshare as ak  # type: ignore[import-untyped]
+import pandas as pd
+
+
+def format_hk_stock_code(code: str | None) -> str:
+    """Format HK stock code to project format (5-digit + .HK suffix)
+    
+    Args:
+        code: Stock code (e.g., '00700', '700', '00700.HK')
+    
+    Returns:
+        Formatted code (e.g., '00700.HK')
+    """
+    if not code:
+        return '.HK'
+    
+    # Extract only digits
+    digits = ''.join(c for c in str(code) if c.isdigit())
+    
+    # Pad to 5 digits
+    if len(digits) < 5:
+        digits = digits.zfill(5)
+    
+    return f"{digits}.HK"
+
+
+def get_hk_stock_list_from_akshare() -> pd.DataFrame:
+    """Get HK stock list from akshare (Sina API)
+    
+    Returns:
+        DataFrame with columns: ts_code, symbol, name, area, industry, list_date.
+        Returns empty DataFrame if akshare fails.
+    """
+    try:
+        df = ak.stock_hk_spot()
+    except Exception as e:
+        print(f"获取港股列表失败：{e}")
+        return pd.DataFrame()
+    
+    if df is None or df.empty:
+        return pd.DataFrame()
+    
+    # Normalize stock codes to 5-digit format
+    df['symbol'] = df['代码'].apply(
+        lambda x: ''.join(c for c in str(x) if c.isdigit()).zfill(5)
+    )
+    
+    # Add .HK suffix for ts_code
+    df['ts_code'] = df['symbol'].apply(lambda x: f"{x}.HK")
+    
+    # Use Chinese name if available, otherwise use '港股 - 代码'
+    if '中文名称' in df.columns:
+        df['name'] = df['中文名称']
+    else:
+        df['name'] = df['symbol'].apply(lambda x: f'港股-{x}')
+    
+    # Add area
+    df['area'] = '香港'
+    
+    # Add empty columns for compatibility with A-share format
+    df['industry'] = ''
+    df['list_date'] = ''
+    
+    # Select and order columns
+    columns_to_keep = ['ts_code', 'symbol', 'name', 'area', 'industry', 'list_date']
+    result = cast(pd.DataFrame, df[columns_to_keep].copy())
+    
+    return result
+
+
+# 港股市场 100 家知名上市公司（备份列表）
 TOP_100_HK_SHARES: list[str] = [
     # 互联网/科技 (20)
     '00700',   # 腾讯控股

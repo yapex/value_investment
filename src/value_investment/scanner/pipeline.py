@@ -17,6 +17,7 @@ from value_investment.scanner.priority_filters import (
     compute_context_hash,
     is_priority_filter,
 )
+from value_investment.scanner.cache_protocol import ICache
 
 if TYPE_CHECKING:
     from value_investment.data.cache import SmartCache
@@ -45,16 +46,40 @@ class FilterBuilder:
         'majority_years': filters.majority_years,
     }
 
-    def __init__(self, cache: Optional["SmartCache"] = None, market: str = 'A'):
+    def __init__(self, cache: Optional[ICache] = None, market: str = 'A'):
         """初始化 FilterBuilder
         
         Args:
-            cache: 缓存实例，用于存储过滤结果
+            cache: 缓存实例，用于存储过滤结果（遵循 DIP 原则依赖抽象接口）
             market: 市场标识（A/HK），用于缓存键生成
         """
         self._filters: list[Dict[str, Any]] = []
         self._cache = cache
         self._market = market
+    
+    def set_cache(self, cache: ICache) -> "FilterBuilder":
+        """设置缓存实例（遵循 ISP 原则的显式方法）
+        
+        Args:
+            cache: 缓存实例
+            
+        Returns:
+            self
+        """
+        self._cache = cache
+        return self
+    
+    def set_market(self, market: str) -> "FilterBuilder":
+        """设置市场标识（遵循 ISP 原则的显式方法）
+        
+        Args:
+            market: 市场标识（A/HK）
+            
+        Returns:
+            self
+        """
+        self._market = market
+        return self
 
     def add_filter(
         self,

@@ -219,11 +219,10 @@ class Scanner:
         if df.empty:
             return df
 
-        # 应用过滤条件（传递 cache 和 market 给 FilterBuilder）
-        # 如果 filters 是 FilterBuilder 实例，设置 cache 和 market
-        if hasattr(filters, '_cache') and hasattr(filters, '_market'):
-            filters._cache = self._cache
-            filters._market = self.market
+        # 应用过滤条件（使用显式方法，遵循 ISP 原则）
+        # 如果 filters 有 set_cache 和 set_market 方法，使用它们
+        if hasattr(filters, 'set_cache') and hasattr(filters, 'set_market'):
+            filters.set_cache(self._cache).set_market(self.market)
         
         result = filters.execute(df, use_cache=use_cache)
 

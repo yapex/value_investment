@@ -78,6 +78,17 @@ v-invest scan --filter "ROE 连续5年 ≥15% 且 毛利率 连续5年 ≥30%"
 
 # 输出到文件
 v-invest scan --filter "ROE 连续5年 ≥15%" -o result.csv
+
+# 缓存机制：首次扫描自动缓存结果，再次运行相同条件直接返回缓存
+v-invest scan --filter "ROIC 5年至少4年 ≥15%, 平均≥15%" -m A --fields roic -y 5 -l 0
+
+# 强制重新扫描（不使用缓存）
+v-invest scan --filter "ROE 连续5年 ≥15%" --no-cache
+
+# 查看已缓存的扫描结果
+v-invest scan-list
+v-invest scan-list -m A    # 查看 A 股市场缓存
+v-invest scan-list -m HK    # 查看港股市场缓存
 ```
 
 **详细参考**: [REFERENCES/scanner.md](./REFERENCES/scanner.md)
@@ -97,6 +108,8 @@ v-invest scan --filter "ROE 连续5年 ≥15%" -o result.csv
 | 指标当前值 | `v-invest indicator roe -s 00700 -m HK` |
 | **指标10年历史** | `v-invest indicator roe,roa -s 00700 -m HK -y 10` |
 | PE百分位 | `v-invest indicator PEPct -s 600519 -m A -y 10` |
+| 股票筛选 | `v-invest scan --filter "ROE 连续5年 ≥15%"` |
+| 查看缓存 | `v-invest scan-list` |
 
 ## 常用选项
 

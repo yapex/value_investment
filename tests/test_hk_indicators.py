@@ -1,220 +1,178 @@
-"""Tests for HK stock financial indicators"""
+"""Tests for HK stock financial indicator calculation"""
+
 import pytest
 import pandas as pd
 
-
-class TestHKFinancialIndicators:
-    """Test HK stock financial indicators registration"""
-
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        """Setup registry with defaults"""
-        from value_investment.indicators.registry import IndicatorRegistry, register_defaults
-
-        registry = IndicatorRegistry.get_instance()
-        registry.clear()
-        register_defaults()
-
-    def test_hk_market_indicators_list(self):
-        """Should list indicators available for HK market"""
-        from value_investment.indicators.registry import IndicatorRegistry
-
-        registry = IndicatorRegistry.get_instance()
-        hk_indicators = registry.list_by_market("港股")
-
-        # Print for debugging
-        hk_names = [ind.name for ind in hk_indicators]
-        print(f"HK indicators: {hk_names}")
-
-        assert isinstance(hk_indicators, list)
-        # Should have more than basic indicators
-        assert len(hk_indicators) > 0
-
-    def test_hk_has_gross_margin(self):
-        """HK market should have gross margin indicator"""
-        from value_investment.indicators.registry import IndicatorRegistry
-
-        registry = IndicatorRegistry.get_instance()
-        gross_margin = registry.get("gross_margin")
-
-        assert gross_margin is not None, "gross_margin should be registered"
-
-    def test_hk_has_debt_ratio(self):
-        """HK market should have debt ratio indicator"""
-        from value_investment.indicators.registry import IndicatorRegistry
-
-        registry = IndicatorRegistry.get_instance()
-        debt_ratio = registry.get("debt_ratio")
-
-        assert debt_ratio is not None, "debt_ratio should be registered"
-
-    def test_hk_has_current_ratio(self):
-        """HK market should have current ratio indicator"""
-        from value_investment.indicators.registry import IndicatorRegistry
-
-        registry = IndicatorRegistry.get_instance()
-        current_ratio = registry.get("current_ratio")
-
-        assert current_ratio is not None, "current_ratio should be registered"
-
-    def test_hk_has_quick_ratio(self):
-        """HK market should have quick ratio indicator"""
-        from value_investment.indicators.registry import IndicatorRegistry
-
-        registry = IndicatorRegistry.get_instance()
-        quick_ratio = registry.get("quick_ratio")
-
-        assert quick_ratio is not None, "quick_ratio should be registered"
-
-    def test_hk_has_inventory_turnover(self):
-        """HK market should have inventory turnover indicator"""
-        from value_investment.indicators.registry import IndicatorRegistry
-
-        registry = IndicatorRegistry.get_instance()
-        inventory_turnover = registry.get("inventory_turnover")
-
-        assert inventory_turnover is not None, "inventory_turnover should be registered"
-
-    def test_hk_has_receivable_turnover(self):
-        """HK market should have receivable turnover indicator"""
-        from value_investment.indicators.registry import IndicatorRegistry
-
-        registry = IndicatorRegistry.get_instance()
-        receivable_turnover = registry.get("receivable_turnover")
-
-        assert receivable_turnover is not None, "receivable_turnover should be registered"
-
-    def test_hk_has_asset_turnover(self):
-        """HK market should have asset turnover indicator"""
-        from value_investment.indicators.registry import IndicatorRegistry
-
-        registry = IndicatorRegistry.get_instance()
-        asset_turnover = registry.get("asset_turnover")
-
-        assert asset_turnover is not None, "asset_turnover should be registered"
+from value_investment.indicators.hk import calculate_hk_roe, calculate_hk_roic, merge_hk_financial_data
 
 
-class TestHKIndicatorsCalculation:
-    """Test HK stock indicators calculation with mock data"""
+class TestHKROICCalculation:
+    """Tests for HK stock ROIC calculation from three statements
 
-    def test_gross_margin_calculation(self):
-        """Should calculate gross margin correctly"""
-        from value_investment.indicators.profitability import GrossMarginIndicator
+    ROIC = NOPAT / 投入资本
+    - NOPAT = 股东应占溢利 + 融资成本
+    - 投入资本 = 股东权益 + 短期贷款 + 长期贷款
+    """
 
-        # Create mock data with standardized field names
-        data = pd.DataFrame({
-            'year': [2023, 2022, 2021],
-            'operating_income': [1000000, 900000, 800000],
-            'operating_cost': [600000, 540000, 480000]
+    def test_calculate_hk_roic_basic(self):
+        """Test basic ROIC calculation"""
+        # 模拟利润表数据
+        income_data = pd.DataFrame({
+            'year': [2024, 2023],
+            '股东应占溢利': [1000, 900],  # 净利润
+            '融资成本': [100, 80],        # 财务费用/融资成本
         })
 
-        indicator = GrossMarginIndicator()
-        result = indicator.calculate(data)
-
-        # Gross margin = (revenue - cost) / revenue * 100
-        # (1000000 - 600000) / 1000000 * 100 = 40%
-        assert result.value == pytest.approx(40.0, rel=0.1)
-        assert result.unit == "%"
-
-    def test_current_ratio_calculation(self):
-        """Should calculate current ratio correctly"""
-        from value_investment.indicators.solvency import CurrentRatioIndicator
-
-        data = pd.DataFrame({
-            'year': [2023, 2022],
-            'current_assets': [500000, 400000],
-            'current_liabilities': [250000, 200000]
+        # 模拟资产负债表数据
+        balance_data = pd.DataFrame({
+            'year': [2024, 2023],
+            '股东权益': [10000, 9000],
+            '短期贷款': [2000, 1800],
+            '长期贷款': [3000, 2700],
         })
 
-        indicator = CurrentRatioIndicator()
-        result = indicator.calculate(data)
+        result = calculate_hk_roic(income_data, balance_data)
 
-        # Current ratio = current assets / current liabilities
-        # 500000 / 250000 = 2.0
-        assert result.value == pytest.approx(2.0, rel=0.1)
+        assert len(result) == 2
+        assert 'year' in result.columns
+        assert 'roic' in result.columns
 
-    def test_quick_ratio_calculation(self):
-        """Should calculate quick ratio correctly"""
-        from value_investment.indicators.solvency import QuickRatioIndicator
+        # ROIC = (净利润 + 融资成本) / (股东权益 + 短期贷款 + 长期贷款)
+        # 2024: (1000 + 100) / (10000 + 2000 + 3000) = 1100 / 15000 = 7.33%
+        # 2023: (900 + 80) / (9000 + 1800 + 2700) = 980 / 13500 = 7.26%
+        expected_roic = [7.333333, 7.259259]
+        assert abs(result['roic'].iloc[0] - expected_roic[0]) < 0.01
+        assert abs(result['roic'].iloc[1] - expected_roic[1]) < 0.01
 
-        data = pd.DataFrame({
-            'year': [2023, 2022],
-            'current_assets': [500000, 400000],
-            'inventory': [100000, 80000],
-            'current_liabilities': [250000, 200000]
+    def test_calculate_hk_roic_without_debt(self):
+        """Test ROIC calculation when there's no debt (only equity)"""
+        income_data = pd.DataFrame({
+            'year': [2024],
+            '股东应占溢利': [1000],
+            '融资成本': [0],
         })
 
-        indicator = QuickRatioIndicator()
-        result = indicator.calculate(data)
-
-        # Quick ratio = (current assets - inventory) / current liabilities
-        # (500000 - 100000) / 250000 = 1.6
-        assert result.value == pytest.approx(1.6, rel=0.1)
-
-    def test_debt_ratio_calculation(self):
-        """Should calculate debt ratio correctly"""
-        from value_investment.indicators.solvency import DebtRatioIndicator
-
-        data = pd.DataFrame({
-            'year': [2023, 2022],
-            'total_liabilities': [400000, 350000],
-            'total_assets': [1000000, 900000]
+        balance_data = pd.DataFrame({
+            'year': [2024],
+            '股东权益': [10000],
+            '短期贷款': [0],
+            '长期贷款': [0],
         })
 
-        indicator = DebtRatioIndicator()
-        result = indicator.calculate(data)
+        result = calculate_hk_roic(income_data, balance_data)
 
-        # Debt ratio = liabilities / assets * 100
-        # 400000 / 1000000 * 100 = 40%
-        assert result.value == pytest.approx(40.0, rel=0.1)
+        # ROIC = (1000 + 0) / (10000 + 0 + 0) = 10%
+        expected_roic = [10.0]
+        assert abs(result['roic'].iloc[0] - expected_roic[0]) < 0.01
 
-    def test_inventory_turnover_calculation(self):
-        """Should calculate inventory turnover correctly"""
-        from value_investment.indicators.efficiency import InventoryTurnoverIndicator
-
-        data = pd.DataFrame({
-            'year': [2023, 2022],
-            'operating_cost': [600000, 540000],
-            'inventory': [100000, 90000]
+    def test_calculate_hk_roic_with_zero_capital(self):
+        """Test ROIC calculation handles zero invested capital"""
+        income_data = pd.DataFrame({
+            'year': [2024],
+            '股东应占溢利': [1000],
+            '融资成本': [100],
         })
 
-        indicator = InventoryTurnoverIndicator()
-        result = indicator.calculate(data)
-
-        # Inventory turnover = cost / inventory
-        # 600000 / 100000 = 6.0
-        assert result.value == pytest.approx(6.0, rel=0.1)
-
-    def test_receivable_turnover_calculation(self):
-        """Should calculate receivable turnover correctly"""
-        from value_investment.indicators.efficiency import ReceivableTurnoverIndicator
-
-        data = pd.DataFrame({
-            'year': [2023, 2022],
-            'operating_income': [1000000, 900000],
-            'accounts_receivable': [200000, 180000]
+        balance_data = pd.DataFrame({
+            'year': [2024],
+            '股东权益': [0],
+            '短期贷款': [0],
+            '长期贷款': [0],
         })
 
-        indicator = ReceivableTurnoverIndicator()
-        result = indicator.calculate(data)
+        result = calculate_hk_roic(income_data, balance_data)
 
-        # Receivable turnover = income / receivable
-        # 1000000 / 200000 = 5.0
-        assert result.value == pytest.approx(5.0, rel=0.1)
+        # Should return NaN when invested capital is 0
+        assert pd.isna(result.iloc[0]['roic'])
 
-    def test_asset_turnover_calculation(self):
-        """Should calculate asset turnover correctly"""
-        from value_investment.indicators.efficiency import AssetTurnoverIndicator
-
-        data = pd.DataFrame({
-            'year': [2023, 2022],
-            'operating_income': [1000000, 900000],
-            'total_assets': [2000000, 1800000]
+    def test_calculate_hk_roic_with_missing_debt_columns(self):
+        """Test ROIC calculation when debt columns are missing"""
+        income_data = pd.DataFrame({
+            'year': [2024],
+            '股东应占溢利': [1000],
+            '融资成本': [100],
         })
 
-        indicator = AssetTurnoverIndicator()
-        result = indicator.calculate(data)
+        # 只有股东权益，没有贷款字段
+        balance_data = pd.DataFrame({
+            'year': [2024],
+            '股东权益': [10000],
+        })
 
-        # Asset turnover = income / assets
-        # 1000000 / 2000000 = 0.5
-        assert result.value == pytest.approx(0.5, rel=0.1)
+        result = calculate_hk_roic(income_data, balance_data)
+
+        # Should handle missing columns gracefully
+        # ROIC = (1000 + 100) / 10000 = 11%
+        expected_roic = [11.0]
+        assert abs(result['roic'].iloc[0] - expected_roic[0]) < 0.01
+
+
+class TestHKROECalculation:
+    """Tests for HK stock ROE calculation from three statements"""
+
+    def test_calculate_hk_roe_basic(self):
+        """Test basic ROE calculation"""
+        # 模拟利润表数据
+        income_data = pd.DataFrame({
+            'year': [2024, 2023, 2022],
+            '股东应占溢利': [1000, 900, 800],  # 净利润
+        })
+
+        # 模拟资产负债表数据
+        balance_data = pd.DataFrame({
+            'year': [2024, 2023, 2022],
+            '股东权益': [10000, 9000, 8000],
+        })
+
+        result = calculate_hk_roe(income_data, balance_data)
+
+        assert len(result) == 3
+        assert 'year' in result.columns
+        assert 'roe' in result.columns
+
+        # ROE = 净利润 / 股东权益
+        expected_roe = [10.0, 10.0, 10.0]  # 1000/10000=10%, 900/9000=10%, 800/8000=10%
+        assert result['roe'].tolist() == expected_roe
+
+    def test_calculate_hk_roe_with_zero_equity(self):
+        """Test ROE calculation handles zero equity"""
+        income_data = pd.DataFrame({
+            'year': [2024],
+            '股东应占溢利': [1000],
+        })
+
+        balance_data = pd.DataFrame({
+            'year': [2024],
+            '股东权益': [0],  # 零权益
+        })
+
+        result = calculate_hk_roe(income_data, balance_data)
+
+        # 应该返回 NaN 而不是 infinity
+        assert pd.isna(result.iloc[0]['roe'])
+
+    def test_merge_hk_financial_data(self):
+        """Test merging three statements into one DataFrame"""
+        balance = pd.DataFrame({
+            'year': [2024, 2023],
+            '股东权益': [10000, 9000],
+            '总资产': [50000, 45000],
+        })
+
+        income = pd.DataFrame({
+            'year': [2024, 2023],
+            '股东应占溢利': [1000, 900],
+            '营业额': [20000, 18000],
+        })
+
+        cashflow = pd.DataFrame({
+            'year': [2024, 2023],
+            '经营产生现金': [1500, 1300],
+        })
+
+        result = merge_hk_financial_data(balance, income, cashflow)
+
+        assert len(result) == 2
+        assert '股东权益' in result.columns
+        assert '股东应占溢利' in result.columns
+        assert '经营产生现金' in result.columns

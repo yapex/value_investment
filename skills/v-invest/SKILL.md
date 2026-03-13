@@ -5,19 +5,86 @@ description: Use when analyzing A股/港股/美股基本面，需要查询股票
 
 # value-investment
 
-价值投资分析工具，支持A股/港股/美股基本面分析，数据来源 akshare。
+价值投资分析工具，支持A股/港股/美股基本面分析。
 
-## 市场与代码格式
+## 市场代码格式
 
-| 市场 | 代码格式 | 示例 | 市场参数 |
-|-----|---------|------|---------|
+| 市场 | 代码格式 | 示例 | 参数 |
+|-----|---------|------|------|
 | A股 | 6位数字 | 600519 | `A` |
 | 港股 | 5位数字 | 00700 | `HK` |
 | 美股 | 字母 | AAPL | `US` |
 
-> 美股自动检测：纯字母代码自动识别为美股
+---
 
-## 常用命令
+## 模块一：财务字段
+
+财务报表的原始字段（资产负债表、利润表、现金流量表）。
+
+```bash
+v-invest fields A balance
+v-invest fields A income
+v-invest fields HK finind
+```
+
+**详细参考**: [REFERENCES/fields.md](./REFERENCES/fields.md)
+
+---
+
+## 模块二：财务指标
+
+基于财务字段计算或直接查询的指标，如 ROE、ROIC、PE 等。
+
+```bash
+# 列出所有可用指标
+v-invest indicators A
+
+# 获取单个指标（当前值）
+v-invest indicator ROE -s 600519 -m A
+
+# 获取指标多年历史数据（重点！）
+v-invest indicator ROE -s 00700 -m HK -y 10
+v-invest indicator roe,roa,net_profit_margin -s 00700 -m HK -y 10
+```
+
+**注意**: 当 `-y` 参数 > 1 时，返回多年历史数据表格
+
+**详细参考**: [REFERENCES/indicators_query.md](./REFERENCES/indicators_query.md)
+
+---
+
+## 模块三：财务分析框架
+
+系统化的分析方法论，基于指标进行深度分析。
+
+| 框架 | 说明 |
+|------|------|
+| [roe_analysis_framework/README.md](./REFERENCES/roe_analysis_framework/README.md) | ROE 分析框架（快速分析、深入分析、同业对比等） |
+
+**递进关系**: 字段 → 指标 → 分析框架
+
+---
+
+## 模块四：股票筛选
+
+批量获取全市场股票数据，使用文本条件进行筛选。
+
+```bash
+# 基本筛选
+v-invest scan --filter "ROE 连续5年 ≥15%"
+
+# 多条件 AND
+v-invest scan --filter "ROE 连续5年 ≥15% 且 毛利率 连续5年 ≥30%"
+
+# 输出到文件
+v-invest scan --filter "ROE 连续5年 ≥15%" -o result.csv
+```
+
+**详细参考**: [REFERENCES/scanner.md](./REFERENCES/scanner.md)
+
+---
+
+## 常用命令速查
 
 | 需求 | 命令 |
 |------|------|
@@ -27,55 +94,12 @@ description: Use when analyzing A股/港股/美股基本面，需要查询股票
 | 资产负债表 | `v-invest balance 600519` |
 | 现金流量表 | `v-invest cashflow 600519` |
 | 财务指标 | `v-invest finind 600519 -m A` |
-| 单个指标 | `v-invest indicator ROIC -s 00700 -m HK` |
+| 指标当前值 | `v-invest indicator roe -s 00700 -m HK` |
+| **指标10年历史** | `v-invest indicator roe,roa -s 00700 -m HK -y 10` |
 | PE百分位 | `v-invest indicator PEPct -s 600519 -m A -y 10` |
-| **可用字段** | `v-invest fields A balance` |
-| **可用指标** | `v-invest indicators A` |
-
-## 查询可用字段/指标
-
-```bash
-# 查看报表字段：fields <market> <report>
-v-invest fields A balance   # A股资产负债表
-v-invest fields HK finind   # 港股财务指标
-v-invest fields US income   # 美股利润表
-
-# 查看可用指标：indicators <market>（必须指定市场）
-v-invest indicators A       # A股指标
-v-invest indicators HK      # 港股指标
-v-invest indicators US      # 美股指标
-```
 
 ## 常用选项
 
 - `--refresh` / `-r`：强制刷新缓存
-- `--fields` / `-f`：筛选字段（三表命令）
 - `-m` / `--market`：指定市场（A/HK/US）
-- `-y` / `--years`：指定年数
-
-```bash
-v-invest income 600519 --fields "NETPROFIT,REPORT_DATE"
-v-invest indicator PEPct -s 600519 -m A -y 10
-```
-
-## 市值查询
-
-```bash
-v-invest indicator latest_market_cap -s 00700 -m HK  # 港股
-v-invest finind 600519 -m A                          # A股（在 finind 中）
-```
-
----
-
-## 分析框架
-
-- **ROE 深度分析** → 参见 [REFERENCES/ROE_ANALYSIS_FRAMEWORK.md](./REFERENCES/ROE_ANALYSIS_FRAMEWORK.md)
-
----
-
-## Agent 查询流程
-
-1. `v-invest indicators <market>` 确认可用指标
-2. `v-invest fields <market> <report>` 确认可用字段
-3. 有现成指标 → 直接执行
-4. 无现成指标 → 制定计算计划
+- `-y` / `--years`：指定年数（当 > 1 时返回多年历史数据）

@@ -202,6 +202,7 @@ class ValueInvestment:
         force_refresh: bool = False,
         fields: list[str] | None = None,
         years: int = 10,
+        map_fields: bool = True,
     ):
         """
         Get balance sheet
@@ -213,6 +214,7 @@ class ValueInvestment:
             fields: List of fields to return (optional). If not provided, returns all fields.
                    REPORT_DATE is always included if fields is provided.
             years: Number of years to fetch (default: 10)
+            map_fields: If True, apply field mapping to standardize column names (default: True)
 
         Returns:
             DataFrame with balance sheet data
@@ -221,6 +223,11 @@ class ValueInvestment:
             end_year = datetime.now().year
         start_year = end_year - years
         df = self._provider.get_balance_sheet(symbol, end_year, start_year)
+        
+        # Apply field mapping
+        if map_fields:
+            df = DataMapper.map_balance_sheet(df)
+        
         return self._filter_fields(df, fields)
 
     def get_profit_sheet(
@@ -230,6 +237,7 @@ class ValueInvestment:
         force_refresh: bool = False,
         fields: list[str] | None = None,
         years: int = 10,
+        map_fields: bool = True,
     ):
         """
         Get profit sheet (income statement)
@@ -241,6 +249,7 @@ class ValueInvestment:
             fields: List of fields to return (optional). If not provided, returns all fields.
                    REPORT_DATE is always included if fields is provided.
             years: Number of years to fetch (default: 10)
+            map_fields: If True, apply field mapping to standardize column names (default: True)
 
         Returns:
             DataFrame with profit sheet data
@@ -249,6 +258,11 @@ class ValueInvestment:
             end_year = datetime.now().year
         start_year = end_year - years
         df = self._provider.get_income_statement(symbol, end_year, start_year)
+        
+        # Apply field mapping
+        if map_fields:
+            df = DataMapper.map_income_statement(df)
+        
         return self._filter_fields(df, fields)
 
     def get_cashflow_sheet(
@@ -258,6 +272,7 @@ class ValueInvestment:
         force_refresh: bool = False,
         fields: list[str] | None = None,
         years: int = 10,
+        map_fields: bool = True,
     ):
         """
         Get cash flow sheet
@@ -269,6 +284,7 @@ class ValueInvestment:
             fields: List of fields to return (optional). If not provided, returns all fields.
                    REPORT_DATE is always included if fields is provided.
             years: Number of years to fetch (default: 10)
+            map_fields: If True, apply field mapping to standardize column names (default: True)
 
         Returns:
             DataFrame with cash flow sheet data
@@ -277,6 +293,11 @@ class ValueInvestment:
             end_year = datetime.now().year
         start_year = end_year - years
         df = self._provider.get_cash_flow_statement(symbol, end_year, start_year)
+        
+        # Apply field mapping
+        if map_fields:
+            df = DataMapper.map_cash_flow(df)
+        
         return self._filter_fields(df, fields)
 
     def get_financial_indicator(self, symbol: str, force_refresh: bool = False):
@@ -291,6 +312,64 @@ class ValueInvestment:
             DataFrame with financial indicators
         """
         return self._provider.get_financial_indicator(symbol, force_refresh=force_refresh)
+
+    def get_indicator_history(
+        self,
+        names: str | list[str],
+        stock_code: str,
+        years: int = 10,
+    ) -> pd.DataFrame:
+        """
+        Get historical indicator values for multiple years.
+
+        Args:
+            names: Indicator name(s), can be a string with comma-separated names or a list
+            stock_code: Stock code
+            years: Number of years to fetch (default: 10)
+
+        Returns:
+            DataFrame with historical indicator values (one row per year)
+
+        Example:
+            >>> vi = ValueInvestment(market='HK')
+            >>> df = vi.get_indicator_history('roe,roa,net_profit_margin', '00700', years=10)
+            >>> print(df)
+               year    roe      roa  net_profit_margin
+            0  2024  18.64   11.03           30.11
+            1  2023  13.51    7.48           19.56
+            ...
+        """
+        # Parse indicator names
+        if isinstance(names, str):
+            indicator_names = [n.strip() for n in names.split(",")]
+        else:
+            indicator_names = names
+
+        # Get historical data for each indicator
+        dfs = []
+        for name in indicator_names:
+            try:
+                result = self.calculate_indicator(name, stock_code, years)
+                if result and result.years and result.values:
+                    df = pd.DataFrame({
+                        'year': result.years,
+                        name: result.values
+                    })
+                    dfs.append(df)
+            except Exception as e:
+                import warnings
+                warnings.warn(f"Failed to get {name}: {e}")
+
+        if not dfs:
+            return pd.DataFrame()
+
+        # Merge all indicators into one DataFrame
+        merged = dfs[0]
+        for df in dfs[1:]:
+            merged = merged.merge(df, on='year', how='outer')
+        
+        merged = merged.sort_values('year', ascending=False)
+        return merged
 
     def indicator(
         self,

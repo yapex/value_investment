@@ -17,9 +17,9 @@ from value_investment.scanner.priority_filters import (
     compute_context_hash,
     is_priority_filter,
 )
-from value_investment.scanner.cache_protocol import ICache
 
 if TYPE_CHECKING:
+    from value_investment.scanner.cache_protocol import ICache
     from value_investment.data.cache import SmartCache
     from value_investment.scanner.scanner import Scanner
 

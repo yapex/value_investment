@@ -5,7 +5,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, TYPE_CHECKING, cast
 
 import pandas as pd
 
@@ -39,7 +39,7 @@ class FilterBuilder:
     """
 
     # 支持的过滤器类型
-    SUPPORTED_FILTERS = {
+    SUPPORTED_FILTERS: dict = {
         'latest_year': filters.latest_year,
         'consecutive_years': filters.consecutive_years,
         'majority_years': filters.majority_years,
@@ -265,7 +265,7 @@ class FilterBuilder:
             
             # 缓存未命中：执行过滤
             filter_func = self.SUPPORTED_FILTERS[filter_type]
-            filtered: pd.DataFrame = filter_func(result, **params)
+            filtered = cast(pd.DataFrame, filter_func(result, **params))  # type: ignore[assignment]
             
             # 缓存结果（保存满足条件的股票代码）
             if not filtered.empty:
@@ -277,7 +277,7 @@ class FilterBuilder:
             if result.empty:
                 return result
         
-        return result
+        return result  # type: ignore[return-value]
     
     def _execute_non_priority_filters(
         self, 
@@ -309,7 +309,7 @@ class FilterBuilder:
             
             # 缓存未命中：执行过滤
             filter_func = self.SUPPORTED_FILTERS[filter_type]
-            filtered: pd.DataFrame = filter_func(result, **params)
+            filtered = cast(pd.DataFrame, filter_func(result, **params))  # type: ignore[assignment]
             
             # 缓存结果
             if not filtered.empty:
@@ -321,7 +321,7 @@ class FilterBuilder:
             if result.empty:
                 return result
         
-        return result
+        return result  # type: ignore[return-value]
 
     def __len__(self) -> int:
         """返回过滤条件数量"""

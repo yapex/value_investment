@@ -19,7 +19,7 @@ from value_investment.scanner.priority_filters import (
 )
 
 if TYPE_CHECKING:
-    from value_investment.core.cache import Cache
+    from value_investment.data.cache import SmartCache
     from value_investment.scanner.scanner import Scanner
 
 
@@ -45,7 +45,7 @@ class FilterBuilder:
         'majority_years': filters.majority_years,
     }
 
-    def __init__(self, cache: Optional["Cache"] = None, market: str = 'A'):
+    def __init__(self, cache: Optional["SmartCache"] = None, market: str = 'A'):
         """初始化 FilterBuilder
         
         Args:
@@ -104,7 +104,7 @@ class FilterBuilder:
             >>> fb.add_filters_from_config(config)
         """
         for item in config:
-            filter_type = item.get('type')
+            filter_type = item.get('type', '')
             params = item.get('params', {})
             self.add_filter(filter_type, **params)
 
@@ -257,10 +257,10 @@ class FilterBuilder:
             
             # 尝试从缓存获取
             cached_result = self._cache.get(cache_key)
-            if cached_result is not None:
+            if cached_result is not None and isinstance(cached_result, pd.DataFrame):
                 # 缓存命中：过滤出在缓存结果中的股票
                 cached_codes = set(cached_result['stock_code'].unique())
-                result = result[result['stock_code'].isin(cached_codes)]
+                result = result[result['stock_code'].isin(list(cached_codes))]
                 continue
             
             # 缓存未命中：执行过滤
@@ -302,9 +302,9 @@ class FilterBuilder:
             
             # 尝试从缓存获取
             cached_result = self._cache.get(cache_key)
-            if cached_result is not None:
+            if cached_result is not None and isinstance(cached_result, pd.DataFrame):
                 cached_codes = set(cached_result['stock_code'].unique())
-                result = result[result['stock_code'].isin(cached_codes)]
+                result = result[result['stock_code'].isin(list(cached_codes))]
                 continue
             
             # 缓存未命中：执行过滤

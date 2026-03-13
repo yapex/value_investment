@@ -5,7 +5,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, TYPE_CHECKING, cast
+from typing import Any, Dict, List, Optional, Protocol, TYPE_CHECKING, cast
 
 import pandas as pd
 
@@ -19,9 +19,14 @@ from value_investment.scanner.priority_filters import (
 )
 
 if TYPE_CHECKING:
-    from value_investment.scanner.cache_protocol import ICache
     from value_investment.data.cache import SmartCache
     from value_investment.scanner.scanner import Scanner
+
+
+class ICache(Protocol):
+    """缓存接口 - 遵循依赖倒置原则"""
+    def get(self, key: str) -> Any: ...
+    def set(self, key: str, value: Any, ttl: int | None = None) -> None: ...
 
 
 class FilterBuilder:

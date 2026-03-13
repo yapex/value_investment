@@ -1,4 +1,4 @@
-"""Tests for growth indicators"""
+"""Tests for growth indicators - more coverage"""
 import pandas as pd
 import pytest
 

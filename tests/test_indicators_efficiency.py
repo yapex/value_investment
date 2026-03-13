@@ -1,4 +1,4 @@
-"""Tests for efficiency indicators"""
+"""Tests for efficiency indicators - more coverage"""
 import pandas as pd
 import pytest
 
@@ -7,6 +7,11 @@ from value_investment.indicators.efficiency import (
     AccountsReceivableRatioIndicator,
     ExpenseRatioIndicator,
     FeeRateIndicator,
+    FeeToGrossProfitRatioIndicator,
+    PayableTurnoverIndicator,
+    ReceivablesToAssetsRatioIndicator,
+    ProductionAssetRatioIndicator,
+    ReturnOnProductionAssetsIndicator,
 )
 
 
@@ -72,6 +77,91 @@ class TestFeeRateIndicator:
         })
         
         indicator = FeeRateIndicator()
+        result = indicator.calculate(data)
+        
+        # Just verify it runs without error
+        assert result.value is not None
+
+
+class TestFeeToGrossProfitRatioIndicator:
+    """Test Fee to Gross Profit Ratio indicator"""
+    
+    def test_calculate_basic(self):
+        """Test basic fee to gross profit ratio"""
+        data = pd.DataFrame({
+            'fee_income': [500000],
+            'gross_profit': [5000000],
+        })
+        
+        indicator = FeeToGrossProfitRatioIndicator()
+        result = indicator.calculate(data)
+        
+        # Just verify it runs without error
+        assert result.value is not None
+
+
+class TestPayableTurnoverIndicator:
+    """Test Payable Turnover indicator"""
+    
+    def test_calculate_basic(self):
+        """Test basic payable turnover"""
+        data = pd.DataFrame({
+            'accounts_payable': [1000000],
+            'operating_cost': [8000000],
+        })
+        
+        indicator = PayableTurnoverIndicator()
+        result = indicator.calculate(data)
+        
+        # Just verify it runs without error
+        assert result.value is not None
+
+
+class TestReceivablesToAssetsRatioIndicator:
+    """Test Receivables to Assets Ratio indicator"""
+    
+    def test_calculate_basic(self):
+        """Test basic receivables to assets ratio"""
+        data = pd.DataFrame({
+            'accounts_receivable': [1500000],
+            'total_assets': [20000000],
+        })
+        
+        indicator = ReceivablesToAssetsRatioIndicator()
+        result = indicator.calculate(data)
+        
+        # Just verify it runs without error
+        assert result.value is not None
+
+
+class TestProductionAssetRatioIndicator:
+    """Test Production Asset Ratio indicator"""
+    
+    def test_calculate_basic(self):
+        """Test basic production asset ratio"""
+        data = pd.DataFrame({
+            'productive_assets': [8000000],
+            'total_assets': [20000000],
+        })
+        
+        indicator = ProductionAssetRatioIndicator()
+        result = indicator.calculate(data)
+        
+        # Just verify it runs without error
+        assert result.value is not None
+
+
+class TestReturnOnProductionAssetsIndicator:
+    """Test Return on Production Assets indicator"""
+    
+    def test_calculate_basic(self):
+        """Test basic return on production assets"""
+        data = pd.DataFrame({
+            'net_profit': [1000000],
+            'productive_assets': [8000000],
+        })
+        
+        indicator = ReturnOnProductionAssetsIndicator()
         result = indicator.calculate(data)
         
         # Just verify it runs without error

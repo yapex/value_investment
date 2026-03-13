@@ -8,6 +8,55 @@ from typing import Optional
 import pandas as pd
 
 
+def filter_by_data_years(
+    df: pd.DataFrame,
+    required_years: int,
+    field: Optional[str] = None
+) -> pd.DataFrame:
+    """过滤出数据年数满足要求的股票
+    
+    当扫描条件明确要求 N 年数据时（如"连续 5 年 ROE≥15%"），
+    直接排除数据不足 N 年的股票。
+    
+    Args:
+        df: 财务数据 DataFrame，必须包含 stock_code, end_date 列
+        required_years: 要求的最少年数
+        field: 可选，指定字段名。如果指定，只检查该字段有数据的年数
+        
+    Returns:
+        过滤后的 DataFrame，只包含数据年数 >= required_years 的股票
+        
+    Example:
+        >>> # 过滤出至少有 5 年数据的股票
+        >>> df = filters.filter_by_data_years(financials, required_years=5)
+        >>>
+        >>> # 过滤出 ROE 字段至少有 5 年数据的股票
+        >>> df = filters.filter_by_data_years(financials, required_years=5, field='roe')
+    """
+    if df.empty:
+        return df
+    
+    df = df.copy()
+    df['end_date'] = pd.to_datetime(df['end_date'])
+    
+    valid_codes = []
+    
+    for code, group in df.groupby('stock_code'):
+        if field is not None:
+            # 检查指定字段有数据且不为 NaN 的年数
+            field_data = group[group[field].notna()]
+            year_count = len(field_data['end_date'].dt.year.unique())
+        else:
+            # 检查总数据年数
+            year_count = len(group['end_date'].dt.year.unique())
+        
+        if year_count >= required_years:
+            valid_codes.append(code)
+    
+    result = df[df['stock_code'].isin(valid_codes)].copy()
+    return result
+
+
 def consecutive_years(
     df: pd.DataFrame,
     field: str,

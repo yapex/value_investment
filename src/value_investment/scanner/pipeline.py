@@ -16,45 +16,45 @@ if TYPE_CHECKING:
 
 class FilterBuilder:
     """过滤器构建器
-    
+
     用于构建要应用的过滤条件，可外部配置后传入 Scanner。
-    
+
     Example:
         >>> fb = FilterBuilder()
         >>> fb.add_filter('latest_year', field='roe', min_value=15)
         >>> fb.add_filter('consecutive_years', field='gross_profit_margin', min_value=30, years=5)
-        >>> 
+        >>>
         >>> scanner = Scanner(market='A')
         >>> result = scanner.scan(stocks, fields=['roe'], filters=fb)
     """
-    
+
     # 支持的过滤器类型
     SUPPORTED_FILTERS = {
         'latest_year': filters.latest_year,
         'consecutive_years': filters.consecutive_years,
         'majority_years': filters.majority_years,
     }
-    
+
     def __init__(self):
         self._filters: list[Dict[str, Any]] = []
-    
+
     def add_filter(
         self,
         filter_type: str,
         **kwargs: Any
     ) -> "FilterBuilder":
         """添加一个过滤条件
-        
+
         Args:
             filter_type: 过滤器类型，可选值：
                 - 'latest_year': 最近一年满足条件
                 - 'consecutive_years': 连续 N 年满足条件
                 - 'majority_years': N 年中至少 M 年满足条件
             **kwargs: 过滤器参数
-            
+
         Returns:
             self
-            
+
         Example:
             >>> fb.add_filter('latest_year', field='roe', min_value=15)
             >>> fb.add_filter('consecutive_years', field='gross_profit_margin', min_value=30, years=5)
@@ -64,20 +64,20 @@ class FilterBuilder:
                 f"Unknown filter type: {filter_type}. "
                 f"Supported: {list(self.SUPPORTED_FILTERS.keys())}"
             )
-        
+
         self._filters.append({
             'type': filter_type,
             'params': kwargs
         })
-        
+
         return self
-    
+
     def add_filters_from_config(self, config: List[Dict[str, Any]]) -> "FilterBuilder":
         """从配置列表批量添加过滤条件
-        
+
         Args:
             config: 配置列表，每个元素包含 type 和 params
-            
+
         Example:
             >>> config = [
             ...     {'type': 'latest_year', 'params': {'field': 'roe', 'min_value': 15}},
@@ -89,15 +89,15 @@ class FilterBuilder:
             filter_type = item.get('type')
             params = item.get('params', {})
             self.add_filter(filter_type, **params)
-        
+
         return self
-    
+
     def add_filters_from_json(self, json_str: str) -> "FilterBuilder":
         """从 JSON 字符串添加过滤条件
-        
+
         Args:
             json_str: JSON 格式的过滤配置
-            
+
         Example:
             >>> json_str = '[{"type": "latest_year", "params": {"field": "roe", "min_value": 15}}]'
             >>> fb.add_filters_from_json(json_str)
@@ -105,9 +105,11 @@ class FilterBuilder:
         import json
         config = json.loads(json_str)
         return self.add_filters_from_config(config)
-    
+
     def execute(self, df: pd.DataFrame) -> pd.DataFrame:
         """执行所有过滤条件
+        
+        在执行过滤前，会先检查数据年数要求，排除数据不足的股票。
         
         Args:
             df: 输入的财务数据 DataFrame
@@ -115,28 +117,53 @@ class FilterBuilder:
         Returns:
             过滤后的 DataFrame
         """
-        result = df
+        if df.empty:
+            return df
         
+        result = df.copy()
+        
+        # 第一步：收集所有过滤条件的年数要求
+        required_years = 0
+        for filter_config in self._filters:
+            filter_type = filter_config['type']
+            params = filter_config['params']
+            years = params.get('years', 0)
+            if years > required_years:
+                required_years = years
+        
+        # 第二步：如果有年数要求，先过滤掉数据不足的股票
+        if required_years > 0:
+            result = filters.filter_by_data_years(result, required_years)
+            
+            # 如果过滤后没有数据，直接返回
+            if result.empty:
+                return result
+        
+        # 第三步：执行各个过滤条件
         for filter_config in self._filters:
             filter_type = filter_config['type']
             params = filter_config['params']
             
             filter_func = self.SUPPORTED_FILTERS[filter_type]
             result = filter_func(result, **params)
+            
+            # 如果中途没有数据了，提前返回
+            if result.empty:
+                return result
         
         return result
-    
+
     def __len__(self) -> int:
         """返回过滤条件数量"""
         return len(self._filters)
-    
+
     def __repr__(self) -> str:
         return f"FilterBuilder(filters={self._filters})"
-    
+
     def to_config(self) -> List[Dict[str, Any]]:
         """导出为配置列表（可用于序列化）"""
         return self._filters.copy()
-    
+
     def to_json(self) -> str:
         """导出为 JSON 字符串"""
         import json
@@ -146,7 +173,7 @@ class FilterBuilder:
 # 便捷函数
 def create_filter_builder(config: List[Dict[str, Any]]) -> FilterBuilder:
     """从配置列表创建 FilterBuilder 的便捷函数
-    
+
     Example:
         >>> config = [
         ...     {'type': 'latest_year', 'params': {'field': 'roe', 'min_value': 15}},

@@ -39,11 +39,13 @@ dev = [
 ]
 
 [tool.poe.tasks.to_nanobot]
-help = "Copy skill to nanobot skills directory"
+help = "Copy entire v-invest skill directory to target. Usage: poe to_nanobot [target]"
+args = [{ name = "target", positional = true, required = false, default = "/Volumes/yapex_ssd/yapex-bot/workspace/skills", help = "Target skills directory" }]
 shell = """
-mkdir -p /Volumes/yapex_ssd/yapex-bot/workspace/skills/v-invest/REFERENCES && \
-cp skills/v-invest/SKILL.md /Volumes/yapex_ssd/yapex-bot/workspace/skills/v-invest/ && \
-cp -r skills/v-invest/REFERENCES/* /Volumes/yapex_ssd/yapex-bot/workspace/skills/v-invest/REFERENCES/
+if [ -z "$target" ]; then target="/Volumes/yapex_ssd/yapex-bot/workspace/skills"; fi && \
+rm -rf "$target/v-invest" && \
+cp -r skills/v-invest "$target/" && \
+echo "✓ Synced skills/v-invest -> $target/v-invest"
 """
 
 

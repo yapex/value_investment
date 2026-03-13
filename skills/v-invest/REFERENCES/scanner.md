@@ -18,36 +18,48 @@ v-invest scan --filter "<过滤条件>" [选项]
 | `-y, --years` | 获取年数 | `5` |
 | `-l, --limit` | 扫描股票数量限制（0=全部） | `100` |
 | `-o, --output` | 输出文件路径（CSV） | - |
+| `--no-cache` | 强制重新扫描，不使用缓存 | - |
 
 ### 使用示例
 
 ```bash
-# 基本筛选：连续5年 ROE ≥ 15%
-v-invest scan --filter "ROE 连续5年 ≥15%"
+# 基本筛选：连续 5 年 ROE ≥ 15%
+v-invest scan --filter "ROE 连续 5 年 ≥15%"
 
-# 多条件 AND：ROE 连续5年 ≥15% 且 毛利率 ≥30%
-v-invest scan --filter "ROE 连续5年 ≥15% 且 毛利率 连续5年 ≥30%"
+# 多条件 AND：ROE 连续 5 年 ≥15% 且 毛利率 ≥30%
+v-invest scan --filter "ROE 连续 5 年 ≥15% 且 毛利率 连续 5 年 ≥30%"
 
-# 多数年份：5年中至少4年 ROE ≥15%
-v-invest scan --filter "ROE 5年至少4年 ≥15%"
+# 多数年份：5 年中至少 4 年 ROE ≥15%
+v-invest scan --filter "ROE 5 年至少 4 年 ≥15%"
 
-# 带平均值：5年中至少4年 ROE ≥15%，且平均值 ≥15%
-v-invest scan --filter "ROE 5年至少4年 ≥15%, 平均≥15%"
+# 带平均值：5 年中至少 4 年 ROE ≥15%，且平均值 ≥15%
+v-invest scan --filter "ROE 5 年至少 4 年 ≥15%, 平均≥15%"
 
 # 最近一年
-v-invest scan --filter "ROE 最近1年 ≥20%"
+v-invest scan --filter "ROE 最近 1 年 ≥20%"
 
 # ≤ 运算符（负债率）
-v-invest scan --filter "负债率 最近1年 ≤60%"
+v-invest scan --filter "负债率 最近 1 年 ≤60%"
 
 # 限制扫描数量
-v-invest scan --filter "ROE 连续5年 ≥15%" --limit 50
+v-invest scan --filter "ROE 连续 5 年 ≥15%" --limit 50
 
 # 输出到文件
-v-invest scan --filter "ROE 连续5年 ≥15%" -o result.csv
+v-invest scan --filter "ROE 连续 5 年 ≥15%" -o result.csv
 
 # 港股市场
-v-invest scan --filter "ROE 连续5年 ≥15%" -m HK
+v-invest scan --filter "ROE 连续 5 年 ≥15%" -m HK
+
+# 缓存机制：首次扫描自动缓存结果，再次运行相同条件直接返回缓存
+v-invest scan --filter "ROIC 5 年至少 4 年 ≥15%, 平均≥15%" -m A --fields roic -y 5 -l 0
+
+# 强制重新扫描（不使用缓存）
+v-invest scan --filter "ROE 连续 5 年 ≥15%" --no-cache
+
+# 查看已缓存的扫描结果
+v-invest scan-list
+v-invest scan-list -m A    # 查看 A 股市场缓存
+v-invest scan-list -m HK    # 查看港股市场缓存
 ```
 
 ## Python API
@@ -63,7 +75,7 @@ stocks = scanner.get_stock_list()
 stock_codes = stocks['symbol'].tolist()
 
 # 解析文本条件
-fb = parse_filter("ROE 连续5年 ≥15% 且 毛利率 连续5年 ≥30%")
+fb = parse_filter("ROE 连续 5 年 ≥15% 且 毛利率 连续 5 年 ≥30%")
 
 # 获取数据并过滤
 result = scanner.scan(
@@ -80,9 +92,9 @@ result = scanner.scan(
 
 | 类型 | 格式 | 示例 |
 |------|------|------|
-| 连续N年 | `{字段} 连续{N}年 {运算符}{数值}%` | `ROE 连续5年 ≥15%` |
-| 最近N年 | `{字段} 最近{N}年 {运算符}{数值}%` | `ROE 最近1年 ≥20%` |
-| 多数年份 | `{字段} {N}年至少{M}年 {运算符}{数值}%` | `ROE 5年至少4年 ≥15%` |
+| 连续 N 年 | `{字段} 连续{N}年 {运算符}{数值}%` | `ROE 连续 5 年 ≥15%` |
+| 最近 N 年 | `{字段} 最近{N}年 {运算符}{数值}%` | `ROE 最近 1 年 ≥20%` |
+| 多数年份 | `{字段} {N}年至少{M}年 {运算符}{数值}%` | `ROE 5 年至少 4 年 ≥15%` |
 
 ### 运算符
 
@@ -96,7 +108,7 @@ result = scanner.scan(
 用 `且` 或 `和` 连接多个条件（AND 逻辑）：
 
 ```
-ROE 连续5年 ≥15% 且 毛利率 连续5年 ≥30%
+ROE 连续 5 年 ≥15% 且 毛利率 连续 5 年 ≥30%
 ```
 
 ### 平均值要求
@@ -104,7 +116,7 @@ ROE 连续5年 ≥15% 且 毛利率 连续5年 ≥30%
 在条件后加 `, 平均≥{数值}%`：
 
 ```
-ROE 5年至少4年 ≥15%, 平均≥15%
+ROE 5 年至少 4 年 ≥15%, 平均≥15%
 ```
 
 ## 支持的字段
@@ -128,3 +140,15 @@ Scanner 内部使用以下过滤函数：
 - `majority_years`：N 年中至少 M 年满足条件，可选平均值
 
 所有过滤器通过 `FilterBuilder` 组合，默认使用 AND 逻辑。
+
+## 缓存机制
+
+Scanner 使用缓存机制提高性能：
+
+| 缓存类型 | 说明 |
+|---------|------|
+| 自动缓存 | 首次扫描时自动缓存结果，相同条件再次扫描直接返回 |
+| `--no-cache` | 强制重新扫描，忽略缓存 |
+| `scan-list` | 查看已缓存的扫描结果，可按市场筛选 |
+
+缓存文件存储在 `.cache/scan/` 目录下。

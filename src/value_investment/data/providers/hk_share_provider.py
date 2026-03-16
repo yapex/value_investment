@@ -145,7 +145,10 @@ class HKShareProvider(BaseProvider):
             cache_key, fetch, ttl=get_ttl_until_june_next_year(datetime.now().year),
             force_refresh=force_refresh
         )
-        return self._filter_by_year(cast(pd.DataFrame, df), end_year)
+        # 应用字段映射
+        from value_investment.data.mapper import DataMapper
+        filtered = self._filter_by_year(cast(pd.DataFrame, df), end_year)
+        return DataMapper.map_balance_sheet(filtered)
 
     def get_income_statement(
         self, stock_code: str, end_year: int | None = None, start_year: int | None = None, force_refresh: bool = False
@@ -168,7 +171,10 @@ class HKShareProvider(BaseProvider):
             cache_key, fetch, ttl=get_ttl_until_june_next_year(datetime.now().year),
             force_refresh=force_refresh
         )
-        return self._filter_by_year(cast(pd.DataFrame, df), end_year)
+        # 应用字段映射
+        from value_investment.data.mapper import DataMapper
+        filtered = self._filter_by_year(cast(pd.DataFrame, df), end_year)
+        return DataMapper.map_income_statement(filtered)
 
     def get_cash_flow_statement(
         self, stock_code: str, end_year: int | None = None, start_year: int | None = None, force_refresh: bool = False
@@ -191,7 +197,10 @@ class HKShareProvider(BaseProvider):
             cache_key, fetch, ttl=get_ttl_until_june_next_year(datetime.now().year),
             force_refresh=force_refresh
         )
-        return self._filter_by_year(cast(pd.DataFrame, df), end_year)
+        # 应用字段映射
+        from value_investment.data.mapper import DataMapper
+        filtered = self._filter_by_year(cast(pd.DataFrame, df), end_year)
+        return DataMapper.map_cash_flow(filtered)
 
     def _normalize_date(self, date: str | None) -> str | None:
         """Normalize date string to YYYY-MM-DD format"""

@@ -78,6 +78,31 @@ CORE_FIELD_MAPPING: dict[str, dict[str, str]] = {
         "港股": "应收帐款",
         "美股": "accountsReceivable",
     },
+    "contract_assets": {  # 合同资产
+        "A股": "合同资产",
+        "港股": "合同资产",
+        "美股": "contractAssets",
+    },
+    "prepayment": {  # 预付款项（流动资产）
+        "A股": "预付款项",
+        "港股": "预付款项",
+        "美股": "prepayments",
+    },
+    "accounts_payable": {
+        "A股": "应付账款",
+        "港股": "应付帐款",
+        "美股": "accountsPayable",
+    },
+    "adv_receipts": {  # 预收款项
+        "A股": "预收款项",
+        "港股": "预收款项",
+        "美股": "advanceReceipts",
+    },
+    "contract_liab": {  # 合同负债
+        "A股": "合同负债",
+        "港股": "合同负债",
+        "美股": "contractLiabilities",
+    },
     "fixed_assets": {
         "A股": "固定资产",
         "港股": "固定资产",

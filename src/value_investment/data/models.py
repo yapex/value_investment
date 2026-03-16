@@ -38,6 +38,12 @@ class BalanceSheet:
     other_current_liabilities: float | None = None  # OTHER_CURRENT_LIAB
     deferred_tax_liabilities: float | None = None  # DEFERRED_TAX_LIAB
 
+    # 运营资金相关字段（新增）
+    contract_assets: float | None = None  # 合同资产
+    contract_liab: float | None = None  # 合同负债
+    prepayment: float | None = None  # 预付款项（流动资产）
+    adv_receipts: float | None = None  # 预收款项
+
     # 权益类 (Equity)
     total_equity: float | None = None  # TOTAL_EQUITY
 

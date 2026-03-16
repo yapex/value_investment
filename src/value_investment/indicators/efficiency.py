@@ -4,6 +4,189 @@ import pandas as pd
 
 from value_investment.indicators.base import BaseIndicator, IndicatorResult, IndicatorType
 
+
+class WorkingCapitalIndicator(BaseIndicator):
+    """Working Capital = 应收账款 + 预付款项 + 存货 + 合同资产 - (应付账款 + 预收款项 + 合同负债)
+
+    反映企业运营资金占用情况，越低说明对上下游议价能力越强
+    """
+
+    name = "working_capital"
+    description = "Working Capital (流动资金 = 应收+预付+存货+合同资产 - 应付-预收-合同负债)"
+    type = IndicatorType.CALCULATED
+
+    def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
+        # 流动资产部分
+        ar_col = self._find_column(data, ['accounts_receivable', 'ACCOUNTS_RECE'])
+        prepay_col = self._find_column(data, ['prepayment', 'PREPAYMENT'])
+        inv_col = self._find_column(data, ['inventory', 'INVENTORY'])
+        ca_col = self._find_column(data, ['contract_assets', 'CONTRACT_ASSETS'])
+
+        # 流动负债部分
+        ap_col = self._find_column(data, ['accounts_payable', 'ACCOUNTS_PAYABLE'])
+        adv_col = self._find_column(data, ['adv_receipts', 'ADV_RECEIPTS'])
+        cl_col = self._find_column(data, ['contract_liab', 'CONTRACT_LIAB'])
+
+        # 计算各项（缺失则为0）
+        ar = data[ar_col] if ar_col else pd.Series(0, index=data.index)
+        prepay = data[prepay_col] if prepay_col else pd.Series(0, index=data.index)
+        inv = data[inv_col] if inv_col else pd.Series(0, index=data.index)
+        ca = data[ca_col] if ca_col else pd.Series(0, index=data.index)
+
+        ap = data[ap_col] if ap_col else pd.Series(0, index=data.index)
+        adv = data[adv_col] if adv_col else pd.Series(0, index=data.index)
+        cl = data[cl_col] if cl_col else pd.Series(0, index=data.index)
+
+        # 计算流动资金
+        wc = (ar + prepay + inv + ca) - (ap + adv + cl)
+
+        return IndicatorResult(
+            value=float(wc.mean()) if len(wc) > 0 else 0.0,
+            unit="元",
+            description="Working Capital (流动资金)",
+            years=data['year'].tolist() if 'year' in data.columns else [],
+            values=wc.tolist() if len(wc) > 0 else []
+        )
+
+    def get_required_fields(self) -> list[str]:
+        return ['accounts_receivable', 'prepayment', 'inventory', 'contract_assets',
+                'accounts_payable', 'adv_receipts', 'contract_liab']
+
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str | None:
+        for col in candidates:
+            if col in df.columns:
+                return col
+        for col in df.columns:
+            for cand in candidates:
+                if cand.lower() in col.lower():
+                    return col
+        return None
+
+
+class WCToRevenueIndicator(BaseIndicator):
+    """WC to Revenue Ratio = Working Capital / Operating Revenue
+
+    反映1元收入占用的流动资金，越低说明运营效率越高
+    """
+
+    name = "wc_to_revenue"
+    description = "WC to Revenue Ratio (1元收入占用流动资金)"
+    type = IndicatorType.CALCULATED
+
+    def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
+        # 先计算 WC
+        ar_col = self._find_column(data, ['accounts_receivable', 'ACCOUNTS_RECE'])
+        prepay_col = self._find_column(data, ['prepayment', 'PREPAYMENT'])
+        inv_col = self._find_column(data, ['inventory', 'INVENTORY'])
+        ca_col = self._find_column(data, ['contract_assets', 'CONTRACT_ASSETS'])
+        ap_col = self._find_column(data, ['accounts_payable', 'ACCOUNTS_PAYABLE'])
+        adv_col = self._find_column(data, ['adv_receipts', 'ADV_RECEIPTS'])
+        cl_col = self._find_column(data, ['contract_liab', 'CONTRACT_LIAB'])
+        revenue_col = self._find_column(data, ['operating_revenue', 'OPERATE_INCOME', 'TOTAL_OPERATE_INCOME', 'total_revenue'])
+
+        # 计算 WC
+        ar = data[ar_col] if ar_col else pd.Series(0, index=data.index)
+        prepay = data[prepay_col] if prepay_col else pd.Series(0, index=data.index)
+        inv = data[inv_col] if inv_col else pd.Series(0, index=data.index)
+        ca = data[ca_col] if ca_col else pd.Series(0, index=data.index)
+        ap = data[ap_col] if ap_col else pd.Series(0, index=data.index)
+        adv = data[adv_col] if adv_col else pd.Series(0, index=data.index)
+        cl = data[cl_col] if cl_col else pd.Series(0, index=data.index)
+
+        wc = (ar + prepay + inv + ca) - (ap + adv + cl)
+
+        # 获取营业收入
+        revenue = data[revenue_col] if revenue_col else pd.Series([1], index=data.index)
+
+        # 计算比率
+        ratio = wc / revenue.replace(0, 1)
+
+        return IndicatorResult(
+            value=float(ratio.mean()) if len(ratio) > 0 else 0.0,
+            unit="ratio",
+            description="WC to Revenue Ratio (1元收入占用流动资金)",
+            years=data['year'].tolist() if 'year' in data.columns else [],
+            values=ratio.tolist() if len(ratio) > 0 else []
+        )
+
+    def get_required_fields(self) -> list[str]:
+        return ['accounts_receivable', 'prepayment', 'inventory', 'contract_assets',
+                'accounts_payable', 'adv_receipts', 'contract_liab', 'operating_revenue']
+
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str | None:
+        for col in candidates:
+            if col in df.columns:
+                return col
+        for col in df.columns:
+            for cand in candidates:
+                if cand.lower() in col.lower():
+                    return col
+        return None
+
+
+class RevenuePerEmployeeIndicator(BaseIndicator):
+    """Revenue per Employee = Operating Revenue / Employee Count
+
+    反映人均产出效率。注意：员工人数需要从外部数据源获取（如tushare公司基本信息接口）。
+
+    数据来源参考：
+    - tushare: stock_company接口的employee字段
+    - 同花顺/东方财富F10公司概况
+    - 年报附注"公司员工情况"
+    """
+
+    name = "revenue_per_employee"
+    description = "Revenue per Employee (人均收入，需要员工人数外部数据)"
+    type = IndicatorType.CALCULATED
+
+    def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
+        revenue_col = self._find_column(data, ['operating_revenue', 'OPERATE_INCOME', 'TOTAL_OPERATE_INCOME', 'total_revenue'])
+
+        # 尝试从 kwargs 获取员工人数
+        employee_count = kwargs.get('employee_count', None)
+
+        if employee_count is None:
+            # 尝试从数据列中获取
+            emp_col = self._find_column(data, ['employee_count', 'EMPLOYEE_COUNT'])
+            if emp_col:
+                employee_count = data[emp_col].iloc[0]
+
+        revenue = data[revenue_col] if revenue_col else pd.Series([0], index=data.index)
+
+        if employee_count is None or employee_count == 0:
+            # 返回提示信息
+            return IndicatorResult(
+                value=0.0,
+                unit="元/人",
+                description="Revenue per Employee (需要员工人数数据 - 可从tushare或web搜索获取)",
+                years=data['year'].tolist() if 'year' in data.columns else [],
+                values=[0.0] * len(revenue)
+            )
+
+        # 计算人均收入
+        ratio = revenue / employee_count
+
+        return IndicatorResult(
+            value=float(ratio.mean()) if len(ratio) > 0 else 0.0,
+            unit="元/人",
+            description=f"Revenue per Employee (员工数: {employee_count})",
+            years=data['year'].tolist() if 'year' in data.columns else [],
+            values=ratio.tolist() if len(ratio) > 0 else []
+        )
+
+    def get_required_fields(self) -> list[str]:
+        return ['operating_revenue']
+
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str | None:
+        for col in candidates:
+            if col in df.columns:
+                return col
+        for col in df.columns:
+            for cand in candidates:
+                if cand.lower() in col.lower():
+                    return col
+        return None
+
 class PayableTurnoverIndicator(BaseIndicator):
     """Payable Turnover = Operating Cost / Accounts Payable"""
 

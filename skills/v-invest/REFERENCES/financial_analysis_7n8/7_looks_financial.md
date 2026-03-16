@@ -172,11 +172,12 @@ v-invest balance {股票代码} -m {市场}
 ### 数据获取
 
 ```bash
-# 周转效率指标
-v-invest indicator "asset_turnover,inventory_turnover,receivables_turnover" -s {股票代码} -m {市场} -y 5
+# 周转效率指标（包含新增指标）
+v-invest indicator "asset_turnover,inventory_turnover,receivables_turnover,working_capital,wc_to_revenue" -s {股票代码} -m {市场} -y 5
 
-# 资产负债表（计算WC）
-v-invest balance {股票代码} -m {市场}
+# 注意：revenue_per_employee 需要员工人数数据，可通过以下方式获取：
+# 1. tushare stock_company 接口
+# 2. web search "{公司名} 员工人数"
 ```
 
 ### 分析要点
@@ -187,6 +188,20 @@ v-invest balance {股票代码} -m {市场}
 | 1元收入占用WC | WC / 营业收入 | 越低越好 |
 | 单位收入固定资产 | 固定资产 / 营业收入 | 轻资产优势 |
 | 人均效率 | 营业收入/员工数 | 与同行对比 |
+
+### 指标说明
+
+| 指标 | 计算公式 | 数据来源 | 说明 |
+|------|---------|---------|------|
+| working_capital | 应收+预付+存货+合同资产-(应付+预收+合同负债) | 资产负债表 | 自动计算 |
+| wc_to_revenue | WC / 营业收入 | 资产负债表+利润表 | 自动计算 |
+| revenue_per_employee | 营业收入 / 员工数 | 利润表+外部数据 | 需手动提供员工数 |
+
+**注意：** revenue_per_employee 的员工人数不在标准财务报表中，可从以下渠道获取：
+- tushare.pro stock_company 接口
+- 同花顺/东方财富 F10 公司概况
+- 年报附注"公司员工情况"
+- web search "{公司名} 员工人数"
 
 ### 输出要求
 

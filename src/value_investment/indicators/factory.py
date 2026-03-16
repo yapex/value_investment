@@ -19,6 +19,9 @@ from value_investment.indicators.efficiency import (
     ProductionAssetRatioIndicator,
     ReceivablesToAssetsRatioIndicator,
     ReturnOnProductionAssetsIndicator,
+    RevenuePerEmployeeIndicator,
+    WCToRevenueIndicator,
+    WorkingCapitalIndicator,
 )
 from value_investment.indicators.growth import (
     CAGRIndicator,
@@ -90,6 +93,9 @@ class IndicatorFactory:
             ProductionAssetRatioIndicator(),
             ReturnOnProductionAssetsIndicator(),
             ReceivablesToAssetsRatioIndicator(),
+            WorkingCapitalIndicator(),
+            WCToRevenueIndicator(),
+            RevenuePerEmployeeIndicator(),
             # Cashflow
             CfoToNetprofitIndicator(),
             FcfToRevenueIndicator(),

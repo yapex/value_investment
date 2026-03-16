@@ -127,6 +127,8 @@ def indicator(
     if years > 1 and indicator_names:
         # Get historical data for each indicator
         dfs = []
+        current_values = {}  # For indicators without historical data (e.g., ImpliedGrowth)
+
         for name in indicator_names:
             try:
                 result = vi.calculate_indicator(name, stock_code, years)
@@ -136,19 +138,32 @@ def indicator(
                         name: result.values
                     })
                     dfs.append(df)
+                elif result and result.value is not None:
+                    # Indicator has current value but no historical data
+                    current_values[name] = result
             except Exception as e:
                 print(f"Warning: Failed to get {name}: {e}")
-        
+
         if dfs:
             # Merge all indicators into one DataFrame
             merged = dfs[0]
             for df in dfs[1:]:
                 merged = merged.merge(df, on='year', how='outer')
             merged = merged.sort_values(by='year', ascending=False)
-            
+
             print(f"### 指标历史数据 - {stock_code} (最近{years}年)\n")
             print(merged.to_markdown(index=False))
-        return
+
+        # Output current-value-only indicators (like ImpliedGrowth)
+        if current_values:
+            print(f"\n### 当前值指标 - {stock_code}\n")
+            items = []
+            for name, result in current_values.items():
+                items.append({"指标": name, "值": f"{result.value}{result.unit}", "说明": result.description})
+            print(pd.DataFrame(items).to_markdown(index=False))
+
+        if dfs or current_values:
+            return
 
     # Original logic for single year or all indicators
     if len(indicator_names) == 1:

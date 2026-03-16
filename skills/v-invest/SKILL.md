@@ -57,11 +57,79 @@ v-invest indicator roe,roa,net_profit_margin -s 00700 -m HK -y 10
 
 系统化的分析方法论，基于指标进行深度分析。
 
-| 框架 | 说明 |
-|------|------|
-| [roe_analysis_framework/README.md](./REFERENCES/roe_analysis_framework/README.md) | ROE 分析框架（快速分析、深入分析、同业对比等） |
-
 **递进关系**: 字段 → 指标 → 分析框架
+
+---
+
+### 框架一：ROE 分析
+
+聚焦 ROE 单指标的深度拆解，适合快速判断股票质量。
+
+| 模式 | 适用场景 | 文件 |
+|------|---------|------|
+| 快速分析 | 5-6 个核心指标，快速判断 | [quick_analysis.md](./REFERENCES/roe_analysis_framework/quick_analysis.md) |
+| 深入分析 | 15+ 指标 + 10年历史，全面评估 | [deep_analysis.md](./REFERENCES/roe_analysis_framework/deep_analysis.md) |
+| 同业对比 | 与竞争对手对比分析 | [peer_comparison.md](./REFERENCES/roe_analysis_framework/peer_comparison.md) |
+
+**入口**: [roe_analysis_framework/README.md](./REFERENCES/roe_analysis_framework/README.md)
+
+---
+
+### 框架二：七看八问企业分析 ⭐
+
+完整的企业分析框架，覆盖财务 + 非财务 + 偏见校验。
+
+**执行流程**:
+```
+准备数据 → 七看财务 → 八问非财务 → 偏见校验 → 输出报告
+```
+
+**七看财务**（按顺序执行）:
+| 步骤 | 内容 | 核心产出 |
+|------|------|---------|
+| 1️⃣ 看营收 | 收入/利润/现金流趋势 | 盈利质量评级 |
+| 2️⃣ 看成本 | 毛利率/费用率/非经常性损益 | 成本结构拆解 |
+| 3️⃣ 看增长 | 收入CAGR/利润CAGR | 增长能力评级 |
+| 4️⃣ 看业务 | 业务板块占比/增长来源 | 核心引擎识别 |
+| 5️⃣ 看资产 | 资产结构/债务风险 | 资产健康度 |
+| 6️⃣ 看效率 | 流动资金/周转率/人均效率 | 投入产出效率 |
+| 7️⃣ 看收益 | ROE/ROA/ROIC | 盈利能力评级 |
+
+**八问非财务**（逐一回答）:
+| 问题 | 核心关注点 |
+|------|-----------|
+| 1. 生意模式 | 靠什么赚钱？客户类型？ |
+| 2. 外部环境 | 行业周期？政策态度？ |
+| 3. 行业空间 | 市场规模？增长潜力？ |
+| 4. 竞争格局 | 集中度？市占率？ |
+| 5. 护城河 | 核心优势？可持续性？ |
+| 6. 管理层 | 能力？诚信？执行力？ |
+| 7. 风险因素 | 3个核心风险？ |
+| 8. 未来展望 | 增长驱动？路径清晰？ |
+
+**详细文件**:
+| 模块 | 文件 |
+|------|------|
+| 七看财务 | [7_looks_financial.md](./REFERENCES/financial_analysis_7n8/7_looks_financial.md) |
+| 八问非财务 | [8_questions_nonfinancial.md](./REFERENCES/financial_analysis_7n8/8_questions_nonfinancial.md) |
+| 偏见校验 | [bias_check.md](./REFERENCES/financial_analysis_7n8/bias_check.md) |
+| 报告模板 | [report_template.md](./REFERENCES/financial_analysis_7n8/report_template.md) |
+
+**入口**: [financial_analysis_7n8/README.md](./REFERENCES/financial_analysis_7n8/README.md)
+
+---
+
+### 框架选择指南
+
+```
+分析目标是什么？
+    ├─ 仅评估 ROE 质量 → 框架一：ROE 分析
+    │   ├─ 快速判断 → quick_analysis.md
+    │   └─ 深度研究 → deep_analysis.md
+    │
+    └─ 完整企业分析 → 框架二：七看八问
+        └─ 按流程执行：准备 → 七看 → 八问 → 校验 → 报告
+```
 
 ---
 

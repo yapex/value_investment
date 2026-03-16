@@ -60,8 +60,17 @@ v-invest indicator "revenue,net_profit,net_profit_deducted,ocf" -s {股票代码
 ### 数据获取
 
 ```bash
-# 毛利率与费用率
-v-invest indicator "gross_margin,operating_margin,rd_ratio,sales_ratio,admin_ratio" -s {股票代码} -m {市场} -y 5
+# 核心盈利能力指标
+v-invest indicator "gross_margin,net_profit_margin,expense_ratio,fee_rate" -s {股票代码} -m {市场} -y 5
+
+# 利润表详细数据（用于计算各项费用率）
+v-invest income {股票代码} -m {市场} -y 3
+
+# 费用率计算方法（从利润表字段计算）
+# 销售费用率 = 销售费用 / 营业收入
+# 管理费用率 = 管理费用 / 营业收入
+# 研发费用率 = 研发费用 / 营业收入
+# 财务费用率 = 财务费用 / 营业收入
 ```
 
 ### 分析要点

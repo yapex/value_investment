@@ -153,16 +153,91 @@ class TestProductionAssetRatioIndicator:
 
 class TestReturnOnProductionAssetsIndicator:
     """Test Return on Production Assets indicator"""
-    
+
     def test_calculate_basic(self):
         """Test basic return on production assets"""
         data = pd.DataFrame({
             'net_profit': [1000000],
             'productive_assets': [8000000],
         })
-        
+
         indicator = ReturnOnProductionAssetsIndicator()
         result = indicator.calculate(data)
-        
+
         # Just verify it runs without error
+        assert result.value is not None
+
+
+class TestFixedAssetToRevenueIndicator:
+    """Test Fixed Asset to Revenue indicator (一元营收需要固定资产)"""
+
+    def test_calculate_basic(self):
+        """Test basic calculation: (fixed_assets + construction_in_progress) / total_revenue"""
+        from value_investment.indicators.efficiency import FixedAssetToRevenueIndicator
+
+        data = pd.DataFrame({
+            'year': [2024, 2023, 2022],
+            'fixed_assets': [1000, 900, 800],
+            'construction_in_progress': [200, 150, 100],
+            'total_revenue': [5000, 4500, 4000],
+        })
+
+        indicator = FixedAssetToRevenueIndicator()
+        result = indicator.calculate(data)
+
+        assert result.value is not None
+        # (1000 + 200) / 5000 = 0.24
+        assert result.value == pytest.approx(0.24, rel=0.01)
+        assert result.unit == "ratio"
+        assert len(result.years) == 3
+        assert len(result.values) == 3
+
+    def test_calculate_missing_construction_in_progress(self):
+        """Test with missing construction_in_progress (should default to 0)"""
+        from value_investment.indicators.efficiency import FixedAssetToRevenueIndicator
+
+        data = pd.DataFrame({
+            'year': [2024],
+            'fixed_assets': [1000],
+            'total_revenue': [5000],
+        })
+
+        indicator = FixedAssetToRevenueIndicator()
+        result = indicator.calculate(data)
+
+        # (1000 + 0) / 5000 = 0.2
+        assert result.value == pytest.approx(0.2, rel=0.01)
+
+    def test_calculate_with_cip_field(self):
+        """Test with cip field (A-share style)"""
+        from value_investment.indicators.efficiency import FixedAssetToRevenueIndicator
+
+        data = pd.DataFrame({
+            'year': [2024],
+            'fixed_assets': [1000],
+            'cip': [300],  # A股在建工程字段
+            'total_revenue': [5000],
+        })
+
+        indicator = FixedAssetToRevenueIndicator()
+        result = indicator.calculate(data)
+
+        # (1000 + 300) / 5000 = 0.26
+        assert result.value == pytest.approx(0.26, rel=0.01)
+
+    def test_calculate_zero_revenue(self):
+        """Test with zero revenue (should handle gracefully)"""
+        from value_investment.indicators.efficiency import FixedAssetToRevenueIndicator
+
+        data = pd.DataFrame({
+            'year': [2024],
+            'fixed_assets': [1000],
+            'construction_in_progress': [200],
+            'total_revenue': [0],
+        })
+
+        indicator = FixedAssetToRevenueIndicator()
+        result = indicator.calculate(data)
+
+        # Should not crash, value can be 0 or inf
         assert result.value is not None

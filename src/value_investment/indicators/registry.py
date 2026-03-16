@@ -510,6 +510,14 @@ DEFAULT_CALCULATED_INDICATORS = [
             "港股": "roa",  # 港股直接使用
         },
     },
+    {
+        "name": "fixed_asset_to_revenue",
+        "display_name": "一元营收需要固定资产",
+        "type": IndicatorType.CALCULATED,
+        "description": "(固定资产+在建工程)/营业收入，衡量资产效率",
+        "unit": "ratio",
+        "market_fields": {},
+    },
 ]
 
 

@@ -470,3 +470,73 @@ class ReceivablesToAssetsRatioIndicator(BaseIndicator):
                 if cand.lower() in col.lower():
                     return col
         return None
+
+
+class FixedAssetToRevenueIndicator(BaseIndicator):
+    """Fixed Asset to Revenue = 一元营收需要固定资产
+
+    Formula: (fixed_assets + construction_in_progress) / total_revenue
+    From 手把手教你读财报: 用（固定资产净额+在建工程）除以营业收入，
+    看企业生产每元营收需要投入多少固定资产
+
+    This indicator measures asset efficiency - how much fixed asset investment
+    is needed to generate one unit of revenue.
+    """
+
+    name = "fixed_asset_to_revenue"
+    description = "一元营收需要固定资产 ((固定资产+在建工程)/营业收入)"
+    type = IndicatorType.CALCULATED
+
+    def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
+        # Get fixed asset columns (support multiple field names)
+        fixed_col = self._find_column(data, ['fixed_assets'])
+        # construction_in_progress for HK, cip for A-share
+        cip_col = self._find_column(data, ['construction_in_progress', 'cip'])
+        # Get revenue column
+        revenue_col = self._find_column(data, ['total_revenue', 'operating_income', 'revenue'])
+
+        # Get values (default to 0 if not available)
+        fixed_assets = data[fixed_col] if fixed_col else pd.Series(0, index=data.index)
+        construction = data[cip_col] if cip_col else pd.Series(0, index=data.index)
+        revenue = data[revenue_col] if revenue_col else pd.Series([1], index=data.index)
+
+        # Calculate total fixed assets (固定资产 + 在建工程)
+        total_fixed = fixed_assets + construction
+
+        # Calculate ratio, handle division by zero
+        ratio = pd.Series(0.0, index=data.index)
+        valid_mask = (revenue != 0) & (revenue.notna())
+        ratio[valid_mask] = total_fixed[valid_mask] / revenue[valid_mask].abs()
+
+        # Get years and sort by year descending to get most recent value
+        years = data['year'].tolist() if 'year' in data.columns else []
+        values = ratio.tolist() if len(ratio) > 0 else []
+
+        # Find most recent year's value
+        if years and values:
+            # Sort by year descending and get the first (most recent) value
+            year_value_pairs = sorted(zip(years, values), key=lambda x: x[0], reverse=True)
+            most_recent_value = year_value_pairs[0][1] if year_value_pairs else 0.0
+        else:
+            most_recent_value = 0.0
+
+        return IndicatorResult(
+            value=float(most_recent_value),
+            unit="ratio",
+            description="一元营收需要固定资产 ((固定资产+在建工程)/营业收入)",
+            years=years,
+            values=values
+        )
+
+    def get_required_fields(self) -> list[str]:
+        return ['fixed_assets', 'construction_in_progress', 'total_revenue']
+
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
+        for col in candidates:
+            if col in df.columns:
+                return col
+        for col in df.columns:
+            for cand in candidates:
+                if cand.lower() in col.lower():
+                    return col
+        return None

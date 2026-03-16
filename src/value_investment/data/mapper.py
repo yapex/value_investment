@@ -650,6 +650,7 @@ class DataMapper:
         "应收帐款": "accounts_receivable",
         "存货": "inventory",
         "固定资产": "fixed_assets",
+        "物业厂房及设备": "fixed_assets",  # 港股固定资产别名
         "无形资产": "intangible_assets",
         "短期贷款": "short_term_debt",
         "长期贷款": "long_term_debt",
@@ -911,6 +912,9 @@ class DataMapper:
         # 重命名字段
         result = result.rename(columns=rename_map)
 
+        # 合并重复列（多个原始列映射到同一个标准列）
+        result = cls._merge_duplicate_columns(result)
+
         # 计算衍生字段
         result = cls._calculate_balance_derived_fields(result)
 
@@ -987,6 +991,52 @@ class DataMapper:
         # 保留原始字段
         if keep_original:
             result = cls._preserve_original_fields(df, result, rename_map)
+
+        return result
+
+    @classmethod
+    def _merge_duplicate_columns(cls, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        合并重复列（多个原始列映射到同一个标准列时）
+
+        当多个列重命名为同一个名称时，pandas 会保留重复列名。
+        此方法将重复列合并为单列，优先使用非 NaN 值。
+        """
+        # 检测重复列名
+        cols = df.columns.tolist()
+        seen = {}
+        duplicates = []
+
+        for i, col in enumerate(cols):
+            if col in seen:
+                duplicates.append(col)
+            else:
+                seen[col] = i
+
+        if not duplicates:
+            return df
+
+        # 合并重复列
+        result = df.copy()
+        for dup_col in set(duplicates):
+            # 获取所有同名列的位置
+            indices = [i for i, c in enumerate(cols) if c == dup_col]
+            if len(indices) > 1:
+                # 合并列：优先使用非 NaN 值
+                combined = result.iloc[:, indices[0]].copy()
+                for idx in indices[1:]:
+                    other_col = result.iloc[:, idx]
+                    # 用 other_col 的非 NaN 值填充 combined 的 NaN
+                    combined = combined.fillna(other_col)
+
+                # 删除所有重复列，只保留第一个
+                # 先删除后面的列（从后往前删，避免索引变化）
+                for idx in sorted(indices[1:], reverse=True):
+                    result = result.drop(result.columns[idx], axis=1)
+
+                # 更新第一个列的值
+                first_idx = indices[0]
+                result.iloc[:, first_idx] = combined
 
         return result
 

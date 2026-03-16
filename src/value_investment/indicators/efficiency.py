@@ -227,33 +227,49 @@ class PayableTurnoverIndicator(BaseIndicator):
 
 
 class ExpenseRatioIndicator(BaseIndicator):
-    """Expense Ratio = (Operating Cost + Sales Expense + Management Expense + Financial Expense) / Operating Income"""
+    """Expense Ratio = (Operating Cost + Sales Expense + Management Expense + Financial Expense) / Operating Income
+    
+    适配 A 股/港股/美股：
+    - A 股/美股：直接使用 operating_cost
+    - 港股：operating_cost = total_revenue - gross_profit
+    """
 
     name = "expense_ratio"
     description = "Expense Ratio ((Operating Cost + Sales/Management/Financial Expense) / Operating Income)"
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        # Total expenses = operating_cost + sales_expense + management_expense + financial_expense
+        # 获取营业成本（适配港股）
         cost_col = self._find_column(data, ['operating_cost'])
-        sales_exp_col = self._find_column(data, ['sales_expense'])
-        mgmt_exp_col = self._find_column(data, ['management_expense'])
-        fin_exp_col = self._find_column(data, ['financial_expense'])
-        income_col = self._find_column(data, ['operating_income', 'total_revenue'])
+        revenue_col = self._find_column(data, ['total_revenue', 'operating_income', 'revenue'])
+        gross_profit_col = self._find_column(data, ['gross_profit'])
+        
+        # 如果有 operating_cost 直接使用，否则用 revenue - gross_profit 推算（港股）
+        if cost_col and cost_col in data.columns:
+            operating_cost = data[cost_col].fillna(0)
+        elif revenue_col and gross_profit_col and revenue_col in data.columns and gross_profit_col in data.columns:
+            operating_cost = (data[revenue_col].fillna(0) - data[gross_profit_col].fillna(0))
+        else:
+            operating_cost = pd.Series(0, index=data.index)
 
-        # Get expenses (default to 0 if not available)
-        operating_cost = data[cost_col] if cost_col else pd.Series(0, index=data.index)
-        sales_expense = data[sales_exp_col] if sales_exp_col else pd.Series(0, index=data.index)
-        mgmt_expense = data[mgmt_exp_col] if mgmt_exp_col else pd.Series(0, index=data.index)
-        fin_expense = data[fin_exp_col] if fin_exp_col else pd.Series(0, index=data.index)
+        # 获取费用
+        sales_exp_col = self._find_column(data, ['sales_expense', 'selling_distribution_expenses'])
+        mgmt_exp_col = self._find_column(data, ['management_expense', 'administrative_expenses'])
+        fin_exp_col = self._find_column(data, ['financial_expense', 'finance_cost'])
+        income_col = self._find_column(data, ['operating_income', 'total_revenue', 'revenue'])
 
-        # Total expenses
+        # 获取费用（默认 0）
+        sales_expense = data[sales_exp_col].fillna(0) if sales_exp_col else pd.Series(0, index=data.index)
+        mgmt_expense = data[mgmt_exp_col].fillna(0) if mgmt_exp_col else pd.Series(0, index=data.index)
+        fin_expense = data[fin_exp_col].fillna(0) if fin_exp_col else pd.Series(0, index=data.index)
+
+        # 总费用
         total_expense = operating_cost + sales_expense + mgmt_expense + fin_expense
 
-        # Get income
-        income = data[income_col] if income_col else pd.Series([1], index=data.index)
+        # 获取营业收入
+        income = data[income_col].fillna(1) if income_col else pd.Series([1], index=data.index)
 
-        # Calculate ratio (as percentage)
+        # 计算比率（百分比）
         expense_ratio = (total_expense / income.replace(0, 1)) * 100
 
         return IndicatorResult(
@@ -279,31 +295,36 @@ class ExpenseRatioIndicator(BaseIndicator):
 
 
 class FeeRateIndicator(BaseIndicator):
-    """Fee Rate = (Sales Expense + Management Expense + Financial Expense) / Operating Income"""
+    """Fee Rate = (Sales Expense + Management Expense + Financial Expense) / Operating Income
+    
+    适配 A 股/港股/美股：
+    - A 股：sales_expense, management_expense, financial_expense
+    - 港股：selling_distribution_expenses, administrative_expenses, finance_cost
+    """
 
     name = "fee_rate"
     description = "Fee Rate ((Sales/Management/Financial Expense) / Operating Income)"
     type = IndicatorType.CALCULATED
 
     def calculate(self, data: pd.DataFrame, **kwargs) -> IndicatorResult:
-        # Fee rate = (sales_expense + management_expense + financial_expense) / operating_income
-        sales_exp_col = self._find_column(data, ['sales_expense'])
-        mgmt_exp_col = self._find_column(data, ['management_expense'])
-        fin_exp_col = self._find_column(data, ['financial_expense'])
-        income_col = self._find_column(data, ['operating_income', 'total_revenue'])
+        # 获取费用（适配港股字段名）
+        sales_exp_col = self._find_column(data, ['sales_expense', 'selling_distribution_expenses'])
+        mgmt_exp_col = self._find_column(data, ['management_expense', 'administrative_expenses'])
+        fin_exp_col = self._find_column(data, ['financial_expense', 'finance_cost'])
+        income_col = self._find_column(data, ['operating_income', 'total_revenue', 'revenue'])
 
-        # Get fee expenses (default to 0 if not available)
-        sales_expense = data[sales_exp_col] if sales_exp_col else pd.Series(0, index=data.index)
-        mgmt_expense = data[mgmt_exp_col] if mgmt_exp_col else pd.Series(0, index=data.index)
-        fin_expense = data[fin_exp_col] if fin_exp_col else pd.Series(0, index=data.index)
+        # 获取费用（默认 0）
+        sales_expense = data[sales_exp_col].fillna(0) if sales_exp_col else pd.Series(0, index=data.index)
+        mgmt_expense = data[mgmt_exp_col].fillna(0) if mgmt_exp_col else pd.Series(0, index=data.index)
+        fin_expense = data[fin_exp_col].fillna(0) if fin_exp_col else pd.Series(0, index=data.index)
 
-        # Total fee expenses
+        # 三费合计
         total_fee = sales_expense + mgmt_expense + fin_expense
 
-        # Get income
-        income = data[income_col] if income_col else pd.Series([1], index=data.index)
+        # 获取营业收入
+        income = data[income_col].fillna(1) if income_col else pd.Series([1], index=data.index)
 
-        # Calculate ratio (as percentage)
+        # 计算比率（百分比）
         fee_rate = (total_fee / income.replace(0, 1)) * 100
 
         return IndicatorResult(

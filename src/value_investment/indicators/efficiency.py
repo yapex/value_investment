@@ -215,7 +215,7 @@ class PayableTurnoverIndicator(BaseIndicator):
     def get_required_fields(self) -> list[str]:
         return ['operating_cost', 'accounts_payable']
 
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str | None:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -267,7 +267,7 @@ class ExpenseRatioIndicator(BaseIndicator):
     def get_required_fields(self) -> list[str]:
         return ['operating_cost', 'operating_income', 'sales_expense', 'management_expense', 'financial_expense']
 
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str | None:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -317,7 +317,7 @@ class FeeRateIndicator(BaseIndicator):
     def get_required_fields(self) -> list[str]:
         return ['operating_income', 'sales_expense', 'management_expense', 'financial_expense']
 
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str | None:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -356,7 +356,7 @@ class FixedAssetTurnoverIndicator(BaseIndicator):
     def get_required_fields(self) -> list[str]:
         return ['operating_income', 'fixed_assets']
 
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str | None:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -423,7 +423,7 @@ class FeeToGrossProfitRatioIndicator(BaseIndicator):
     def get_required_fields(self) -> list[str]:
         return ['operating_income', 'operating_cost', 'sales_expense', 'management_expense', 'financial_expense']
 
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str | None:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -472,7 +472,7 @@ class AccountsReceivableRatioIndicator(BaseIndicator):
     def get_required_fields(self) -> list[str]:
         return ['accounts_receivable', 'operating_income']
 
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str | None:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -529,7 +529,7 @@ class ProductionAssetRatioIndicator(BaseIndicator):
     def get_required_fields(self) -> list[str]:
         return ['fixed_assets', 'construction_in_progress', 'project_materials', 'total_assets']
 
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str | None:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -587,7 +587,7 @@ class ReturnOnProductionAssetsIndicator(BaseIndicator):
     def get_required_fields(self) -> list[str]:
         return ['total_profit', 'fixed_assets', 'construction_in_progress', 'project_materials']
 
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str | None:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -644,7 +644,7 @@ class ReceivablesToAssetsRatioIndicator(BaseIndicator):
     def get_required_fields(self) -> list[str]:
         return ['accounts_receivable', 'notes_receivable', 'other_receivables', 'total_assets']
 
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str | None:
         for col in candidates:
             if col in df.columns:
                 return col
@@ -714,7 +714,7 @@ class FixedAssetToRevenueIndicator(BaseIndicator):
     def get_required_fields(self) -> list[str]:
         return ['fixed_assets', 'construction_in_progress', 'total_revenue']
 
-    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str:
+    def _find_column(self, df: pd.DataFrame, candidates: list[str]) -> str | None:
         for col in candidates:
             if col in df.columns:
                 return col

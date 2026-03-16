@@ -1004,8 +1004,8 @@ class DataMapper:
         """
         # 检测重复列名
         cols = df.columns.tolist()
-        seen = {}
-        duplicates = []
+        seen: dict[str, int] = {}
+        duplicates: list[str] = []
 
         for i, col in enumerate(cols):
             if col in seen:
@@ -1029,14 +1029,19 @@ class DataMapper:
                     # 用 other_col 的非 NaN 值填充 combined 的 NaN
                     combined = combined.fillna(other_col)
 
-                # 删除所有重复列，只保留第一个
-                # 先删除后面的列（从后往前删，避免索引变化）
-                for idx in sorted(indices[1:], reverse=True):
-                    result = result.drop(result.columns[idx], axis=1)
+                # 构建新的 DataFrame，只保留合并后的列
+                # 收集要保留的列索引（第一个重复列 + 所有非重复列）
+                keep_indices = [i for i in range(len(cols)) if i not in indices[1:]]
+                result = result.iloc[:, keep_indices].copy()
 
-                # 更新第一个列的值
-                first_idx = indices[0]
-                result.iloc[:, first_idx] = combined
+                # 更新合并列的值（位置可能已变化）
+                new_cols = result.columns.tolist()
+                if dup_col in new_cols:
+                    new_idx = new_cols.index(dup_col)
+                    result.iloc[:, new_idx] = combined
+
+                # 更新 cols 列表以反映删除后的状态
+                cols = result.columns.tolist()
 
         return result
 

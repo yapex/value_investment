@@ -1,9 +1,9 @@
 ---
-name: value-investment
+name: v-invest
 description: Use when analyzing A股/港股/美股基本面，需要查询股票信息、历史股价、财务报表、财务指标（ROIC/ROE/CAGR/PE百分位）或进行价值投资分析
 ---
 
-# value-investment
+# v-invest
 
 价值投资分析工具，支持A股/港股/美股基本面分析。
 

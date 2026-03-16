@@ -27,15 +27,15 @@ class WorkingCapitalIndicator(BaseIndicator):
         adv_col = self._find_column(data, ['adv_receipts', 'ADV_RECEIPTS'])
         cl_col = self._find_column(data, ['contract_liab', 'CONTRACT_LIAB'])
 
-        # 计算各项（缺失则为0）
-        ar = data[ar_col] if ar_col else pd.Series(0, index=data.index)
-        prepay = data[prepay_col] if prepay_col else pd.Series(0, index=data.index)
-        inv = data[inv_col] if inv_col else pd.Series(0, index=data.index)
-        ca = data[ca_col] if ca_col else pd.Series(0, index=data.index)
+        # 计算各项（缺失则为0），填充 NaN 为 0
+        ar = data[ar_col].fillna(0) if ar_col else pd.Series(0, index=data.index)
+        prepay = data[prepay_col].fillna(0) if prepay_col else pd.Series(0, index=data.index)
+        inv = data[inv_col].fillna(0) if inv_col else pd.Series(0, index=data.index)
+        ca = data[ca_col].fillna(0) if ca_col else pd.Series(0, index=data.index)
 
-        ap = data[ap_col] if ap_col else pd.Series(0, index=data.index)
-        adv = data[adv_col] if adv_col else pd.Series(0, index=data.index)
-        cl = data[cl_col] if cl_col else pd.Series(0, index=data.index)
+        ap = data[ap_col].fillna(0) if ap_col else pd.Series(0, index=data.index)
+        adv = data[adv_col].fillna(0) if adv_col else pd.Series(0, index=data.index)
+        cl = data[cl_col].fillna(0) if cl_col else pd.Series(0, index=data.index)
 
         # 计算流动资金
         wc = (ar + prepay + inv + ca) - (ap + adv + cl)
@@ -84,19 +84,19 @@ class WCToRevenueIndicator(BaseIndicator):
         cl_col = self._find_column(data, ['contract_liab', 'CONTRACT_LIAB'])
         revenue_col = self._find_column(data, ['operating_revenue', 'OPERATE_INCOME', 'TOTAL_OPERATE_INCOME', 'total_revenue'])
 
-        # 计算 WC
-        ar = data[ar_col] if ar_col else pd.Series(0, index=data.index)
-        prepay = data[prepay_col] if prepay_col else pd.Series(0, index=data.index)
-        inv = data[inv_col] if inv_col else pd.Series(0, index=data.index)
-        ca = data[ca_col] if ca_col else pd.Series(0, index=data.index)
-        ap = data[ap_col] if ap_col else pd.Series(0, index=data.index)
-        adv = data[adv_col] if adv_col else pd.Series(0, index=data.index)
-        cl = data[cl_col] if cl_col else pd.Series(0, index=data.index)
+        # 计算 WC，填充 NaN 为 0
+        ar = data[ar_col].fillna(0) if ar_col else pd.Series(0, index=data.index)
+        prepay = data[prepay_col].fillna(0) if prepay_col else pd.Series(0, index=data.index)
+        inv = data[inv_col].fillna(0) if inv_col else pd.Series(0, index=data.index)
+        ca = data[ca_col].fillna(0) if ca_col else pd.Series(0, index=data.index)
+        ap = data[ap_col].fillna(0) if ap_col else pd.Series(0, index=data.index)
+        adv = data[adv_col].fillna(0) if adv_col else pd.Series(0, index=data.index)
+        cl = data[cl_col].fillna(0) if cl_col else pd.Series(0, index=data.index)
 
         wc = (ar + prepay + inv + ca) - (ap + adv + cl)
 
-        # 获取营业收入
-        revenue = data[revenue_col] if revenue_col else pd.Series([1], index=data.index)
+        # 获取营业收入，填充 NaN 为 0
+        revenue = data[revenue_col].fillna(0) if revenue_col else pd.Series([1], index=data.index)
 
         # 计算比率
         ratio = wc / revenue.replace(0, 1)

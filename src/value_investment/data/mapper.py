@@ -647,6 +647,8 @@ class DataMapper:
         "CONSTRUCT_PROGRESS": "construction_in_progress",
         "PROJECT_MATERIAL": "project_materials",
         "PREPAID_EXP": "prepaid_expenses",
+        "CONTRACT_ASSETS": "contract_assets",  # 合同资产
+        "PREPAYMENT": "prepayment",  # 预付款项（流动资产）
         "DEFERRED_TAX_ASSETS": "deferred_tax_assets",
         "OTHER_CURRENT_ASSET": "other_current_assets",
         "OTHER_NONCURRENT_ASSET": "other_non_current_assets",
@@ -660,6 +662,8 @@ class DataMapper:
         "LEASE_LIAB": "lease_liability",
         "NONCURRENT_LIAB_1YEAR": "noncurrent_liability_due_1y",
         "ADVANCE_RECEIPTS": "advance_receipts",
+        "ADV_RECEIPTS": "adv_receipts",  # 预收款项
+        "CONTRACT_LIAB": "contract_liab",  # 合同负债
         "OTHER_CURRENT_LIAB": "other_current_liabilities",
         "DEFERRED_TAX_LIAB": "deferred_tax_liabilities",
         "TOTAL_EQUITY": "total_equity",

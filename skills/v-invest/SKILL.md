@@ -40,11 +40,11 @@ v-invest fields HK finind
 v-invest indicators A
 
 # 获取单个指标（当前值）
-v-invest indicator ROE -s 600519 -m A
+v-invest indicator roe -s 600519 -m A
 
 # 获取指标多年历史数据（重点！）
-v-invest indicator ROE -s 00700 -m HK -y 10
-v-invest indicator roe,roa,net_profit_margin -s 00700 -m HK -y 10
+v-invest indicator roe -s 00700 -m HK -y 10
+v-invest indicator roe,roa,gross_profit_margin -s 00700 -m HK -y 10
 ```
 
 **注意**: 当 `-y` 参数 > 1 时，返回多年历史数据表格
@@ -123,7 +123,7 @@ v-invest indicator roe,roa,net_profit_margin -s 00700 -m HK -y 10
 
 ```
 分析目标是什么？
-    ├─ 仅评估 ROE 质量 → 框架一：ROE 分析
+    ├─ 仅评估 roe 质量 → 框架一：ROE 分析
     │   ├─ 快速判断 → quick_analysis.md
     │   └─ 深度研究 → deep_analysis.md
     │
@@ -139,19 +139,19 @@ v-invest indicator roe,roa,net_profit_margin -s 00700 -m HK -y 10
 
 ```bash
 # 基本筛选
-v-invest scan --filter "ROE 连续5年 ≥15%"
+v-invest scan --filter "roe 连续5年 ≥15%"
 
 # 多条件 AND
-v-invest scan --filter "ROE 连续5年 ≥15% 且 毛利率 连续5年 ≥30%"
+v-invest scan --filter "roe 连续5年 ≥15% 且 毛利率 连续5年 ≥30%"
 
 # 输出到文件
-v-invest scan --filter "ROE 连续5年 ≥15%" -o result.csv
+v-invest scan --filter "roe 连续5年 ≥15%" -o result.csv
 
 # 缓存机制：首次扫描自动缓存结果，再次运行相同条件直接返回缓存
-v-invest scan --filter "ROIC 5年至少4年 ≥15%, 平均≥15%" -m A --fields roic -y 5 -l 0
+v-invest scan --filter "roic 5年至少4年 ≥15%, 平均≥15%" -m A --fields roic -y 5 -l 0
 
 # 强制重新扫描（不使用缓存）
-v-invest scan --filter "ROE 连续5年 ≥15%" --no-cache
+v-invest scan --filter "roe 连续5年 ≥15%" --no-cache
 
 # 查看已缓存的扫描结果
 v-invest scan-list
@@ -174,10 +174,11 @@ v-invest scan-list -m HK    # 查看港股市场缓存
 | 现金流量表 | `v-invest cashflow 600519` |
 | 财务指标 | `v-invest finind 600519 -m A` |
 | 指标当前值 | `v-invest indicator roe -s 00700 -m HK` |
-| **指标10年历史** | `v-invest indicator roe,roa -s 00700 -m HK -y 10` |
-| PE百分位 | `v-invest indicator PEPct -s 600519 -m A -y 10` |
-| 股票筛选 | `v-invest scan --filter "ROE 连续5年 ≥15%"` |
+| **指标10年历史** | `v-invest indicator roe,roa,gross_profit_margin -s 00700 -m HK -y 10` |
+| PE百分位 | `v-invest indicator pepct -s 600519 -m A -y 10` |
+| 股票筛选 | `v-invest scan --filter "roe 连续5年 ≥15%"` |
 | 查看缓存 | `v-invest scan-list` |
+| 查看A股缓存 | `v-invest scan-list -m A` |
 
 ## 常用选项
 

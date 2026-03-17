@@ -44,7 +44,7 @@ v-invest indicator roe -s 600519 -m A
 
 # 获取指标多年历史数据（重点！）
 v-invest indicator roe -s 00700 -m HK -y 10
-v-invest indicator roe,roa,gross_profit_margin -s 00700 -m HK -y 10
+v-invest indicator roe,roa,operating_profit_margin -s 00700 -m HK -y 10
 ```
 
 **注意**: 当 `-y` 参数 > 1 时，返回多年历史数据表格
@@ -174,8 +174,8 @@ v-invest scan-list -m HK    # 查看港股市场缓存
 | 现金流量表 | `v-invest cashflow 600519` |
 | 财务指标 | `v-invest finind 600519 -m A` |
 | 指标当前值 | `v-invest indicator roe -s 00700 -m HK` |
-| **指标10年历史** | `v-invest indicator roe,roa,gross_profit_margin -s 00700 -m HK -y 10` |
-| PE百分位 | `v-invest indicator pepct -s 600519 -m A -y 10` |
+| **指标10年历史** | `v-invest indicator roe,roa,operating_profit_margin -s 00700 -m HK -y 10` |
+| PE百分位 | `v-invest indicator PEPct -s 600519 -m A -y 10` |
 | 股票筛选 | `v-invest scan --filter "roe 连续5年 ≥15%"` |
 | 查看缓存 | `v-invest scan-list` |
 | 查看A股缓存 | `v-invest scan-list -m A` |

@@ -1,6 +1,6 @@
 [project]
 name = "value-investment"
-version = "0.2.2"
+version = "0.2.3"
 description = "A value investment analysis tool for A股/港股/美股"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -40,9 +40,9 @@ dev = [
 
 [tool.poe.tasks.to_nanobot]
 help = "Copy entire v-invest skill directory to target. Usage: poe to_nanobot [target]"
-args = [{ name = "target", positional = true, required = false, default = "/Volumes/yapex_ssd/yapex-bot/workspace/skills", help = "Target skills directory" }]
+args = [{ name = "target", positional = true, required = false, default = "/Users/yapex/bots/yapex-bot/workspace/skills", help = "Target skills directory" }]
 shell = """
-if [ -z "$target" ]; then target="/Volumes/yapex_ssd/yapex-bot/workspace/skills"; fi && \
+if [ -z "$target" ]; then target="/Users/yapex/bots/yapex-bot/workspace/skills"; fi && \
 rm -rf "$target/v-invest" && \
 cp -r skills/v-invest "$target/" && \
 echo "✓ Synced skills/v-invest -> $target/v-invest"

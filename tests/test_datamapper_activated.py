@@ -75,3 +75,51 @@ def test_indicator_works_with_mapped_fields():
     # Should calculate correctly with standardized field names
     assert result.value > 0, "ROE should be calculated with standardized field names"
     assert len(result.values) == 2, "Should have values for both years"
+
+
+def test_free_cash_flow_calculated_from_capex():
+    """Verify free_cash_flow = operating_cash_flow - capital_expenditure (标准定义)"""
+    from value_investment.data.mapper import DataMapper
+    import pandas as pd
+
+    # 模拟原始现金流量表数据（已映射后）
+    df = pd.DataFrame({
+        'year': [2023, 2022, 2021],
+        'operating_cash_flow': [1000, 800, 600],  # 经营活动现金流
+        'capital_expenditure': [200, 150, 100],   # 资本支出 (CAPEX)
+    })
+
+    # 调用计算衍生字段方法
+    result = DataMapper._calculate_cashflow_derived_fields(df)
+
+    # 标准定义: FCF = OCF - CAPEX
+    # 2023: 1000 - 200 = 800
+    # 2022: 800 - 150 = 650
+    # 2021: 600 - 100 = 500
+    expected_fcf = [800, 650, 500]
+    assert 'free_cash_flow' in result.columns, "Should calculate free_cash_flow"
+    assert result['free_cash_flow'].tolist() == expected_fcf, \
+        f"FCF should be OCF - CAPEX, got {result['free_cash_flow'].tolist()}"
+
+
+def test_free_cash_flow_fallback_to_investing_cash_flow():
+    """Verify fallback to OCF - investing_cash_flow when CAPEX unavailable"""
+    from value_investment.data.mapper import DataMapper
+    import pandas as pd
+
+    # 没有 CAPEX 字段，只有 investing_cash_flow
+    df = pd.DataFrame({
+        'year': [2023, 2022],
+        'operating_cash_flow': [1000, 800],
+        'investing_cash_flow': [-300, -250],  # 投资活动现金流（通常为负）
+    })
+
+    result = DataMapper._calculate_cashflow_derived_fields(df)
+
+    # 回退逻辑: FCF = OCF - investing_cash_flow
+    # 2023: 1000 - (-300) = 1300
+    # 2022: 800 - (-250) = 1050
+    expected_fcf = [1300, 1050]
+    assert 'free_cash_flow' in result.columns, "Should calculate free_cash_flow with fallback"
+    assert result['free_cash_flow'].tolist() == expected_fcf, \
+        f"FCF fallback should be OCF - investing_cash_flow, got {result['free_cash_flow'].tolist()}"

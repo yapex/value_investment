@@ -1107,9 +1107,15 @@ class DataMapper:
     @classmethod
     def _calculate_cashflow_derived_fields(cls, df: pd.DataFrame) -> pd.DataFrame:
         """计算现金流量表衍生字段"""
-        # 自由现金流 = 经营活动现金流 - 投资活动现金流
-        if "operating_cash_flow" in df.columns and "investing_cash_flow" in df.columns:
-            df["free_cash_flow"] = df["operating_cash_flow"] - df["investing_cash_flow"]
+        # 自由现金流 = 经营活动现金流 - 资本支出 (标准定义)
+        # 优先使用 CAPEX，如果没有则回退到 investing_cash_flow
+        if "operating_cash_flow" in df.columns:
+            if "capital_expenditure" in df.columns:
+                # 标准定义: FCF = OCF - CAPEX
+                df["free_cash_flow"] = df["operating_cash_flow"] - df["capital_expenditure"]
+            elif "investing_cash_flow" in df.columns:
+                # 回退: FCF = OCF - investing_cash_flow
+                df["free_cash_flow"] = df["operating_cash_flow"] - df["investing_cash_flow"]
 
         return df
 

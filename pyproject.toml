@@ -39,14 +39,8 @@ dev = [
 ]
 
 [tool.poe.tasks.to_nanobot]
-help = "Copy entire v-invest skill directory to target. Usage: poe to_nanobot [target]"
-args = [{ name = "target", positional = true, required = false, default = "/Users/yapex/bots/yapex-bot/workspace/skills", help = "Target skills directory" }]
-shell = """
-if [ -z "$target" ]; then target="/Users/yapex/bots/yapex-bot/workspace/skills"; fi && \
-rm -rf "$target/v-invest" && \
-cp -r skills/v-invest "$target/" && \
-echo "✓ Synced skills/v-invest -> $target/v-invest"
-"""
+help = "Copy skills to nanobot. Usage: poe to_nanobot"
+shell = "rm -rf /Users/yapex/bots/yapex-bot/workspace/skills/financial_data /Users/yapex/bots/yapex-bot/workspace/skills/roe_analysis /Users/yapex/bots/yapex-bot/workspace/skills/quantitative_analysis && cp -r skills/* /Users/yapex/bots/yapex-bot/workspace/skills/ && echo '✓ Synced skills/ -> nanobot'"
 
 
 [tool.pytest.ini_options]

@@ -6,13 +6,18 @@ A股/港股/美股基本面分析工具，基于 **tushare** (A股) + akshare (�
 
 ### 第一步：配置 Tushare Token
 
-```bash
-# 1. 复制配置模板
-cp .env.example .env
+A股数据需要配置 Tushare Token（环境变量）：
 
-# 2. 编辑 .env，填入你的 Tushare Token
-# 获取 Token: https://tushare.pro/user/token
+```bash
+# 方式一：临时设置（当前终端有效）
+export TUSHARE_TOKEN=你的token
+
+# 方式二：写入 ~/.bashrc 或 ~/.zshrc（永久生效）
+echo 'export TUSHARE_TOKEN=你的token' >> ~/.bashrc  # 或 ~/.zshrc
+source ~/.bashrc
 ```
+
+获取 Token: https://tushare.pro/user/token
 
 ### 第二步：安装工具
 
@@ -56,20 +61,18 @@ cd value_investment
 
 ### 2. 配置 Tushare Token
 
-**A股数据必须配置 Tushare Token**：
+**A股数据必须配置 Tushare Token（环境变量）**：
 
 ```bash
-# 复制配置模板
-cp .env.example .env
+# 方式一：临时设置（当前终端有效）
+export TUSHARE_TOKEN=你的token
 
-# 编辑 .env 文件，填入你的 Token
-# 获取地址: https://tushare.pro/user/token
+# 方式二：写入 ~/.bashrc 或 ~/.zshrc（永久生效）
+echo 'export TUSHARE_TOKEN=你的token' >> ~/.bashrc  # 或 ~/.zshrc
+source ~/.bashrc
 ```
 
-```bash
-# .env 文件内容示例
-TUSHARE_TOKEN=your_token_here
-```
+获取 Token: https://tushare.pro/user/token
 
 > **说明**：
 > - A股数据：需要 Tushare Token

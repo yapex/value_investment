@@ -13,7 +13,6 @@ dependencies = [
     "pydantic-settings>=2.13.1",
     "tushare>=1.4.25",
     "yfinance>=1.2.0",
-    "pytest-dotenv>=0.5.2",
     "dependency-injector>=4.48.3",
     "tabulate>=0.9.0",  # DataFrame.to_markdown() 需要
     "matplotlib>=3.10.8",
@@ -35,7 +34,6 @@ dev = [
     "poethepoet>=0.30.0",
     "pytest-cov>=7.0.0",
     "ruff>=0.15.4",
-    "pytest-dotenv>=0.5.2",
 ]
 
 [tool.poe.tasks.to_nanobot]
@@ -46,7 +44,6 @@ shell = "rm -rf /Users/yapex/bots/yapex-bot/workspace/skills/financial_data /Use
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-env_files = [".env"]
 
 [tool.pyright]
 include = ["src", "tests"]

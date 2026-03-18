@@ -128,11 +128,7 @@ class YFinanceProvider(BaseProvider):
             # Reset index to get date as column
             df = df.reset_index()
 
-            # Rename 'Date' column to 'trade_date' for consistency
-            if 'Date' in df.columns:
-                df = df.rename(columns={'Date': 'trade_date'})
-
-            # Apply field mapping
+            # Apply field mapping (including Date -> trade_date via config)
             result = self._apply_mapping(df, "market")
 
             if result is not None and not result.empty:

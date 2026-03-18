@@ -177,14 +177,21 @@ YFINANCE_CONFIG = ProviderConfig(
     class_name="YFinanceProvider",
     field_mappings={
         "market": {
+            "Date": "trade_date",
             "Close": "close",
             "Open": "open",
             "High": "high",
             "Low": "low",
             "Volume": "volume",
             "Adj Close": "adj_close",
-            "trade_date": "trade_date",
-        }
+        },
+        "info": {
+            "symbol": "symbol",
+            "shortName": "name",
+            "marketCap": "market_cap",
+            "peRatio": "pe_ratio",
+            "dividendYield": "dividend_yield",
+        },
     }
 )
 

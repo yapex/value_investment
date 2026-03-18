@@ -121,6 +121,39 @@ class BaseProvider(ABC):
         # Apply renaming
         return df.rename(columns=rename_map)
     
+    def _filter_latest_by_update_flag(
+        self,
+        df: pd.DataFrame | None,
+        date_col: str = "report_date",
+    ) -> pd.DataFrame | None:
+        """Filter to keep only the latest records by update_flag
+        
+        Tushare returns multiple records for the same report period when data is updated.
+        The update_flag column indicates:
+        - 1: Latest/updated record (keep this)
+        - 0: Original record (discard)
+        
+        Args:
+            df: DataFrame to filter (can be None)
+            date_col: Column name for the report date (used for deduplication)
+            
+        Returns:
+            Filtered DataFrame with only latest records, or None if input is None
+        """
+        if df is None or df.empty:
+            return df
+        
+        df = df.copy()
+        
+        # If update_flag exists, prefer records with update_flag=1
+        if "update_flag" in df.columns:
+            # Sort by update_flag descending (1 before 0), then by date
+            df = df.sort_values(["update_flag"], ascending=False)
+            # Drop duplicates by date column, keeping first (which is update_flag=1)
+            df = df.drop_duplicates(subset=[date_col], keep="first")
+        
+        return df
+
     def _get_from_cache(self, key: str) -> Any | None:
         """Get data from cache
         

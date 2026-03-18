@@ -11,7 +11,10 @@ from unittest.mock import MagicMock, patch
 
 
 class MockCache:
-    """Mock cache for testing - simple in-memory implementation"""
+    """Mock cache for testing - simple in-memory implementation
+
+    Supports SmartCache interface including get_or_fetch_with_range
+    """
 
     def __init__(self):
         self._data = {}
@@ -28,6 +31,58 @@ class MockCache:
 
     def clear(self):
         self._data.clear()
+
+    def get_or_fetch_with_range(
+        self,
+        key,
+        date_column,
+        fetch_func,
+        start_date=None,
+        end_date=None,
+        ttl=None,
+        force_refresh=False,
+    ):
+        """Mock implementation of SmartCache.get_or_fetch_with_range"""
+        if force_refresh:
+            self.invalidate(key)
+
+        cached = self.get(key)
+        if cached is not None:
+            # 模拟 SmartCache 的行为
+            if isinstance(cached, dict) and "data" in cached:
+                data = cached["data"]
+            else:
+                data = cached
+            # 如果有日期过滤，应用过滤
+            if date_column and isinstance(data, pd.DataFrame) and not data.empty:
+                data = self._filter_by_date(data, date_column, start_date, end_date)
+            return data
+
+        # 缓存未命中，调用 fetch_func
+        data = fetch_func()
+        # 存储带元数据的缓存
+        if isinstance(data, pd.DataFrame) and not data.empty and end_date:
+            self.set(key, {"data": data, "_cached_end_date": end_date}, ttl=ttl)
+        else:
+            self.set(key, data, ttl=ttl)
+        # 如果有日期过滤，应用过滤
+        if date_column and isinstance(data, pd.DataFrame) and not data.empty:
+            data = self._filter_by_date(data, date_column, start_date, end_date)
+        return data
+
+    def _filter_by_date(self, df, date_column, start_date, end_date):
+        """模拟 SmartCache 的日期过滤"""
+        if df.empty or date_column not in df.columns:
+            return df
+        df_copy = df.copy()
+        df_copy["_date_temp"] = pd.to_datetime(df_copy[date_column])
+        if start_date:
+            start_dt = pd.to_datetime(start_date)
+            df_copy = df_copy[df_copy["_date_temp"] >= start_dt]
+        if end_date:
+            end_dt = pd.to_datetime(end_date)
+            df_copy = df_copy[df_copy["_date_temp"] <= end_dt]
+        return df_copy.drop(columns=["_date_temp"])
 
 
 @pytest.fixture

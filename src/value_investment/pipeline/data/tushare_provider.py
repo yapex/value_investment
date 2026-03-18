@@ -188,7 +188,7 @@ class TushareProvider(DataProvider):
         if "year" in df.columns:
             df = df[(df["year"] >= start_year) & (df["year"] <= end_year)]
 
-        return df
+        return df if isinstance(df, pd.DataFrame) else pd.DataFrame()
 
     def _fetch_income_statement(self, ts_code: str, start_year: int, end_year: int) -> pd.DataFrame:
         """Fetch income statement data from Tushare"""
@@ -225,4 +225,4 @@ class TushareProvider(DataProvider):
         if "year" in df.columns:
             df = df[(df["year"] >= start_year) & (df["year"] <= end_year)]
 
-        return df
+        return df if isinstance(df, pd.DataFrame) else pd.DataFrame()

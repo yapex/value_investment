@@ -3,40 +3,64 @@
 This module defines all field constants used in calculators and handlers.
 Sources:
 - Standard IFRS fields: from CORE_FIELD_MAPPING
-- Custom calculated fields: manually added
 
 Usage:
-    from value_investment.pipeline.fields import OPERATING_PROFIT, ROIC
+    from value_investment.pipeline.fields import OPERATING_PROFIT, TOTAL_ASSETS
 
     class ROICCalculator:
-        required_fields = {OPERATING_PROFIT, TOTAL_ASSETS, CASH_AND_EQUIVALENTS, CURRENT_LIABILITIES}
+        required_fields = {OPERATING_PROFIT, TOTAL_ASSETS, ...}
 """
 
-from value_investment.data.mapper import CORE_FIELD_MAPPING
-
 # =============================================================================
-# Standard IFRS Fields
+# Standard IFRS Fields (from CORE_FIELD_MAPPING)
 # =============================================================================
-# Note: This list should match CORE_FIELD_MAPPING keys
-# For IDE support, use these constants instead of string literals
 
-OPERATING_PROFIT = "operating_profit"
-TOTAL_ASSETS = "total_assets"
-CASH_AND_EQUIVALENTS = "cash_and_equivalents"
-CURRENT_LIABILITIES = "current_liabilities"
+# Income Statement
 NET_PROFIT = "net_profit"
-TOTAL_EQUITY = "total_equity"
-REVENUE = "revenue"
+OPERATING_PROFIT = "operating_profit"
 GROSS_PROFIT = "gross_profit"
-# ... other fields from CORE_FIELD_MAPPING
+TOTAL_REVENUE = "total_revenue"
+OPERATING_COST = "operating_cost"
+BASIC_EPS = "basic_eps"
+DILUTED_EPS = "diluted_eps"
+GROSS_MARGIN = "gross_margin"
+NET_PROFIT_MARGIN = "net_profit_margin"
 
-# =============================================================================
-# Custom Calculated Fields
-# =============================================================================
-ROIC = "roic"
+# Balance Sheet
+TOTAL_ASSETS = "total_assets"
+TOTAL_EQUITY = "total_equity"
+TOTAL_LIABILITIES = "total_liabilities"
+CURRENT_ASSETS = "current_assets"
+CURRENT_LIABILITIES = "current_liabilities"
+CASH_AND_EQUIVALENTS = "cash_and_equivalents"
+INVENTORY = "inventory"
+ACCOUNTS_RECEIVABLE = "accounts_receivable"
+ACCOUNTS_PAYABLE = "accounts_payable"
+PREPAYMENT = "prepayment"
+ADV_RECEIPTS = "adv_receipts"
+CONTRACT_ASSETS = "contract_assets"
+CONTRACT_LIAB = "contract_liab"
+FIXED_ASSETS = "fixed_assets"
+
+# Cash Flow
+OPERATING_CASH_FLOW = "operating_cash_flow"
+INVESTING_CASH_FLOW = "investing_cash_flow"
+FINANCING_CASH_FLOW = "financing_cash_flow"
+CAPITAL_EXPENDITURE = "capital_expenditure"
+
+# Market Data
+MARKET_CAP = "market_cap"
+TOTAL_SHARES = "total_shares"
+PE_RATIO = "pe_ratio"
+PB_RATIO = "pb_ratio"
+
+# Ratios
 ROE = "roe"
 ROA = "roa"
-GROSS_PROFIT_MARGIN = "gross_profit_margin"
-NET_PROFIT_MARGIN = "net_profit_margin"
+ASSET_TURNOVER = "asset_turnover"
+INVENTORY_TURNOVER = "inventory_turnover"
+RECEIVABLE_TURNOVER = "receivable_turnover"
 CURRENT_RATIO = "current_ratio"
 QUICK_RATIO = "quick_ratio"
+DEBT_RATIO = "debt_ratio"
+BOOK_VALUE_PER_SHARE = "book_value_per_share"

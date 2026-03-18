@@ -31,17 +31,17 @@ class ValueInvestmentError(Exception):
 
 class IndicatorNotFoundError(ValueInvestmentError):
     """Raised when an indicator is not found"""
-    
+
     def __init__(self, indicator_name: str, available_indicators: list[str] | None = None):
         self.indicator_name = indicator_name
         self.available_indicators = available_indicators or []
-        
+
         message = f"Indicator '{indicator_name}' not found"
         if self.available_indicators:
             message += f". Available indicators: {', '.join(self.available_indicators[:10])}"
             if len(self.available_indicators) > 10:
                 message += f" (and {len(self.available_indicators) - 10} more)"
-        
+
         super().__init__(message)
 
 
@@ -116,16 +116,16 @@ class ValueInvestment:
 
         code = code.strip()
 
-        # A 股：6-digit codes starting with 0, 3, 6
+        # A 股:6-digit codes starting with 0, 3, 6
         if code.isdigit() and len(code) == 6:
             if code[0] in A_SHARE_CODE_PREFIXES:
                 return "A"
 
-        # 港股：5-digit codes
+        # 港股:5-digit codes
         if code.isdigit() and len(code) == 5:
             return "HK"
 
-        # 美股：alphabetic ticker symbols
+        # 美股:alphabetic ticker symbols
         if code.isalpha():
             return "US"
 
@@ -221,10 +221,12 @@ class ValueInvestment:
             end_year = datetime.now().year
         start_year = end_year - years
         df = self._provider.get_balance_sheet(symbol, end_year, start_year)
-        
-        # 守门员验证：确保只包含已映射字段
+
+        # 守门员验证:确保只包含已映射字段
         df = DataMapper.validate_mapped_fields(df, "balance_sheet")
-        
+        if df is None:
+            return pd.DataFrame()
+
         return self._filter_fields(df, fields)
 
     def get_profit_sheet(
@@ -255,10 +257,12 @@ class ValueInvestment:
             end_year = datetime.now().year
         start_year = end_year - years
         df = self._provider.get_income_statement(symbol, end_year, start_year)
-        
-        # 守门员验证：确保只包含已映射字段
+
+        # 守门员验证:确保只包含已映射字段
         df = DataMapper.validate_mapped_fields(df, "income_statement")
-        
+        if df is None:
+            return pd.DataFrame()
+
         return self._filter_fields(df, fields)
 
     def get_cashflow_sheet(
@@ -289,10 +293,12 @@ class ValueInvestment:
             end_year = datetime.now().year
         start_year = end_year - years
         df = self._provider.get_cash_flow_statement(symbol, end_year, start_year)
-        
-        # 守门员验证：确保只包含已映射字段
+
+        # 守门员验证:确保只包含已映射字段
         df = DataMapper.validate_mapped_fields(df, "cash_flow")
-        
+        if df is None:
+            return pd.DataFrame()
+
         return self._filter_fields(df, fields)
 
     def get_financial_indicator(self, symbol: str, force_refresh: bool = False):
@@ -307,10 +313,12 @@ class ValueInvestment:
             DataFrame with financial indicators
         """
         df = self._provider.get_financial_indicator(symbol, force_refresh=force_refresh)
-        
-        # 守门员验证：确保只包含已映射字段
+
+        # 守门员验证:确保只包含已映射字段
         df = DataMapper.validate_mapped_fields(df, "financial_indicator")
-        
+
+        if df is None:
+            return pd.DataFrame()
         return df
 
     def get_indicator_history(
@@ -367,7 +375,7 @@ class ValueInvestment:
         merged = dfs[0]
         for df in dfs[1:]:
             merged = merged.merge(df, on='year', how='outer')
-        
+
         merged = merged.sort_values('year', ascending=False)
         return merged
 
@@ -381,7 +389,7 @@ class ValueInvestment:
         """
         Get indicator values - unified interface for RAW and CALCULATED indicators
 
-        This is the main interface for users. It automatically handles both RAW and 
+        This is the main interface for users. It automatically handles both RAW and
         CALCULATED indicators, returning consistent results.
 
         Args:
@@ -416,10 +424,10 @@ class ValueInvestment:
             # Returns: DataFrame with all indicators
         """
         import warnings
-        
+
         if stock_code is None:
             raise ValueError("stock_code is required when getting indicator values")
-        
+
         # Case 1: Get all indicators
         if names is None:
             warnings.warn(
@@ -430,14 +438,14 @@ class ValueInvestment:
             # Get all RAW indicators from financial_indicator
             df = self.get_financial_indicator(stock_code, force_refresh=kwargs.get('force_refresh', False))
             return df
-        
+
         # Case 2: Single indicator
         if isinstance(names, str):
             names = [names]
             single = True
         else:
             single = False
-        
+
         # Case 3: Multiple indicators
         result = {}
         for name in names:
@@ -463,14 +471,14 @@ class ValueInvestment:
             if meta.type == IndicatorType.RAW:
                 # RAW indicator: get from financial_indicator
                 df = self.get_financial_indicator(stock_code, force_refresh=kwargs.get('force_refresh', False))
-                
+
                 # Get the source field name for this market
                 source_field = meta.get_field_for_market(self._market)
-                
+
                 # Try source field first, then standard name
                 lookup_field = source_field if source_field and source_field in df.columns else name
                 
-                if lookup_field in df.columns:
+                if df is not None and lookup_field in df.columns:
                     val = df[lookup_field].iloc[0] if len(df) > 0 else None
                     result[name] = val
                 else:
@@ -479,7 +487,7 @@ class ValueInvestment:
                 # CALCULATED indicator: calculate from financial statements
                 indicator_result = self.calculate_indicator(name, stock_code, years, **kwargs)
                 result[name] = indicator_result.value
-        
+
         # Return single value dict or full dict
         if single and len(result) == 1:
             return {names[0]: result.get(names[0])}
@@ -510,7 +518,7 @@ class ValueInvestment:
             IndicatorNotFoundError: if indicator is not found
         """
         from value_investment.indicators.base import IndicatorType
-        
+
         # If no stock_code, return metadata only
         if stock_code is None:
             registry = IndicatorRegistry.get_instance()
@@ -520,19 +528,20 @@ class ValueInvestment:
                 all_indicators = [ind.name for ind in registry.list_all()]
                 raise IndicatorNotFoundError(name, all_indicators)
             return meta
-        
+
         # Get indicator metadata to determine type
         registry = IndicatorRegistry.get_instance()
         meta = registry.get(name)
-        
+
         # If indicator not found, raise exception
         if meta is None:
             all_indicators = [ind.name for ind in registry.list_all()]
             raise IndicatorNotFoundError(name, all_indicators)
-        
+
         if meta.type == IndicatorType.RAW:
             # RAW indicator: get directly from financial_indicator
-            return self.get_financial_indicator(stock_code, force_refresh=kwargs.get('force_refresh', False))
+            result = self.get_financial_indicator(stock_code, force_refresh=kwargs.get('force_refresh', False))
+            return result if result is not None else pd.DataFrame()
         else:
             # CALCULATED indicator: calculate from financial statements
             return self.calculate_indicator(name, stock_code, years, **kwargs)
@@ -560,22 +569,22 @@ class ValueInvestment:
             IndicatorResult with calculated value
         """
         from value_investment.indicators.base import IndicatorType
-        
+
         indicator = self._factory.get(indicator_name)
-        
+
         # Check if indicator type matches method purpose
         if hasattr(indicator, 'type') and indicator.type == IndicatorType.RAW:
             # RAW indicators should use get_indicator(), not calculate_indicator()
             # But we still allow it for backward compatibility
             pass
 
-        # 计算日期范围，用于获取多年历史数据（如 prices 依赖）
+        # 计算日期范围,用于获取多年历史数据(如 prices 依赖)
         end_date = datetime.now().strftime(DATE_FORMAT_COMPACT)
         start_year = datetime.now().year - years
         start_date = f'{start_year}0101'
 
-        # 将日期范围传入 kwargs，这样 prices 依赖会获取多年数据
-        # 注意：使用不复权价格 (adjust="") 来计算历史 PE，因为复权价格会扭曲历史 PE
+        # 将日期范围传入 kwargs,这样 prices 依赖会获取多年数据
+        # 注意:使用不复权价格 (adjust="") 来计算历史 PE,因为复权价格会扭曲历史 PE
         kwargs['start_date'] = start_date
         kwargs['end_date'] = end_date
         kwargs['adjust'] = ""
@@ -652,7 +661,7 @@ class ValueInvestment:
             return df
 
         field_list = list(fields)
-        # 强制包含 report_date（支持大小写）
+        # 强制包含 report_date(支持大小写)
         date_col = "report_date" if "report_date" in df.columns else "REPORT_DATE"
         if date_col not in field_list:
             field_list.insert(0, date_col)
@@ -700,43 +709,43 @@ class ValueInvestment:
             """Filter to keep only annual reports (12-31) and deduplicate by year"""
             if df.empty:
                 return df
-            
+
             # Ensure year column exists
             date_col = None
             if 'report_date' in df.columns:
                 date_col = 'report_date'
             elif 'REPORT_DATE' in df.columns:
                 date_col = 'REPORT_DATE'
-            
+
             if date_col is None:
                 return df
-            
+
             # Convert to string for filtering
             df = df.copy()
             df['_date_str'] = df[date_col].astype(str)
-            
+
             # Filter for annual reports (ending with 1231)
             annual_mask = df['_date_str'].str.endswith('1231')
-            
+
             # If report_type column exists, prefer report_type=1 (consolidated)
             # Note: report_type may be string or int, handle both
             if 'report_type' in df.columns:
                 consolidated_mask = df['report_type'].astype(str) == '1'
                 annual_mask = annual_mask & consolidated_mask
-            
+
             df = df.loc[annual_mask].copy()
-            
+
             # Extract year
             df['year'] = pd.to_datetime(df[date_col]).dt.year
-            
+
             # Deduplicate: keep latest row per year (by ann_date if available, else by row order)
             if 'ann_date' in df.columns:
                 df = df.sort_values('ann_date', ascending=False)
             df = df.drop_duplicates(subset=['year'], keep='first')
-            
+
             # Clean up temp column
             df = df.drop(columns=['_date_str'], errors='ignore')
-            
+
             return df
 
         balance = filter_annual(balance)

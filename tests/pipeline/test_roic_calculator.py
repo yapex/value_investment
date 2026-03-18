@@ -1,32 +1,33 @@
 """Tests for ROIC Calculator"""
 import pytest
 from value_investment.pipeline.calculators.roic import ROICCalculator
-from value_investment.pipeline.fields.registry import get_registry
+from value_investment.pipeline.fields import (
+    OPERATING_PROFIT,
+    TOTAL_ASSETS,
+    CASH_AND_EQUIVALENTS,
+    CURRENT_LIABILITIES,
+)
 
 
 def test_roic_required_fields():
-    """Test ROIC calculator declares required fields from Registry"""
-    registry = get_registry()
-    expected_deps = registry.get_dependencies("roic")
-    
+    """Test ROIC calculator declares required fields"""
     calc = ROICCalculator()
-    assert calc.required_fields == set(expected_deps)
-    # Should contain the four fields from registry
-    assert "operating_profit" in calc.required_fields
-    assert "total_assets" in calc.required_fields
-    assert "cash_and_equivalents" in calc.required_fields
-    assert "current_liabilities" in calc.required_fields
+    assert calc.required_fields == {
+        OPERATING_PROFIT,
+        TOTAL_ASSETS,
+        CASH_AND_EQUIVALENTS,
+        CURRENT_LIABILITIES,
+    }
 
 
 def test_roic_calculate():
-    """Test ROIC calculation using standard field names"""
+    """Test ROIC calculation"""
     calc = ROICCalculator()
-    # Use standard field names from registry
     results = {
-        "operating_profit": {2024: 100.0, 2023: 90.0},
-        "total_assets": {2024: 1000.0, 2023: 900.0},
-        "cash_and_equivalents": {2024: 200.0, 2023: 180.0},
-        "current_liabilities": {2024: 300.0, 2023: 280.0},
+        OPERATING_PROFIT: {2024: 100.0, 2023: 90.0},
+        TOTAL_ASSETS: {2024: 1000.0, 2023: 900.0},
+        CASH_AND_EQUIVALENTS: {2024: 200.0, 2023: 180.0},
+        CURRENT_LIABILITIES: {2024: 300.0, 2023: 280.0},
     }
     roic = calc.calculate(results)
     # ROIC = Operating Profit / (Total Assets - Cash - Current Liabilities)

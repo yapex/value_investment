@@ -1,7 +1,12 @@
 """ROIC Calculator"""
 from typing import Any
 
-from value_investment.pipeline.fields.registry import get_registry
+from value_investment.pipeline.fields import (
+    OPERATING_PROFIT,
+    TOTAL_ASSETS,
+    CASH_AND_EQUIVALENTS,
+    CURRENT_LIABILITIES,
+)
 
 
 class ROICCalculator:
@@ -9,17 +14,14 @@ class ROICCalculator:
     
     ROIC = Operating Profit / (Total Assets - Cash - Current Liabilities)
     = Operating Profit / Working Capital
-    
-    Dependencies are declared in the Field Registry, not hardcoded.
     """
 
-    name = "roic"
-
-    @property
-    def required_fields(self) -> set[str]:
-        """Get required fields from Field Registry"""
-        registry = get_registry()
-        return set(registry.get_dependencies(self.name))
+    required_fields = {
+        OPERATING_PROFIT,
+        TOTAL_ASSETS,
+        CASH_AND_EQUIVALENTS,
+        CURRENT_LIABILITIES,
+    }
 
     def calculate(self, results: dict[str, dict[int, Any]]) -> dict[int, float]:
         """Calculate ROIC from results
@@ -30,15 +32,10 @@ class ROICCalculator:
         Returns:
             {year: roic_value}
         """
-        # Get fields from registry
-        registry = get_registry()
-        deps = registry.get_dependencies(self.name)
-        
-        # Build results dict with defaults
-        operating_profit = results.get(deps[0], {})  # operating_profit
-        total_assets = results.get(deps[1], {})     # total_assets
-        cash = results.get(deps[2], {})             # cash_and_equivalents
-        current_liabilities = results.get(deps[3], {})  # current_liabilities
+        operating_profit = results.get(OPERATING_PROFIT, {})
+        total_assets = results.get(TOTAL_ASSETS, {})
+        cash = results.get(CASH_AND_EQUIVALENTS, {})
+        current_liabilities = results.get(CURRENT_LIABILITIES, {})
 
         roic = {}
         for year in operating_profit:

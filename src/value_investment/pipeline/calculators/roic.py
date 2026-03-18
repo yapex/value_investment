@@ -1,12 +1,7 @@
 """ROIC Calculator"""
 from typing import Any
 
-from value_investment.pipeline.fields import (
-    OPERATING_PROFIT,
-    TOTAL_ASSETS,
-    CASH_AND_EQUIVALENTS,
-    CURRENT_LIABILITIES,
-)
+from value_investment.pipeline.fields import IFRSFields, CustomFields
 
 
 class ROICCalculator:
@@ -16,11 +11,13 @@ class ROICCalculator:
     = Operating Profit / Working Capital
     """
 
+    name = CustomFields.ROIC
+
     required_fields = {
-        OPERATING_PROFIT,
-        TOTAL_ASSETS,
-        CASH_AND_EQUIVALENTS,
-        CURRENT_LIABILITIES,
+        IFRSFields.OPERATING_PROFIT,
+        IFRSFields.TOTAL_ASSETS,
+        IFRSFields.CASH_AND_EQUIVALENTS,
+        IFRSFields.CURRENT_LIABILITIES,
     }
 
     def calculate(self, results: dict[str, dict[int, Any]]) -> dict[int, float]:
@@ -32,10 +29,10 @@ class ROICCalculator:
         Returns:
             {year: roic_value}
         """
-        operating_profit = results.get(OPERATING_PROFIT, {})
-        total_assets = results.get(TOTAL_ASSETS, {})
-        cash = results.get(CASH_AND_EQUIVALENTS, {})
-        current_liabilities = results.get(CURRENT_LIABILITIES, {})
+        operating_profit = results.get(IFRSFields.OPERATING_PROFIT, {})
+        total_assets = results.get(IFRSFields.TOTAL_ASSETS, {})
+        cash = results.get(IFRSFields.CASH_AND_EQUIVALENTS, {})
+        current_liabilities = results.get(IFRSFields.CURRENT_LIABILITIES, {})
 
         roic = {}
         for year in operating_profit:

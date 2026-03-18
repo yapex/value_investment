@@ -48,6 +48,7 @@ class TestMapToStandardDefaultDeny:
         })
         
         result = DataMapper.map_to_standard(df, 'tushare', 'income_statement', 'A')
+        assert result is not None
         
         # 只包含已映射的字段
         assert 'total_revenue' in result.columns
@@ -58,6 +59,7 @@ class TestMapToStandardDefaultDeny:
         """测试 copy 断开与原始 DataFrame 的联系"""
         df = pd.DataFrame({'total_operate_income': [100]})
         result = DataMapper.map_to_standard(df, 'tushare', 'income_statement', 'A')
+        assert result is not None
         
         # 修改结果不影响原始
         result.iloc[0, 0] = 999
@@ -74,6 +76,7 @@ class TestMapToStandardDefaultDeny:
         
         # 不应该抛出异常
         result = DataMapper.map_to_standard(df, 'tushare', 'income_statement', 'A')
+        assert result is not None
         assert 'total_revenue' in result.columns
 
 

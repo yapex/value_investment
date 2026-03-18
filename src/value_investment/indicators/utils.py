@@ -1,5 +1,5 @@
 """指标计算辅助工具"""
-from typing import Set
+from typing import Set, cast
 
 import pandas as pd
 
@@ -43,4 +43,4 @@ def require_field(df: pd.DataFrame, field: str) -> pd.Series:
                 f"'{field}' 未注册\n"
                 f"请先在 CORE_FIELD_MAPPING 或 field_mappings 中添加映射"
             )
-    return df[field]
+    return cast(pd.Series, df[field])

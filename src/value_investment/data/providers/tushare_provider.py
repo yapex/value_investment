@@ -11,6 +11,8 @@ Usage:
     provider = TushareProvider(cache=cache, token="your_token")
     df = provider.get_balance_sheet("000001.SZ", 2023)
 """
+from typing import cast
+
 import pandas as pd
 import tushare as ts  # type: ignore
 
@@ -19,6 +21,7 @@ from value_investment.core.constants import (
     SHANGHAI_SUFFIX,
     SHENZHEN_SUFFIX,
 )
+from value_investment.data.mapper import DataMapper
 from value_investment.data.providers.base_provider import (
     BaseProvider,
     get_ttl_until_june_next_year,
@@ -36,6 +39,9 @@ class TushareProvider(BaseProvider):
     - get_historical_data() - 历史行情
     - get_stock_info() - 股票基本信息
     """
+
+    # 缓存默认年数
+    DEFAULT_CACHE_YEARS = 10
 
     # 缓存 TTL 常量
     HISTORICAL_DATA_TTL = HISTORICAL_DATA_TTL
@@ -83,113 +89,197 @@ class TushareProvider(BaseProvider):
     def get_balance_sheet(self, stock_code: str, end_year: int, start_year: int | None = None) -> pd.DataFrame:
         """Get balance sheet data
 
+        缓存策略：
+        - 缓存键不含年份（balance:stock_code）
+        - 默认获取10年全量数据
+        - 使用 SmartCache.get_or_fetch_with_range 按需过滤
+
         Args:
             stock_code: Stock code (6-digit like "600519" or ts_code like "600519.SH")
             end_year: End year (e.g., 2023)
-            start_year: Start year (optional, defaults to end_year - 15)
+            start_year: Start year (optional, defaults to end_year - 10 + 1)
 
         Returns:
             DataFrame with balance sheet data (standard field names)
         """
-        if start_year is None:
-            start_year = end_year - 15
-
         ts_code = self._to_ts_code(stock_code)
-        cache_key = self._get_cache_key("balance", stock_code, str(start_year), str(end_year))
-        cached = self._get_from_cache(cache_key)
-        if cached is not None:
-            return cached
+        cache_key = self._get_cache_key("balance", stock_code)
 
-        # Fetch from tushare (不指定 fields，返回所有字段)
-        df = self._api.balancesheet(
-            ts_code=ts_code,
-            start_date=f"{start_year}0101",
-            end_date=f"{end_year}1231",
+        # 计算实际获取的年份范围（用于 fetch）
+        fetch_start_year = end_year - self.DEFAULT_CACHE_YEARS + 1
+
+        # 计算用户请求的年份范围（用于过滤）
+        if start_year is None:
+            start_year = fetch_start_year
+
+        # 构造 fetch 函数
+        def fetch_func() -> pd.DataFrame:
+            from datetime import datetime
+            today = datetime.now().strftime('%Y%m%d')
+
+            df = self._api.balancesheet(
+                ts_code=ts_code,
+                start_date=f"{fetch_start_year}0101",
+                end_date=today,
+            )
+
+            if isinstance(df, pd.Series):
+                df = df.to_frame().T
+
+            if df is not None and not df.empty:
+                df = df[df['ann_date'].astype(str) <= today].copy()
+
+            result = DataMapper.map_to_standard(
+                cast(pd.DataFrame | None, df),
+                source="tushare",
+                data_type="balance_sheet",
+                market="A",
+            )
+            result = self._filter_latest_by_update_flag(result, "report_date")
+            return result if result is not None else pd.DataFrame()
+
+        # 使用 SmartCache 进行智能缓存和按需过滤
+        ttl = get_ttl_until_june_next_year(end_year)
+        result = self._cache.get_or_fetch_with_range(
+            key=cache_key,
+            date_column="report_date",
+            fetch_func=fetch_func,
+            start_date=f"{start_year}-01-01",
+            end_date=f"{end_year}-12-31",
+            ttl=ttl,
         )
 
-        # Apply field mapping
-        result = self._apply_mapping(df, "balance")
-
-        if result is not None and not result.empty:
-            ttl = get_ttl_until_june_next_year(end_year)
-            self._set_to_cache(cache_key, result, ttl=ttl)
-            return result
-
-        return pd.DataFrame()
+        return result if result is not None else pd.DataFrame()
 
     def get_income_statement(self, stock_code: str, end_year: int, start_year: int | None = None) -> pd.DataFrame:
         """Get income statement data
 
+        缓存策略：
+        - 缓存键不含年份（income:stock_code）
+        - 默认获取10年全量数据
+        - 使用 SmartCache.get_or_fetch_with_range 按需过滤
+
         Args:
             stock_code: Stock code (6-digit like "600519" or ts_code like "600519.SH")
             end_year: End year
-            start_year: Start year (optional, defaults to end_year - 15)
+            start_year: Start year (optional, defaults to end_year - 10 + 1)
 
         Returns:
             DataFrame with income statement data
         """
-        if start_year is None:
-            start_year = end_year - 15
-
         ts_code = self._to_ts_code(stock_code)
-        cache_key = self._get_cache_key("income", stock_code, str(start_year), str(end_year))
-        cached = self._get_from_cache(cache_key)
-        if cached is not None:
-            return cached
+        cache_key = self._get_cache_key("income", stock_code)
 
-        # Fetch from tushare (不指定 fields，返回所有字段)
-        df = self._api.income(
-            ts_code=ts_code,
-            start_date=f"{start_year}0101",
-            end_date=f"{end_year}1231",
+        # 计算实际获取的年份范围（用于 fetch）
+        fetch_start_year = end_year - self.DEFAULT_CACHE_YEARS + 1
+
+        # 计算用户请求的年份范围（用于过滤）
+        if start_year is None:
+            start_year = fetch_start_year
+
+        # 构造 fetch 函数
+        def fetch_func() -> pd.DataFrame:
+            from datetime import datetime
+            today = datetime.now().strftime('%Y%m%d')
+
+            df = self._api.income(
+                ts_code=ts_code,
+                start_date=f"{fetch_start_year}0101",
+                end_date=today,
+            )
+
+            if isinstance(df, pd.Series):
+                df = df.to_frame().T
+
+            if df is not None and not df.empty:
+                df = df[df['ann_date'].astype(str) <= today].copy()
+
+            result = DataMapper.map_to_standard(
+                cast(pd.DataFrame | None, df),
+                source="tushare",
+                data_type="income_statement",
+                market="A",
+            )
+            result = self._filter_latest_by_update_flag(result, "report_date")
+            return result if result is not None else pd.DataFrame()
+
+        # 使用 SmartCache 进行智能缓存和按需过滤
+        ttl = get_ttl_until_june_next_year(end_year)
+        result = self._cache.get_or_fetch_with_range(
+            key=cache_key,
+            date_column="report_date",
+            fetch_func=fetch_func,
+            start_date=f"{start_year}-01-01",
+            end_date=f"{end_year}-12-31",
+            ttl=ttl,
         )
 
-        # Apply field mapping
-        result = self._apply_mapping(df, "income")
-
-        if result is not None and not result.empty:
-            ttl = get_ttl_until_june_next_year(end_year)
-            self._set_to_cache(cache_key, result, ttl=ttl)
-            return result
-
-        return pd.DataFrame()
+        return result if result is not None else pd.DataFrame()
 
     def get_cash_flow_statement(self, stock_code: str, end_year: int, start_year: int | None = None) -> pd.DataFrame:
         """Get cash flow statement data
 
+        缓存策略：
+        - 缓存键不含年份（cashflow:stock_code）
+        - 默认获取10年全量数据
+        - 使用 SmartCache.get_or_fetch_with_range 按需过滤
+
         Args:
             stock_code: Stock code (6-digit like "600519" or ts_code like "600519.SH")
             end_year: End year
-            start_year: Start year (optional, defaults to end_year - 15)
+            start_year: Start year (optional, defaults to end_year - 10 + 1)
 
         Returns:
             DataFrame with cash flow statement data
         """
-        if start_year is None:
-            start_year = end_year - 15
-
         ts_code = self._to_ts_code(stock_code)
-        cache_key = self._get_cache_key("cashflow", stock_code, str(start_year), str(end_year))
-        cached = self._get_from_cache(cache_key)
-        if cached is not None:
-            return cached
+        cache_key = self._get_cache_key("cashflow", stock_code)
 
-        # Fetch from tushare (不指定 fields，返回所有字段)
-        df = self._api.cashflow(
-            ts_code=ts_code,
-            start_date=f"{start_year}0101",
-            end_date=f"{end_year}1231",
+        # 计算实际获取的年份范围（用于 fetch）
+        fetch_start_year = end_year - self.DEFAULT_CACHE_YEARS + 1
+
+        # 计算用户请求的年份范围（用于过滤）
+        if start_year is None:
+            start_year = fetch_start_year
+
+        # 构造 fetch 函数
+        def fetch_func() -> pd.DataFrame:
+            from datetime import datetime
+            today = datetime.now().strftime('%Y%m%d')
+
+            df = self._api.cashflow(
+                ts_code=ts_code,
+                start_date=f"{fetch_start_year}0101",
+                end_date=today,
+            )
+
+            if isinstance(df, pd.Series):
+                df = df.to_frame().T
+
+            if df is not None and not df.empty:
+                df = df[df['ann_date'].astype(str) <= today].copy()
+
+            result = DataMapper.map_to_standard(
+                cast(pd.DataFrame | None, df),
+                source="tushare",
+                data_type="cash_flow",
+                market="A",
+            )
+            result = self._filter_latest_by_update_flag(result, "report_date")
+            return result if result is not None else pd.DataFrame()
+
+        # 使用 SmartCache 进行智能缓存和按需过滤
+        ttl = get_ttl_until_june_next_year(end_year)
+        result = self._cache.get_or_fetch_with_range(
+            key=cache_key,
+            date_column="report_date",
+            fetch_func=fetch_func,
+            start_date=f"{start_year}-01-01",
+            end_date=f"{end_year}-12-31",
+            ttl=ttl,
         )
 
-        # Apply field mapping
-        result = self._apply_mapping(df, "cashflow")
-
-        if result is not None and not result.empty:
-            ttl = get_ttl_until_june_next_year(end_year)
-            self._set_to_cache(cache_key, result, ttl=ttl)
-            return result
-
-        return pd.DataFrame()
+        return result if result is not None else pd.DataFrame()
     
     def get_historical_data(
         self,

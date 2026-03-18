@@ -728,8 +728,8 @@ class AkshareProvider(BaseProvider):
                 stock=hk_code, symbol="资产负债表", indicator="年度"
             )
             wide_df = self._transform_hk_financial_data(df)
-            # Apply field mapping
-            result = self._apply_mapping(wide_df, "balance")
+            # Apply field mapping using DataMapper
+            result = DataMapper.map_to_standard(wide_df, source="akshare", data_type="balance_sheet", market="HK")
             return result if result is not None else wide_df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
@@ -746,8 +746,8 @@ class AkshareProvider(BaseProvider):
                 stock=hk_code, symbol="利润表", indicator="年度"
             )
             wide_df = self._transform_hk_financial_data(df)
-            # Apply field mapping
-            result = self._apply_mapping(wide_df, "income")
+            # Apply field mapping using DataMapper
+            result = DataMapper.map_to_standard(wide_df, source="akshare", data_type="income_statement", market="HK")
             return result if result is not None else wide_df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
@@ -764,8 +764,8 @@ class AkshareProvider(BaseProvider):
                 stock=hk_code, symbol="现金流量表", indicator="年度"
             )
             wide_df = self._transform_hk_financial_data(df)
-            # Apply field mapping
-            result = self._apply_mapping(wide_df, "cashflow")
+            # Apply field mapping using DataMapper
+            result = DataMapper.map_to_standard(wide_df, source="akshare", data_type="cash_flow", market="HK")
             return result if result is not None else wide_df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
@@ -780,8 +780,8 @@ class AkshareProvider(BaseProvider):
                 stock=symbol, symbol="资产负债表", indicator="年报"
             )
             wide_df = self._transform_hk_financial_data(df)
-            # Apply field mapping
-            result = self._apply_mapping(wide_df, "balance")
+            # Apply field mapping using DataMapper
+            result = DataMapper.map_to_standard(wide_df, source="akshare", data_type="balance_sheet", market="US")
             return result if result is not None else wide_df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
@@ -796,8 +796,8 @@ class AkshareProvider(BaseProvider):
                 stock=symbol, symbol="综合损益表", indicator="年报"
             )
             wide_df = self._transform_hk_financial_data(df)
-            # Apply field mapping
-            result = self._apply_mapping(wide_df, "income")
+            # Apply field mapping using DataMapper
+            result = DataMapper.map_to_standard(wide_df, source="akshare", data_type="income_statement", market="US")
             return result if result is not None else wide_df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
@@ -812,8 +812,8 @@ class AkshareProvider(BaseProvider):
                 stock=symbol, symbol="现金流量表", indicator="年报"
             )
             wide_df = self._transform_hk_financial_data(df)
-            # Apply field mapping
-            result = self._apply_mapping(wide_df, "cashflow")
+            # Apply field mapping using DataMapper
+            result = DataMapper.map_to_standard(wide_df, source="akshare", data_type="cash_flow", market="US")
             return result if result is not None else wide_df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
@@ -826,8 +826,8 @@ class AkshareProvider(BaseProvider):
         def fetch():
             full_symbol = self._format_stock_symbol(symbol)
             df = ak.stock_balance_sheet_by_yearly_em(symbol=full_symbol)
-            # Apply field mapping
-            result = self._apply_mapping(df, "balance")
+            # Apply field mapping using DataMapper
+            result = DataMapper.map_to_standard(df, source="akshare", data_type="balance_sheet", market="A")
             return result if result is not None else df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
@@ -840,8 +840,8 @@ class AkshareProvider(BaseProvider):
         def fetch():
             full_symbol = self._format_stock_symbol(symbol)
             df = ak.stock_profit_sheet_by_yearly_em(symbol=full_symbol)
-            # Apply field mapping
-            result = self._apply_mapping(df, "income")
+            # Apply field mapping using DataMapper
+            result = DataMapper.map_to_standard(df, source="akshare", data_type="income_statement", market="A")
             return result if result is not None else df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)
@@ -854,8 +854,8 @@ class AkshareProvider(BaseProvider):
         def fetch():
             full_symbol = self._format_stock_symbol(symbol)
             df = ak.stock_cash_flow_sheet_by_yearly_em(symbol=full_symbol)
-            # Apply field mapping
-            result = self._apply_mapping(df, "cashflow")
+            # Apply field mapping using DataMapper
+            result = DataMapper.map_to_standard(df, source="akshare", data_type="cash_flow", market="A")
             return result if result is not None else df
 
         return self._cache.get_or_fetch(cache_key, fetch, ttl=ttl, force_refresh=force_refresh)

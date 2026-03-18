@@ -1,18 +1,39 @@
 """Standard field constants for pipeline
 
 This module defines all field constants used in calculators and handlers.
-Sources:
-- Standard IFRS fields: from CORE_FIELD_MAPPING
+All fields are from CORE_FIELD_MAPPING - no custom fields allowed.
 
 Usage:
     from value_investment.pipeline.fields import OPERATING_PROFIT, TOTAL_ASSETS
 
     class ROICCalculator:
         required_fields = {OPERATING_PROFIT, TOTAL_ASSETS, ...}
+
+    # All calculators are validated at container setup time
 """
 
+from value_investment.data.mapper import CORE_FIELD_MAPPING
+
+# All valid fields - calculators must use only these
+ALL_FIELDS = frozenset(CORE_FIELD_MAPPING.keys())
+
+
+def validate_fields(calculator_cls) -> None:
+    """Validate calculator's required_fields are all standard fields
+    
+    Raises:
+        ValueError: If any field is not in ALL_FIELDS
+    """
+    for field in calculator_cls.required_fields:
+        if field not in ALL_FIELDS:
+            raise ValueError(
+                f"Calculator {calculator_cls.__name__} uses invalid field: {field}. "
+                f"Valid fields: {sorted(ALL_FIELDS)}"
+            )
+
+
 # =============================================================================
-# Standard IFRS Fields (from CORE_FIELD_MAPPING)
+# Standard Fields (from CORE_FIELD_MAPPING)
 # =============================================================================
 
 # Income Statement

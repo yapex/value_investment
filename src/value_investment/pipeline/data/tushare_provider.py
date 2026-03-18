@@ -80,17 +80,11 @@ class TushareProvider(DataProvider):
         june_next_year = datetime(now.year + 1, 6, 30, 23, 59, 59)
         return int((june_next_year - now).total_seconds())
 
-    def _extract_year(self, df: pd.DataFrame, date_col: str = "report_date") -> pd.DataFrame:
-        """Extract year from date column"""
-        if df.empty or date_col not in df.columns:
-            return df
-
-        df = df.copy()
-        df["year"] = pd.to_datetime(df[date_col]).dt.year
-        return df
-
-    def _filter_latest_by_update_flag(self, df: pd.DataFrame, date_col: str = "report_date") -> pd.DataFrame:
-        """Filter to keep only the latest records by update_flag"""
+    def _filter_latest_by_update_flag(self, df: pd.DataFrame, date_col: str = "ann_date") -> pd.DataFrame:
+        """Filter to keep only the latest records by update_flag
+        
+        Tushare returns data with ann_date (announcement date).
+        """
         if df.empty:
             return df
 
@@ -99,6 +93,15 @@ class TushareProvider(DataProvider):
             df = df.sort_values(["update_flag"], ascending=False)
             df = df.drop_duplicates(subset=[date_col], keep="first")
 
+        return df
+
+    def _extract_year(self, df: pd.DataFrame, date_col: str = "ann_date") -> pd.DataFrame:
+        """Extract year from date column"""
+        if df.empty or date_col not in df.columns:
+            return df
+
+        df = df.copy()
+        df["year"] = pd.to_datetime(df[date_col]).dt.year
         return df
 
     def fetch_financial_data(

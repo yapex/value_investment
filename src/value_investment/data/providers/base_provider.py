@@ -69,57 +69,96 @@ class BaseProvider(ABC):
     
     def get_field_mapping(self, data_type: str) -> dict[str, str]:
         """Get field mapping for a specific data type
-        
+
         Args:
             data_type: Type of data (e.g., "income", "balance", "cashflow", "market")
-            
+
         Returns:
             Dictionary mapping native field names to standard field names
         """
         return self._field_mappings.get(data_type, {})
-    
-    def _apply_mapping(
+
+    def standardize_columns(
         self,
         df: pd.DataFrame | None,
         data_type: str,
     ) -> pd.DataFrame | None:
-        """Apply field mapping to DataFrame
-        
+        """Standardize column names using field_mappings
+
+        Renames native field names to standard field names based on the
+        field_mappings configuration for the given data_type.
+
         Only renames columns that exist in the DataFrame.
         Unmapped columns are kept as-is.
-        
+
         Args:
             df: DataFrame to transform (can be None)
-            data_type: Type of data (to select correct mapping)
-            
+            data_type: Type of data (to select correct mapping from field_mappings)
+
         Returns:
             Transformed DataFrame with standard field names.
             Returns None if input is None.
+            Returns empty DataFrame if input is empty.
         """
         if df is None:
             return None
-        
+
         if df.empty:
             return df
-        
+
         # Get mapping for this data type
         mapping = self.get_field_mapping(data_type)
-        
+
         if not mapping:
             return df
-        
+
         # Build rename map (only for columns that exist)
         rename_map = {
             native: standard
             for native, standard in mapping.items()
             if native in df.columns
         }
-        
+
         if not rename_map:
             return df
-        
+
         # Apply renaming
         return df.rename(columns=rename_map)
+
+    def _apply_mapping(
+        self,
+        df: pd.DataFrame | None,
+        data_type: str,
+    ) -> pd.DataFrame | None:
+        """Apply field mapping to DataFrame (deprecated, use standardize_columns)
+
+        This method is kept for backward compatibility.
+        New code should use standardize_columns().
+
+        Args:
+            df: DataFrame to transform (can be None)
+            data_type: Type of data (to select correct mapping)
+
+        Returns:
+            Transformed DataFrame with standard field names.
+            Returns None if input is None.
+        """
+        return self.standardize_columns(df, data_type)
+
+    def get_supported_fields(self, data_type: str) -> list[str]:
+        """Get list of supported standard field names for a data type
+
+        Returns the standard field names that this provider can return
+        for the given data_type, based on its field_mappings configuration.
+
+        Args:
+            data_type: Type of data (e.g., "income", "balance", "cashflow")
+
+        Returns:
+            List of standard field names (e.g., ["stock_code", "total_assets", ...])
+        """
+        mapping = self.get_field_mapping(data_type)
+        return list(mapping.values())
     
     def _filter_latest_by_update_flag(
         self,

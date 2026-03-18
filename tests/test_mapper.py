@@ -3,9 +3,9 @@
 TDD Phase 1: Write failing tests first, then implement the method.
 
 The map_to_standard() method should:
-1. Support sources: 'tushare', 'akshare', 'yfinance'
+1. Support markets: 'A', 'HK', 'US'
 2. Support data_types: 'balance_sheet', 'income_statement', 'cash_flow', 'financial_indicator'
-3. Map source-specific fields (ts_code → stock_code, end_date → report_date)
+3. Map market-specific fields (ts_code → stock_code, end_date → report_date)
 4. Apply type-specific field mappings
 """
 
@@ -34,7 +34,7 @@ class TestMapToStandardTushare:
 
         # Act: Map to standard fields
         result = DataMapper.map_to_standard(
-            df, source="tushare", data_type="balance_sheet"
+            df, market="A", data_type="balance_sheet"
         )
 
         # Assert: Source-specific fields mapped
@@ -60,7 +60,7 @@ class TestMapToStandardTushare:
         })
 
         result = DataMapper.map_to_standard(
-            df, source="tushare", data_type="income_statement"
+            df, market="A", data_type="income_statement"
         )
 
         assert "stock_code" in result.columns
@@ -80,7 +80,7 @@ class TestMapToStandardTushare:
         })
 
         result = DataMapper.map_to_standard(
-            df, source="tushare", data_type="cash_flow"
+            df, market="A", data_type="cash_flow"
         )
 
         assert "stock_code" in result.columns
@@ -100,7 +100,7 @@ class TestMapToStandardTushare:
         })
 
         result = DataMapper.map_to_standard(
-            df, source="tushare", data_type="financial_indicator"
+            df, market="A", data_type="financial_indicator"
         )
 
         assert "stock_code" in result.columns
@@ -114,7 +114,7 @@ class TestMapToStandardTushare:
         df = pd.DataFrame()
 
         result = DataMapper.map_to_standard(
-            df, source="tushare", data_type="balance_sheet"
+            df, market="A", data_type="balance_sheet"
         )
 
         assert result.empty
@@ -122,7 +122,7 @@ class TestMapToStandardTushare:
     def test_tushare_none_dataframe(self):
         """Should handle None input gracefully"""
         result = DataMapper.map_to_standard(
-            None, source="tushare", data_type="balance_sheet"
+            None, market="A", data_type="balance_sheet"
         )
 
         assert result is None
@@ -136,7 +136,7 @@ class TestMapToStandardTushare:
         })
 
         result = DataMapper.map_to_standard(
-            df, source="tushare", data_type="balance_sheet"
+            df, market="A", data_type="balance_sheet"
         )
 
         # Mapped columns
@@ -154,7 +154,7 @@ class TestMapToStandardTushare:
         })
 
         result = DataMapper.map_to_standard(
-            df, source="tushare", data_type="balance_sheet"
+            df, market="A", data_type="balance_sheet"
         )
 
         assert len(result) == 3
@@ -177,7 +177,7 @@ class TestMapToStandardAkshare:
         })
 
         result = DataMapper.map_to_standard(
-            df, source="akshare", data_type="balance_sheet"
+            df, market="A", data_type="balance_sheet"
         )
 
         # AKShare A 股 mapping: 股票代码 → stock_code, 报告期 → report_date
@@ -194,7 +194,7 @@ class TestMapToStandardAkshare:
         })
 
         result = DataMapper.map_to_standard(
-            df, source="akshare", data_type="income_statement"
+            df, market="A", data_type="income_statement"
         )
 
         assert "stock_code" in result.columns
@@ -216,7 +216,7 @@ class TestMapToStandardYfinance:
         df.index = pd.Index(["2023-12-31"], name="date")
 
         result = DataMapper.map_to_standard(
-            df, source="yfinance", data_type="balance_sheet"
+            df, market="US", data_type="balance_sheet"
         )
 
         # YFinance mapping should handle these fields
@@ -228,7 +228,7 @@ class TestMapToStandardYfinance:
         df = pd.DataFrame()
 
         result = DataMapper.map_to_standard(
-            df, source="yfinance", data_type="balance_sheet"
+            df, market="US", data_type="balance_sheet"
         )
 
         assert result.empty
@@ -243,7 +243,7 @@ class TestMapToStandardEdgeCases:
 
         with pytest.raises(ValueError, match="Unknown source"):
             DataMapper.map_to_standard(
-                df, source="invalid_source", data_type="balance_sheet"
+                df, market="INVALID", data_type="balance_sheet"
             )
 
     def test_invalid_data_type_raises_error(self):
@@ -252,7 +252,7 @@ class TestMapToStandardEdgeCases:
 
         with pytest.raises(ValueError, match="Unknown data_type"):
             DataMapper.map_to_standard(
-                df, source="tushare", data_type="invalid_type"
+                df, market="A", data_type="invalid_type"
             )
 
     def test_case_insensitive_source(self):
@@ -264,7 +264,7 @@ class TestMapToStandardEdgeCases:
 
         # Lowercase
         result1 = DataMapper.map_to_standard(
-            df, source="TUSHARE", data_type="balance_sheet"
+            df, market="A", data_type="balance_sheet"
         )
         assert "stock_code" in result1.columns
 
@@ -276,7 +276,7 @@ class TestMapToStandardEdgeCases:
         })
 
         result = DataMapper.map_to_standard(
-            df, source="tushare", data_type="BALANCE_SHEET"
+            df, market="A", data_type="BALANCE_SHEET"
         )
         assert "stock_code" in result.columns
 
@@ -301,7 +301,7 @@ class TestMapToStandardIntegration:
         })
 
         result = DataMapper.map_to_standard(
-            df, source="tushare", data_type="balance_sheet"
+            df, market="A", data_type="balance_sheet"
         )
 
         # Verify source-specific mapping

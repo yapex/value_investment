@@ -233,6 +233,95 @@ CORE_FIELD_MAPPING: dict[str, dict[str, str]] = {
 
 
 # ============================================================================
+# 自定义字段映射 (Custom Field Mapping)
+# ============================================================================
+# 结构：标准字段名(snake_case) → {市场: 市场字段名}
+# 用途：定义市场特有的非标准财务字段
+# 
+# 添加原则：
+#   1. 基于业务需求添加，不预填充
+#   2. 字段名必须使用 snake_case
+#   3. 每个字段必须标注适用的市场（A股/港股/美股）
+#   4. 通过单元测试发现缺失字段时，再添加到此映射
+#   5. 注释说明添加原因和使用场景
+#
+# 示例：
+#   "dividend_per_share": {"港股": "每股股息"},  # 用于股息率计算
+
+CUSTOM_FIELD_MAPPING: dict[str, dict[str, str]] = {
+    # =========================================================================
+    # 元数据字段 (Metadata Fields)
+    # =========================================================================
+    # 说明：这些字段用于标识和追踪数据，不属于财务指标
+    
+    # 股票代码字段
+    "stock_code": {
+        "A股": "ts_code",  # Tushare 使用 ts_code
+        "港股": "股票代码",  # Akshare 港股使用中文
+        "美股": "symbol",  # YFinance 使用 symbol
+    },
+    
+    # 报告期字段
+    "report_date": {
+        "A股": "end_date",  # Tushare 使用 end_date
+        "港股": "REPORT_DATE",  # 港股使用 REPORT_DATE
+        "美股": "REPORT_DATE",  # 美股使用 REPORT_DATE
+    },
+    
+    # 公告日期字段
+    "announce_date": {
+        "A股": "ann_date",  # Tushare 使用 ann_date
+    },
+    
+    # 更新标记字段
+    "update_flag": {
+        "A股": "update_flag",  # Tushare 使用 update_flag
+    },
+    
+    # =========================================================================
+    # Tushare 特定字段映射 (Tushare 使用与标准字段不同的英文名)
+    # =========================================================================
+    # 说明：Tushare 的某些字段名与标准字段名不同，需要映射
+    # 注意：如果 Tushare 字段名与标准字段名相同，则不需要在此添加
+    
+    # 资产负债表
+    "total_liabilities": {"A股": "total_liab"},  # Tushare 使用 total_liab
+    "capital_reserve": {"A股": "capital_rese"},  # Tushare 使用 capital_rese
+    "surplus_reserve": {"A股": "surplus_rese"},  # Tushare 使用 surplus_rese
+    "undistributed_profit": {"A股": "undist_profit"},  # Tushare 使用 undist_profit
+    
+    # 利润表
+    "total_revenue": {"A股": "total_operate_income"},  # Tushare 使用 total_operate_income
+    "operating_income": {"A股": "operate_income"},  # Tushare 使用 operate_income
+    "net_profit": {"A股": "netprofit"},  # Tushare 使用 netprofit
+    "parent_net_profit": {"A股": "parent_netprofit"},  # Tushare 使用 parent_netprofit
+    "total_operating_cost": {"A股": "total_operate_cost"},  # Tushare 使用 total_operate_cost
+    "operating_cost": {"A股": "operate_cost"},  # Tushare 使用 operate_cost
+    "operating_profit": {"A股": "operate_profit"},  # Tushare 使用 operate_profit
+    "total_profit": {"A股": "total_profit"},  # Tushare 使用 total_profit
+    "income_tax": {"A股": "income_tax"},  # Tushare 使用 income_tax
+    
+    # 现金流量表
+    "operating_cash_flow": {"A股": "n_cashflow_act"},  # Tushare 使用 n_cashflow_act
+    "investing_cash_flow": {"A股": "n_cashflow_inv_act"},  # Tushare 使用 n_cashflow_inv_act
+    "financing_cash_flow": {"A股": "n_cash_flows_fnc_act"},  # Tushare 使用 n_cash_flows_fnc_act
+    "capital_expenditure": {"A股": "construct_long_asset"},  # Tushare 使用 construct_long_asset
+}
+
+
+# ============================================================================
+# 合并字段映射 (Merged Field Mapping)
+# ============================================================================
+# 用途：内部使用，合并 CORE_FIELD_MAPPING 和 CUSTOM_FIELD_MAPPING
+
+def _get_merged_field_mapping() -> dict[str, dict[str, str]]:
+    """获取合并后的字段映射"""
+    merged = CORE_FIELD_MAPPING.copy()
+    merged.update(CUSTOM_FIELD_MAPPING)
+    return merged
+
+
+# ============================================================================
 # 反向索引：市场字段 → 标准字段 (自动生成)
 # ============================================================================
 _REVERSE_FIELD_INDEX: dict[str, dict[str, str]] = {}
@@ -245,7 +334,9 @@ def _build_reverse_index() -> None:
     for market in ["A股", "港股", "美股"]:
         _REVERSE_FIELD_INDEX[market] = {}
 
-    for standard_field, market_map in CORE_FIELD_MAPPING.items():
+    # 使用合并后的映射构建反向索引
+    merged_mapping = _get_merged_field_mapping()
+    for standard_field, market_map in merged_mapping.items():
         for market, market_field in market_map.items():
             if market in _REVERSE_FIELD_INDEX:
                 _REVERSE_FIELD_INDEX[market][market_field] = standard_field
@@ -929,9 +1020,11 @@ class DataMapper:
         market_map = {"a": "A股", "hk": "港股", "us": "美股"}
         market = market_map.get(market.lower(), market)
         
-        if standard_field not in CORE_FIELD_MAPPING:
+        # 使用合并后的映射检查
+        merged_mapping = _get_merged_field_mapping()
+        if standard_field not in merged_mapping:
             return False
-        return market in CORE_FIELD_MAPPING[standard_field]
+        return market in merged_mapping[standard_field]
 
     @classmethod
     def validate_mapped_fields(cls, df: pd.DataFrame | None, data_type: str) -> pd.DataFrame | None:
@@ -1548,6 +1641,39 @@ class DataMapper:
         "Net Income": "net_profit",
     }
 
+    # =========================================================================
+    # 市场字段映射 (动态生成)
+    # =========================================================================
+    # 从 CORE_FIELD_MAPPING 和 CUSTOM_FIELD_MAPPING 自动生成
+    # 结构：{市场字段名: 标准字段名}
+    # 用途：Provider 将市场特定字段名（如"资产总计"）映射为标准字段名（如"total_assets"）
+
+    @classmethod
+    def _get_market_mapping(cls, market: str) -> dict[str, str]:
+        """从 CORE_FIELD_MAPPING 和 CUSTOM_FIELD_MAPPING 生成市场字段映射
+        
+        返回该市场下：{市场字段名: 标准字段名}
+        
+        Args:
+            market: 市场代码 ("A", "HK", "US")
+        
+        Returns:
+            {市场字段名: 标准字段名} 的字典
+            例: {"资产总计": "total_assets", "负债合计": "total_liabilities", ...}
+        """
+        market_names = {"A": "A股", "HK": "港股", "US": "美股"}
+        market_name = market_names.get(market.upper(), market)
+        
+        mapping: dict[str, str] = {}
+        merged = {**CORE_FIELD_MAPPING, **CUSTOM_FIELD_MAPPING}
+        
+        for std_field, market_map in merged.items():
+            if market_name in market_map:
+                native_field = market_map[market_name]
+                mapping[native_field] = std_field
+        
+        return mapping
+
     # 数据类型到映射的映射
     DATA_TYPE_MAPPINGS = {
         "balance_sheet": "BALANCE_MAPPING",
@@ -1556,7 +1682,7 @@ class DataMapper:
         "financial_indicator": "FINANCIAL_INDICATOR_MAPPING",
     }
 
-    # 数据源映射
+    # 数据源映射 (已废弃，保留用于向后兼容)
     SOURCE_MAPPINGS = {
         "tushare": "TUSHARE_SOURCE_MAPPING",
         "akshare": "AKSHARE_SOURCE_MAPPING",
@@ -1567,25 +1693,23 @@ class DataMapper:
     def map_to_standard(
         cls,
         df: pd.DataFrame | None,
-        source: str,
-        data_type: str,
-        market: str = "A",
+        market: str,
+        data_type: str | None = None,
     ) -> pd.DataFrame | None:
-        """统一映射入口：将数据源原始字段映射为标准字段
+        """统一映射入口：将市场特定原始字段映射为标准字段
         
         默认拒绝策略：只保留已映射的字段，未映射字段不进入后续流程。
         
         Args:
             df: 原始 DataFrame (可能为 None)
-            source: 数据源 ("tushare" | "akshare" | "yfinance")
-            data_type: 数据类型
-            market: 市场 ("A", "HK", "US")，用于判断字段是否应该存在
+            market: 市场代码 ("A", "HK", "US")
+            data_type: 数据类型 (可选，用于特殊处理如 financial_indicator)
         
         Returns:
             映射后的 DataFrame（只包含已映射的标准字段名）
         
         Raises:
-            ValueError: 如果 source 或 data_type 无效
+            ValueError: 如果 market 无效
         """
         # 处理 None 和空 DataFrame
         if df is None:
@@ -1593,51 +1717,47 @@ class DataMapper:
         if df.empty:
             return df
 
-        # 标准化 source 和 data_type
-        source = source.lower().strip()
-        data_type = data_type.lower().strip()
+        # 标准化 market
+        market = market.upper().strip()
+        valid_markets = {"A", "HK", "US"}
+        if market not in valid_markets:
+            raise ValueError(f"Unknown market: '{market}'. Valid markets: {', '.join(valid_markets)}")
 
-        # 验证 source
-        if source not in cls.SOURCE_MAPPINGS:
-            valid_sources = ", ".join(cls.SOURCE_MAPPINGS.keys())
-            raise ValueError(f"Unknown source: '{source}'. Valid sources: {valid_sources}")
+        # 标准化 data_type
+        if data_type:
+            data_type = data_type.lower().strip()
 
-        # 验证 data_type
-        if data_type not in cls.DATA_TYPE_MAPPINGS:
-            valid_types = ", ".join(cls.DATA_TYPE_MAPPINGS.keys())
-            raise ValueError(f"Unknown data_type: '{data_type}'. Valid types: {valid_types}")
+        # 收集映射表
+        rename_map: dict[str, str] = {}
 
-        # 收集完整的映射表（source + type）
-        rename_map = {}  # {原生字段: 标准字段}
-
-        # Step 1: 应用数据源特定映射
-        source_mapping_name = cls.SOURCE_MAPPINGS[source]
-        source_mapping = getattr(cls, source_mapping_name, {})
-        for old_field, new_field in source_mapping.items():
+        # Step 1: 应用市场字段映射（动态生成）
+        market_mapping = cls._get_market_mapping(market)
+        for old_field, new_field in market_mapping.items():
             if old_field in df.columns:
                 rename_map[old_field] = new_field
 
-        # Step 2: 应用数据类型映射
-        type_mapping_name = cls.DATA_TYPE_MAPPINGS[data_type]
-        type_mapping = getattr(cls, type_mapping_name, None)
+        # Step 2: 应用数据类型特定映射（如果提供）
+        if data_type and data_type in cls.DATA_TYPE_MAPPINGS:
+            type_mapping_name = cls.DATA_TYPE_MAPPINGS[data_type]
+            type_mapping = getattr(cls, type_mapping_name, None)
 
-        if type_mapping is not None:
-            if data_type == "financial_indicator":
-                # 财务指标特殊处理：先应用 rename_map，再调用 map_financial_indicator
-                result = {
-                    new_field: df[old_field].values
-                    for old_field, new_field in rename_map.items()
-                    if old_field in df.columns
-                }
-                temp_df = pd.DataFrame(result)
-                return cls.map_financial_indicator(temp_df, market=market)
-            else:
-                for old_field, new_field in type_mapping.items():
-                    if old_field in df.columns and old_field not in rename_map:
-                        rename_map[old_field] = new_field
+            if type_mapping is not None:
+                if data_type == "financial_indicator":
+                    # 财务指标特殊处理
+                    result = {
+                        new_field: df[old_field].values
+                        for old_field, new_field in rename_map.items()
+                        if old_field in df.columns
+                    }
+                    temp_df = pd.DataFrame(result)
+                    return cls.map_financial_indicator(temp_df, market=market)
+                else:
+                    # 其他数据类型：添加类型特定映射
+                    for old_field, new_field in type_mapping.items():
+                        if old_field in df.columns and old_field not in rename_map:
+                            rename_map[old_field] = new_field
 
-        # Step 3: 显式构建新 DataFrame，只包含已映射字段（高效方案）
-        # 高效方案：使用 dict comprehension + .values 提取独立数组
+        # Step 3: 显式构建新 DataFrame，只包含已映射字段
         result = {
             standard_col: df[native_col].values
             for native_col, standard_col in rename_map.items()
@@ -1654,7 +1774,7 @@ class DataMapper:
         if missing_native:
             import logging
             logging.warning(
-                f"[{source}/{market}] 原始数据缺少映射字段: {missing_native}，"
+                f"[{market}] 原始数据缺少映射字段: {missing_native}，"
                 f"这些字段将被忽略"
             )
 

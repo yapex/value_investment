@@ -13,25 +13,16 @@ from value_investment.pipeline.fields import IFRSFields
 
 
 # Field mapping: standard field name -> Tushare field name
+# Copied from CORE_FIELD_MAPPING for A 股 market
 TUSHARE_BALANCE_FIELDS = {
     IFRSFields.TOTAL_ASSETS: "total_assets",
-    IFRSFields.TOTAL_LIABILITIES: "total_liab",
-    IFRSFields.TOTAL_EQUITY: "total_hldr_eqy_exc_min_int",
-    IFRSFields.CURRENT_ASSETS: "total_cur_assets",
+    IFRSFields.CASH_AND_EQUIVALENTS: "money_cap",
     IFRSFields.CURRENT_LIABILITIES: "total_cur_liab",
-    IFRSFields.CASH_AND_EQUIVALENTS: "monetary_cap",
-    IFRSFields.INVENTORY: "inventories",
-    IFRSFields.ACCOUNTS_RECEIVABLE: "account_receiv",
-    IFRSFields.ACCOUNTS_PAYABLE: "acct_payable",
-    IFRSFields.FIXED_ASSETS: "fix_assets",
 }
 
 TUSHARE_INCOME_FIELDS = {
-    IFRSFields.TOTAL_REVENUE: "total_revenue",
-    IFRSFields.NET_PROFIT: "net_profit",
-    IFRSFields.OPERATING_PROFIT: "oper_profit",
-    IFRSFields.GROSS_PROFIT: "total_profit",
-    IFRSFields.OPERATING_COST: "total_oper_cost",
+    IFRSFields.OPERATING_PROFIT: "operate_profit",
+    IFRSFields.NET_PROFIT: "continued_net_profit",
 }
 
 

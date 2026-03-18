@@ -963,9 +963,12 @@ class DataMapper:
         # 收集所有标准字段名
         standard_fields = set(type_mapping.values())
         
-        # 检查所有列是否都在标准字段中
+        # 保留字段：不验证这些字段（辅助列如 year, stock_code 等）
+        reserved_fields = {'year', 'stock_code', 'report_date', 'announce_date', 'update_flag'}
+        
+        # 检查所有列是否都在标准字段或保留字段中
         actual_columns = set(df.columns)
-        unmapped = actual_columns - standard_fields
+        unmapped = actual_columns - standard_fields - reserved_fields
         
         if unmapped:
             raise UnmappedFieldError(
@@ -1518,6 +1521,15 @@ class DataMapper:
         "投资活动产生的现金流量净额": "investing_cash_flow",
         "筹资活动产生的现金流量净额": "financing_cash_flow",
         "购建固定资产支付的现金": "capital_expenditure",
+        # 港股长格式数据字段 (STD_ITEM_NAME 中的值)
+        "资产总值": "total_assets",
+        "负债总额": "total_liabilities",
+        "权益总额": "total_equity",
+        "收益": "total_revenue",
+        "期内溢利": "net_profit",
+        "经营业务现金净额": "operating_cash_flow",
+        "投资业务现金净额": "investing_cash_flow",
+        "融资业务现金净额": "financing_cash_flow",
         # 港股/美股长格式数据字段
         "REPORT_DATE": "report_date",
         "STD_ITEM_NAME": "item_name",  # 港股使用

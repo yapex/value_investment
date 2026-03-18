@@ -626,6 +626,16 @@ QUARTERLY_MAPPING = {
 }
 
 
+class MappedFieldMissingError(Exception):
+    """字段已注册但数据中不存在"""
+    pass
+
+
+class UnmappedFieldError(Exception):
+    """字段未在映射表中注册"""
+    pass
+
+
 class DataMapper:
     """A股字段 -> 国际标准字段映射器"""
 
@@ -903,6 +913,25 @@ class DataMapper:
                 return result
         # 如果没有找到映射，返回原字段名（假设它已经是标准字段名）
         return market_field
+
+    @classmethod
+    def is_field_expected_for_market(cls, standard_field: str, market: str) -> bool:
+        """检查字段是否应该存在于指定市场
+        
+        Args:
+            standard_field: 标准字段名
+            market: 市场代码 ("A", "HK", "US")
+        
+        Returns:
+            True 如果该字段在当前市场有定义
+        """
+        # 标准化市场名称
+        market_map = {"a": "A股", "hk": "港股", "us": "美股"}
+        market = market_map.get(market.lower(), market)
+        
+        if standard_field not in CORE_FIELD_MAPPING:
+            return False
+        return market in CORE_FIELD_MAPPING[standard_field]
 
     @classmethod
     def list_core_fields(cls) -> list[str]:
@@ -1375,3 +1404,203 @@ class DataMapper:
                     fields.add(value)
 
         return sorted(fields)
+
+    # =========================================================================
+    # 统一映射方法 (Unified Mapping Method)
+    # =========================================================================
+
+    # 数据源特定字段映射 (Source-specific field mappings)
+    # 这些映射处理数据源特有的字段名，如 ts_code → stock_code
+
+    TUSHARE_SOURCE_MAPPING = {
+        # 通用字段
+        "ts_code": "stock_code",
+        "end_date": "report_date",
+        "ann_date": "announce_date",
+        "update_flag": "update_flag",
+        # 资产负债表特有字段
+        "total_liab": "total_liabilities",
+        "capital_rese": "capital_reserve",
+        "surplus_rese": "surplus_reserve",
+        "undist_profit": "undistributed_profit",
+        # 利润表特有字段 (Tushare API 返回小写字段名)
+        "total_operate_income": "total_revenue",
+        "operate_income": "operating_income",
+        "netprofit": "net_profit",
+        "parent_netprofit": "parent_net_profit",
+        "total_operate_cost": "total_operating_cost",
+        "operate_cost": "operating_cost",
+        "operate_profit": "operating_profit",
+        "total_profit": "total_profit",
+        "income_tax": "income_tax",
+        # 现金流量表特有字段
+        "n_cashflow_act": "operating_cash_flow",
+        "n_cashflow_inv_act": "investing_cash_flow",
+        "n_cash_flows_fnc_act": "financing_cash_flow",
+        "netcash_operate": "operating_cash_flow",
+        "netcash_invest": "investing_cash_flow",
+        "netcash_finance": "financing_cash_flow",
+        "construct_long_asset": "capital_expenditure",
+    }
+
+    AKSHARE_SOURCE_MAPPING = {
+        # 通用字段 (中文列名)
+        "股票代码": "stock_code",
+        "报告期": "report_date",
+        "证券代码": "stock_code",
+        "日期": "date",
+        # A 股财务报表通用字段
+        "报告日期": "report_date",
+        "ann_date": "announce_date",
+        # A 股资产负债表字段
+        "资产总计": "total_assets",
+        "负债合计": "total_liabilities",
+        "股东权益合计": "total_equity",
+        "流动资产合计": "current_assets",
+        "流动负债合计": "current_liabilities",
+        "货币资金": "cash_and_equivalents",
+        "存货": "inventory",
+        "应收账款": "accounts_receivable",
+        "应付账款": "accounts_payable",
+        "固定资产": "fixed_assets",
+        # A 股利润表字段
+        "营业总收入": "total_revenue",
+        "营业收入": "operating_income",
+        "净利润": "net_profit",
+        "毛利": "gross_profit",
+        "营业利润": "operating_profit",
+        "营业成本": "operating_cost",
+        # A 股现金流量表字段
+        "经营活动产生的现金流量净额": "operating_cash_flow",
+        "投资活动产生的现金流量净额": "investing_cash_flow",
+        "筹资活动产生的现金流量净额": "financing_cash_flow",
+        "购建固定资产支付的现金": "capital_expenditure",
+        # 港股/美股长格式数据字段
+        "REPORT_DATE": "report_date",
+        "STD_ITEM_NAME": "item_name",  # 港股使用
+        "ITEM_NAME": "item_name",  # 美股使用
+        "AMOUNT": "amount",
+    }
+
+    YFINANCE_SOURCE_MAPPING = {
+        # YFinance 字段 (美股)
+        # 注：YFinance 返回的数据通常已经是标准英文格式
+        "Total Assets": "total_assets",
+        "Total Liabilities": "total_liabilities",
+        "Total Stockholder Equity": "total_equity",
+        "Cash And Cash Equivalents": "cash_and_equivalents",
+        "Total Revenue": "total_revenue",
+        "Net Income": "net_profit",
+    }
+
+    # 数据类型到映射的映射
+    DATA_TYPE_MAPPINGS = {
+        "balance_sheet": "BALANCE_MAPPING",
+        "income_statement": "INCOME_MAPPING",
+        "cash_flow": "CASHFLOW_MAPPING",
+        "financial_indicator": "FINANCIAL_INDICATOR_MAPPING",
+    }
+
+    # 数据源映射
+    SOURCE_MAPPINGS = {
+        "tushare": "TUSHARE_SOURCE_MAPPING",
+        "akshare": "AKSHARE_SOURCE_MAPPING",
+        "yfinance": "YFINANCE_SOURCE_MAPPING",
+    }
+
+    @classmethod
+    def map_to_standard(
+        cls,
+        df: pd.DataFrame | None,
+        source: str,
+        data_type: str,
+        market: str = "A",
+    ) -> pd.DataFrame | None:
+        """统一映射入口：将数据源原始字段映射为标准字段
+        
+        默认拒绝策略：只保留已映射的字段，未映射字段不进入后续流程。
+        
+        Args:
+            df: 原始 DataFrame (可能为 None)
+            source: 数据源 ("tushare" | "akshare" | "yfinance")
+            data_type: 数据类型
+            market: 市场 ("A", "HK", "US")，用于判断字段是否应该存在
+        
+        Returns:
+            映射后的 DataFrame（只包含已映射的标准字段名）
+        
+        Raises:
+            ValueError: 如果 source 或 data_type 无效
+        """
+        # 处理 None 和空 DataFrame
+        if df is None:
+            return None
+        if df.empty:
+            return df
+
+        # 标准化 source 和 data_type
+        source = source.lower().strip()
+        data_type = data_type.lower().strip()
+
+        # 验证 source
+        if source not in cls.SOURCE_MAPPINGS:
+            valid_sources = ", ".join(cls.SOURCE_MAPPINGS.keys())
+            raise ValueError(f"Unknown source: '{source}'. Valid sources: {valid_sources}")
+
+        # 验证 data_type
+        if data_type not in cls.DATA_TYPE_MAPPINGS:
+            valid_types = ", ".join(cls.DATA_TYPE_MAPPINGS.keys())
+            raise ValueError(f"Unknown data_type: '{data_type}'. Valid types: {valid_types}")
+
+        # 收集完整的映射表（source + type）
+        rename_map = {}  # {原生字段: 标准字段}
+
+        # Step 1: 应用数据源特定映射
+        source_mapping_name = cls.SOURCE_MAPPINGS[source]
+        source_mapping = getattr(cls, source_mapping_name, {})
+        for old_field, new_field in source_mapping.items():
+            if old_field in df.columns:
+                rename_map[old_field] = new_field
+
+        # Step 2: 应用数据类型映射
+        type_mapping_name = cls.DATA_TYPE_MAPPINGS[data_type]
+        type_mapping = getattr(cls, type_mapping_name, None)
+
+        if type_mapping is not None:
+            if data_type == "financial_indicator":
+                # 财务指标特殊处理：先应用 rename_map，再调用 map_financial_indicator
+                result = {
+                    new_field: df[old_field].values
+                    for old_field, new_field in rename_map.items()
+                    if old_field in df.columns
+                }
+                temp_df = pd.DataFrame(result)
+                return cls.map_financial_indicator(temp_df, market=market)
+            else:
+                for old_field, new_field in type_mapping.items():
+                    if old_field in df.columns and old_field not in rename_map:
+                        rename_map[old_field] = new_field
+
+        # Step 3: 显式构建新 DataFrame，只包含已映射字段（高效方案）
+        # 高效方案：使用 dict comprehension + .values 提取独立数组
+        result = {
+            standard_col: df[native_col].values
+            for native_col, standard_col in rename_map.items()
+            if native_col in df.columns
+        }
+        
+        # 检查缺失字段（只对当前市场应该存在的字段发出警告）
+        missing_native = []
+        for native_col, standard_col in rename_map.items():
+            if native_col not in df.columns:
+                if cls.is_field_expected_for_market(standard_col, market):
+                    missing_native.append(native_col)
+
+        if missing_native:
+            import logging
+            logging.warning(
+                f"[{source}/{market}] 原始数据缺少映射字段: {missing_native}，"
+                f"这些字段将被忽略"
+            )
+
+        return pd.DataFrame(result) if result else pd.DataFrame()

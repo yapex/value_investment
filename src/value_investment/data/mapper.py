@@ -934,6 +934,49 @@ class DataMapper:
         return market in CORE_FIELD_MAPPING[standard_field]
 
     @classmethod
+    def validate_mapped_fields(cls, df: pd.DataFrame | None, data_type: str) -> pd.DataFrame | None:
+        """验证 DataFrame 只包含已映射的标准字段（守门员机制）
+        
+        在 API 层调用，确保 Provider 返回的数据符合预期。
+        
+        Args:
+            df: Provider 返回的 DataFrame
+            data_type: 数据类型 ("balance_sheet" | "income_statement" | "cash_flow" | "financial_indicator")
+        
+        Returns:
+            验证通过的 DataFrame
+        
+        Raises:
+            UnmappedFieldError: 如果 DataFrame 包含未映射的字段
+        """
+        if df is None or df.empty:
+            return df
+        
+        # 获取该数据类型支持的标准字段
+        if data_type.lower() not in cls.DATA_TYPE_MAPPINGS:
+            # 如果数据类型不在映射表中，跳过验证（可能是 market/info 等类型）
+            return df
+        
+        type_mapping_name = cls.DATA_TYPE_MAPPINGS[data_type.lower()]
+        type_mapping = getattr(cls, type_mapping_name, {})
+        
+        # 收集所有标准字段名
+        standard_fields = set(type_mapping.values())
+        
+        # 检查所有列是否都在标准字段中
+        actual_columns = set(df.columns)
+        unmapped = actual_columns - standard_fields
+        
+        if unmapped:
+            raise UnmappedFieldError(
+                f"发现未映射字段: {unmapped}\n"
+                f"数据来源可能未正确调用 map_to_standard()\n"
+                f"请确保 Provider 在返回数据前调用了映射方法"
+            )
+        
+        return df
+
+    @classmethod
     def list_core_fields(cls) -> list[str]:
         """
         列出所有核心标准字段名

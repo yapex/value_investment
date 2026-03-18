@@ -120,3 +120,44 @@ class TestGetRegisteredFields:
         assert 'total_revenue' in fields
         assert 'total_assets' in fields
         assert 'net_profit' in fields
+
+
+class TestValidateMappedFields:
+    """测试 validate_mapped_fields 守门员验证"""
+    
+    def test_validate_passes_for_mapped_fields(self):
+        """测试已映射字段通过验证"""
+        df = pd.DataFrame({'total_revenue': [100], 'net_profit': [10]})
+        result = DataMapper.validate_mapped_fields(df, 'income_statement')
+        
+        assert result is not None
+        assert list(result.columns) == ['total_revenue', 'net_profit']
+    
+    def test_validate_raises_for_unmapped_fields(self):
+        """测试未映射字段抛出异常"""
+        df = pd.DataFrame({'total_revenue': [100], 'unmapped_field': [10]})
+        
+        with pytest.raises(UnmappedFieldError) as exc_info:
+            DataMapper.validate_mapped_fields(df, 'income_statement')
+        
+        assert 'unmapped_field' in str(exc_info.value)
+    
+    def test_validate_skips_for_non_financial_types(self):
+        """测试非财务数据类型跳过验证"""
+        df = pd.DataFrame({'close': [100], 'volume': [1000]})
+        result = DataMapper.validate_mapped_fields(df, 'market')
+        
+        assert result is not None
+        assert list(result.columns) == ['close', 'volume']
+    
+    def test_validate_handles_none(self):
+        """测试 None 输入"""
+        result = DataMapper.validate_mapped_fields(None, 'income_statement')
+        assert result is None
+    
+    def test_validate_handles_empty(self):
+        """测试空 DataFrame"""
+        df = pd.DataFrame()
+        result = DataMapper.validate_mapped_fields(df, 'income_statement')
+        assert result is not None
+        assert result.empty

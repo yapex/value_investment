@@ -222,9 +222,8 @@ class ValueInvestment:
         start_year = end_year - years
         df = self._provider.get_balance_sheet(symbol, end_year, start_year)
         
-        # Apply field mapping
-        if map_fields:
-            df = DataMapper.map_balance_sheet(df)
+        # 守门员验证：确保只包含已映射字段
+        df = DataMapper.validate_mapped_fields(df, "balance_sheet")
         
         return self._filter_fields(df, fields)
 
@@ -257,9 +256,8 @@ class ValueInvestment:
         start_year = end_year - years
         df = self._provider.get_income_statement(symbol, end_year, start_year)
         
-        # Apply field mapping
-        if map_fields:
-            df = DataMapper.map_income_statement(df)
+        # 守门员验证：确保只包含已映射字段
+        df = DataMapper.validate_mapped_fields(df, "income_statement")
         
         return self._filter_fields(df, fields)
 
@@ -292,9 +290,8 @@ class ValueInvestment:
         start_year = end_year - years
         df = self._provider.get_cash_flow_statement(symbol, end_year, start_year)
         
-        # Apply field mapping
-        if map_fields:
-            df = DataMapper.map_cash_flow(df)
+        # 守门员验证：确保只包含已映射字段
+        df = DataMapper.validate_mapped_fields(df, "cash_flow")
         
         return self._filter_fields(df, fields)
 
@@ -309,7 +306,12 @@ class ValueInvestment:
         Returns:
             DataFrame with financial indicators
         """
-        return self._provider.get_financial_indicator(symbol, force_refresh=force_refresh)
+        df = self._provider.get_financial_indicator(symbol, force_refresh=force_refresh)
+        
+        # 守门员验证：确保只包含已映射字段
+        df = DataMapper.validate_mapped_fields(df, "financial_indicator")
+        
+        return df
 
     def get_indicator_history(
         self,
@@ -692,11 +694,6 @@ class ValueInvestment:
         balance = self._provider.get_balance_sheet(symbol, end_year)
         profit = self._provider.get_income_statement(symbol, end_year)
         cashflow = self._provider.get_cash_flow_statement(symbol, end_year)
-
-        # Apply field mapping to standardize column names to IFRS standard
-        balance = DataMapper.map_balance_sheet(balance)
-        profit = DataMapper.map_income_statement(profit)
-        cashflow = DataMapper.map_cash_flow(cashflow)
 
         # Filter to keep only annual reports (one row per year)
         def filter_annual(df: pd.DataFrame) -> pd.DataFrame:

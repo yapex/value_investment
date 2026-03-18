@@ -1,0 +1,1 @@
+"""Fields registry module"""

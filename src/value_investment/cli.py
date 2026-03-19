@@ -8,7 +8,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from value_investment.data.cache import SmartCache
+from value_investment.core.cache import SmartCache
 from value_investment.pipeline.api import PipelineAPI
 from value_investment.pipeline.fields import ALL_FIELDS
 

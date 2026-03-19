@@ -17,14 +17,14 @@ import pandas as pd
 
 from value_investment.core.constants import HISTORICAL_DATA_TTL
 # TODO (Task 7): Update import to value_investment.mapper after restructuring
-from value_investment.data.mapper import (
+from value_investment.mapper import (
     FINANCIAL_INDICATOR_MAPPING,
     DataMapper,
 )
 from value_investment.providers.base import BaseProvider, get_ttl_until_june_next_year
 
 if TYPE_CHECKING:
-    from value_investment.data.cache import SmartCache
+    from value_investment.core.cache import SmartCache
 
 
 # US Provider 支持的字段集合

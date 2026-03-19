@@ -9,7 +9,7 @@ from typing import Any
 import pandas as pd
 
 # TODO (Task 7): Update import to value_investment.mapper after restructuring
-from value_investment.data.mapper import CUSTOM_FIELD_MAPPING
+from value_investment.mapper import CUSTOM_FIELD_MAPPING
 from value_investment.domain.fields import IFRSFields
 
 

@@ -19,8 +19,7 @@ Constraints:
     - 通过 test_ifrs_fields_lock.py 测试锁定
 """
 
-# TODO (Task 7): Update import to value_investment.mapper after restructuring
-from value_investment.data.mapper import CORE_FIELD_MAPPING
+from value_investment.mapper import CORE_FIELD_MAPPING
 
 
 class IFRSFieldsMeta(type):

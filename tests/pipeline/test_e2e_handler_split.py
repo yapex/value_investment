@@ -1,5 +1,6 @@
 """End-to-end tests for handler split architecture"""
 import pytest
+import pandas as pd
 from unittest.mock import MagicMock
 
 from value_investment.pipeline.container import Container
@@ -17,35 +18,46 @@ class TestE2EHandlerSplit:
         Container._instance = None
 
     @pytest.fixture
-    def mock_tushare(self):
-        """Mock Tushare provider for A股 testing"""
+    def mock_a_share_provider(self):
+        """Mock A-share provider with fetch_raw_* methods"""
         provider = MagicMock()
         provider.supported_fields = {
             "total_revenue", "net_profit", "total_assets",  # Statement
             "roe", "roa", "gross_margin",  # Indicator
             "market_cap", "pe_ratio", "pb_ratio",  # Market
         }
-        provider.fetch_financial_data = MagicMock(
-            return_value={
-                "total_revenue": {2024: 100e9, 2023: 90e9},
-                "net_profit": {2024: 50e9, 2023: 45e9},
-            }
+        # fetch_raw_* 返回原始数据（未映射）
+        provider.fetch_raw_balance_sheet = MagicMock(
+            return_value=pd.DataFrame({"year": [2024, 2023], "total_assets": [1000e9, 900e9]})
         )
+        provider.fetch_raw_income_statement = MagicMock(
+            return_value=pd.DataFrame({
+                "year": [2024, 2023],
+                "total_operate_income": [100e9, 90e9],
+                "netprofit": [50e9, 45e9],
+            })
+        )
+        provider.fetch_raw_cash_flow = MagicMock(return_value=pd.DataFrame())
+        # 字段映射声明
+        provider.FIELD_MAPPINGS = {
+            "balance_sheet": {},
+            "income_statement": {
+                "total_operate_income": "total_revenue",
+                "netprofit": "net_profit",
+            },
+            "cash_flow": {},
+        }
+        # fetch_indicators / fetch_market_data 保持向后兼容
         provider.fetch_indicators = MagicMock(
-            return_value={
-                "roe": {2024: 25.5, 2023: 24.8},
-            }
+            return_value={"roe": {2024: 25.5, 2023: 24.8}}
         )
         provider.fetch_market_data = MagicMock(
-            return_value={
-                "market_cap": 2.5e12,
-                "pe_ratio": 28.5,
-            }
+            return_value={"market_cap": 2.5e12, "pe_ratio": 28.5}
         )
         return provider
 
     @pytest.mark.asyncio
-    async def test_a_stock_statement_fields_routed(self, mock_tushare):
+    async def test_a_stock_statement_fields_routed(self, mock_a_share_provider):
         """A股 statement 字段只被 AShareStatementHandler 处理"""
         Container._instance = None
         container = Container.create()
@@ -53,7 +65,7 @@ class TestE2EHandlerSplit:
         # 替换 A 股 Statement Handler 的 provider
         for handler in container.bus().handlers:
             if type(handler).__name__ == "AShareStatementHandler":
-                handler._provider = mock_tushare
+                handler._provider = mock_a_share_provider
 
         message = Message(
             symbol="600519",
@@ -70,14 +82,14 @@ class TestE2EHandlerSplit:
         assert 2024 in message.results.get("total_revenue", {})
 
     @pytest.mark.asyncio
-    async def test_a_stock_indicator_fields_routed(self, mock_tushare):
+    async def test_a_stock_indicator_fields_routed(self, mock_a_share_provider):
         """A股 indicator 字段只被 AShareIndicatorHandler 处理"""
         Container._instance = None
         container = Container.create()
 
         for handler in container.bus().handlers:
             if type(handler).__name__ == "AShareIndicatorHandler":
-                handler._provider = mock_tushare
+                handler._provider = mock_a_share_provider
 
         message = Message(
             symbol="600519",
@@ -93,7 +105,7 @@ class TestE2EHandlerSplit:
         assert message.results["roe"][2024] == 25.5
 
     @pytest.mark.asyncio
-    async def test_hk_handler_ignores_a_stock_message(self, mock_tushare):
+    async def test_hk_handler_ignores_a_stock_message(self, mock_a_share_provider):
         """HK Handler 拒绝 A 股消息（快速拒绝），AShareStatementHandler 处理 A 股"""
         Container._instance = None
         container = Container.create()
@@ -101,7 +113,7 @@ class TestE2EHandlerSplit:
         # Mock AShareStatementHandler provider
         for handler in container.bus().handlers:
             if type(handler).__name__ == "AShareStatementHandler":
-                handler._provider = mock_tushare
+                handler._provider = mock_a_share_provider
             elif type(handler).__name__ in ("HKShareStatementHandler", "USShareStatementHandler"):
                 handler._provider = None  # 确保 HK/US 没有 provider
 
@@ -120,7 +132,7 @@ class TestE2EHandlerSplit:
         assert 2024 in message.results.get("total_revenue", {})
 
     @pytest.mark.asyncio
-    async def test_mixed_fields_routed_to_correct_handlers(self, mock_tushare):
+    async def test_mixed_fields_routed_to_correct_handlers(self, mock_a_share_provider):
         """混合字段路由到正确的 Handler"""
         Container._instance = None
         container = Container.create()
@@ -128,7 +140,7 @@ class TestE2EHandlerSplit:
         # 注入 mock provider
         for handler in container.bus().handlers:
             if type(handler).__name__ in ("AShareStatementHandler", "AShareIndicatorHandler", "AShareMarketHandler"):
-                handler._provider = mock_tushare
+                handler._provider = mock_a_share_provider
 
         message = Message(
             symbol="600519",

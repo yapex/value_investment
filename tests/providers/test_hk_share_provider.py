@@ -79,12 +79,13 @@ class TestHKProviderFieldMappings:
             mapped_fields.update(mapping.values())
 
         # 核心财务报表字段应该有映射（与 supported_fields 交集）
+        # 注意：HK 净利润对应 parent_net_profit（归属母公司净利润）
         statement_fields = {
             "total_assets", "total_liabilities", "total_equity",
             "current_assets", "current_liabilities",
             "cash_and_equivalents", "inventory",
             "accounts_receivable", "accounts_payable", "fixed_assets",
-            "total_revenue", "net_profit", "operating_profit",
+            "total_revenue", "parent_net_profit", "operating_profit",
             "operating_cash_flow", "investing_cash_flow", "financing_cash_flow",
             "capital_expenditure",
         }

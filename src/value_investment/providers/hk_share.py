@@ -129,7 +129,7 @@ class HKProvider(BaseProvider):
     SUPPORTED_FIELDS: set[str] = {
         # 利润表
         "total_revenue",
-        "parent_net_profit",
+        "net_profit",
         "operating_profit",
         "gross_profit",
         "operating_cost",
@@ -634,6 +634,7 @@ class HKProvider(BaseProvider):
         return {
             "total_revenue",
             "net_profit",
+            "parent_net_profit",
             "operating_profit",
             "gross_profit",
             "operating_cost",

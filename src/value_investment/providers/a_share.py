@@ -44,11 +44,11 @@ class TushareProvider(BaseProvider):
             "total_share": "total_shares",
         },
         "income_statement": {
-            "total_operate_income": "total_revenue",
-            "netprofit": "net_profit",
+            # Tushare 列名与标准字段名相同
+            "total_revenue": "total_revenue",
+            "n_income": "net_profit",
             "operate_profit": "operating_profit",
             "oper_cost": "operating_cost",
-            "n_income": "net_profit",
             "n_income_attr_p": "parent_net_profit",
         },
         "cash_flow": {
@@ -302,7 +302,8 @@ class TushareProvider(BaseProvider):
 
     def fetch_raw_balance_sheet(self, ts_code: str, start_year: int, end_year: int) -> pd.DataFrame:
         """获取原始资产负债表数据（不做映射，返回 Tushare 原始列名）"""
-        cache_key = f"pipeline:raw:balance:{ts_code}"
+        stock_code = self._to_ts_code(ts_code)
+        cache_key = f"pipeline:raw:balance:{stock_code}"
 
         cached = self._cache.get(cache_key)
         if cached is not None and not cached.empty:
@@ -312,7 +313,7 @@ class TushareProvider(BaseProvider):
 
         today = datetime.now().strftime("%Y%m%d")
         df = self._api.balancesheet(
-            ts_code=ts_code,
+            ts_code=stock_code,
             start_date=f"{start_year}0101",
             end_date=today,
         )
@@ -330,7 +331,8 @@ class TushareProvider(BaseProvider):
 
     def fetch_raw_income_statement(self, ts_code: str, start_year: int, end_year: int) -> pd.DataFrame:
         """获取原始利润表数据（不做映射，返回 Tushare 原始列名）"""
-        cache_key = f"pipeline:raw:income:{ts_code}"
+        stock_code = self._to_ts_code(ts_code)
+        cache_key = f"pipeline:raw:income:{stock_code}"
 
         cached = self._cache.get(cache_key)
         if cached is not None and not cached.empty:
@@ -340,7 +342,7 @@ class TushareProvider(BaseProvider):
 
         today = datetime.now().strftime("%Y%m%d")
         df = self._api.income(
-            ts_code=ts_code,
+            ts_code=stock_code,
             start_date=f"{start_year}0101",
             end_date=today,
         )
@@ -358,7 +360,8 @@ class TushareProvider(BaseProvider):
 
     def fetch_raw_cash_flow(self, ts_code: str, start_year: int, end_year: int) -> pd.DataFrame:
         """获取原始现金流量表数据（不做映射，返回 Tushare 原始列名）"""
-        cache_key = f"pipeline:raw:cashflow:{ts_code}"
+        stock_code = self._to_ts_code(ts_code)
+        cache_key = f"pipeline:raw:cashflow:{stock_code}"
 
         cached = self._cache.get(cache_key)
         if cached is not None and not cached.empty:
@@ -368,7 +371,7 @@ class TushareProvider(BaseProvider):
 
         today = datetime.now().strftime("%Y%m%d")
         df = self._api.cashflow(
-            ts_code=ts_code,
+            ts_code=stock_code,
             start_date=f"{start_year}0101",
             end_date=today,
         )

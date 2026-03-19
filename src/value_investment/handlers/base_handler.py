@@ -100,7 +100,9 @@ class BaseHandler(ABC):
         start_year: int | None = None,
     ) -> pd.DataFrame:
         """获取资产负债表（执行字段映射）"""
-        raw_df = self._provider.fetch_raw_balance_sheet(stock_code, end_year, start_year)
+        if start_year is None:
+            start_year = end_year - 10 + 1
+        raw_df = self._provider.fetch_raw_balance_sheet(stock_code, start_year, end_year)
         return self._standardize(raw_df, "balance_sheet")
 
     def get_income_statement(
@@ -110,7 +112,9 @@ class BaseHandler(ABC):
         start_year: int | None = None,
     ) -> pd.DataFrame:
         """获取利润表（执行字段映射）"""
-        raw_df = self._provider.fetch_raw_income_statement(stock_code, end_year, start_year)
+        if start_year is None:
+            start_year = end_year - 10 + 1
+        raw_df = self._provider.fetch_raw_income_statement(stock_code, start_year, end_year)
         return self._standardize(raw_df, "income_statement")
 
     def get_cash_flow_statement(
@@ -120,5 +124,7 @@ class BaseHandler(ABC):
         start_year: int | None = None,
     ) -> pd.DataFrame:
         """获取现金流量表（执行字段映射）"""
-        raw_df = self._provider.fetch_raw_cash_flow(stock_code, end_year, start_year)
+        if start_year is None:
+            start_year = end_year - 10 + 1
+        raw_df = self._provider.fetch_raw_cash_flow(stock_code, start_year, end_year)
         return self._standardize(raw_df, "cash_flow")

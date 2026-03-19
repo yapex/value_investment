@@ -58,6 +58,11 @@ US_PROVIDER_SUPPORTED_FIELDS: set[str] = {
     # === 财务指标 ===
     "roe",
     "roa",
+    # === 市场数据 ===
+    "market_cap",
+    "pe_ratio",
+    "pb_ratio",
+    "total_shares",
     "gross_margin",
     "net_profit_margin",
     # === 每股指标 ===

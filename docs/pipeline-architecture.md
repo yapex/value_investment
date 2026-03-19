@@ -209,11 +209,16 @@ class BaseHandler(ABC):
 
 ### 2.5 Calculator (计算器)
 
-Calculator 负责计算派生字段。
+Calculator 负责计算派生字段。**所有 Calculator 必须使用 `@calculator` 装饰器注册**。
 
 ```python
+from value_investment.pipeline.calculators import calculator
+from value_investment.pipeline.fields import IFRSFields
+
+@calculator  # ← 必须！否则不会被发现
 class GrossProfitCalculator:
     name = IFRSFields.GROSS_PROFIT
+    
     required_fields = {
         IFRSFields.TOTAL_REVENUE,
         IFRSFields.OPERATING_COST,
@@ -225,6 +230,14 @@ class GrossProfitCalculator:
         cost = results.get(IFRSFields.OPERATING_COST, {})
         return {year: revenue.get(year, 0) - cost.get(year, 0) for year in revenue}
 ```
+
+**已注册的 Calculator**:
+
+| Calculator | 字段名 | 依赖字段 |
+|-----------|--------|---------|
+| GrossProfitCalculator | `gross_profit` | revenue, operating_cost |
+| InventoryTurnoverCalculator | `inventory_turnover` | operating_cost, inventory |
+| ImpliedGrowthCalculator | `implied_growth` | operating_cash_flow, capital_expenditure, market_cap |
 
 ---
 
@@ -480,11 +493,15 @@ def create(cls) -> "Container":
 
 ### 6.1 创建新 Calculator
 
+**重要**: 所有 Calculator 必须使用 `@calculator` 装饰器，否则不会被发现。
+
 ```python
 # src/value_investment/pipeline/calculators/xxx.py
 from typing import Any
+from value_investment.pipeline.calculators import calculator
 from value_investment.pipeline.fields import IFRSFields
 
+@calculator  # ← 必须！
 class XxxCalculator:
     """XXX 计算器
     
@@ -518,23 +535,43 @@ class XxxCalculator:
         }
 ```
 
-### 6.2 注册 Calculator
+### 6.2 自动注册
 
-在 `calculators/__init__.py` 中注册:
+**无需手动注册**！使用 `@calculator` 装饰器后，Calculator 会自动被发现并注册。
 
 ```python
-from value_investment.pipeline.calculators.xxx import XxxCalculator
-
-ALL_CALCULATORS = [
-    GrossProfitCalculator(),
-    InventoryTurnoverCalculator(),
-    XxxCalculator(),  # 添加新计算器
-]
-
-CALCULATOR_MAP = {calc.name: calc for calc in ALL_CALCULATORS}
+# calculators/__init__.py 会自动发现并注册所有带 @calculator 的类
+# 不需要手动添加到 ALL_CALCULATORS
 ```
 
-### 6.3 计算器执行时机
+### 6.3 验证依赖链
+
+每次运行测试时，会自动验证所有 Calculator 的依赖字段是否可获取：
+
+```bash
+# 运行测试时自动验证
+uv run python -m pytest tests/pipeline/test_validator.py
+
+# 输出示例
+============================================================
+Pipeline Calculator Validation
+============================================================
+
+✅ gross_profit
+    ✓ total_revenue                       → AStockStatementHandler
+    ✓ operating_cost                      → AStockStatementHandler
+
+✅ implied_growth
+    ✓ operating_cash_flow                 → AStockStatementHandler
+    ✓ capital_expenditure                 → AStockStatementHandler
+    ✓ market_cap                          → AStockMarketHandler
+
+============================================================
+Total: 3 OK, 0 Missing
+============================================================
+```
+
+### 6.4 计算器执行时机
 
 Calculator 在 `PipelineAPI.get_data()` 中，数据获取完成后执行：
 
@@ -562,8 +599,18 @@ async def get_data(self, symbol, fields, ...):
 ```python
 # tests/pipeline/test_xxx_calculator.py
 import pytest
-from value_investment.pipeline.calculators.xxx import XxxCalculator
+from value_investment.pipeline.calculators import calculator
 from value_investment.pipeline.fields import IFRSFields
+
+@calculator  # ← 必须
+class XxxCalculator:
+    name = IFRSFields.XXX
+    required_fields = {IFRSFields.FIELD_A, IFRSFields.FIELD_B}
+    
+    def calculate(self, results):
+        field_a = results.get(IFRSFields.FIELD_A, {})
+        field_b = results.get(IFRSFields.FIELD_B, {})
+        return {year: field_a.get(year, 0) / field_b.get(year, 1) for year in field_a}
 
 class TestXxxCalculator:
     def test_required_fields(self):
@@ -585,20 +632,21 @@ class TestXxxCalculator:
         
         assert calculated[2024] == 5.0
         assert calculated[2023] == 4.0
-    
-    def test_missing_data(self):
-        calc = XxxCalculator()
-        results = {
-            IFRSFields.FIELD_A: {2024: 100},
-            # FIELD_B 缺失
-        }
-        calculated = calc.calculate(results)
-        
-        # 缺失字段时使用默认值
-        assert calculated[2024] == 100  # 100 / 1 (默认值)
 ```
 
-### 7.2 测试 Handler
+### 7.2 测试依赖链验证
+
+```python
+# tests/pipeline/test_validator.py
+from value_investment.pipeline.calculators import ALL_CALCULATORS
+from value_investment.pipeline.validator import assert_all_valid
+
+def test_all_calculators_have_valid_dependencies():
+    """所有 Calculator 的依赖字段都必须有 Handler 支持"""
+    assert_all_valid(ALL_CALCULATORS)  # 失败会抛出 AssertionError
+```
+
+### 7.3 测试 Handler
 
 ```python
 # tests/pipeline/test_my_handler.py
@@ -698,11 +746,37 @@ uv run python -m pytest tests/pipeline/test_e2e_roic.py -v
 
 ### Q2: 如何添加新的派生字段计算器？
 
-1. **创建 Calculator**: `src/value_investment/pipeline/calculators/new_calc.py`
-2. **定义字段**: 字段名添加到 `IFRSFields`
-3. **定义映射**: 如果需要，在 `CORE_FIELD_MAPPING` 中添加
-4. **注册**: 在 `calculators/__init__.py` 中注册
-5. **测试**: 编写单元测试
+**步骤**:
+
+1. **创建文件**: `src/value_investment/pipeline/calculators/xxx.py`
+
+2. **实现 Calculator** (必须加 `@calculator`):
+   ```python
+   from value_investment.pipeline.calculators import calculator
+   from value_investment.pipeline.fields import IFRSFields
+   
+   @calculator  # ← 必须！
+   class XxxCalculator:
+       name = IFRSFields.XXX
+       required_fields = {IFRSFields.FIELD_A, IFRSFields.FIELD_B}
+       
+       def calculate(self, results):
+           # 计算逻辑
+           return {year: value for year, value in ...}
+   ```
+
+3. **写测试**: `tests/pipeline/test_xxx_calculator.py`
+
+4. **运行测试** (自动验证依赖链):
+   ```bash
+   uv run python -m pytest tests/pipeline/test_xxx_calculator.py
+   ```
+
+**无需手动注册**！`@calculator` 装饰器会自动注册。
+
+**验证依赖链**:
+- 运行 `pytest tests/pipeline/test_validator.py` 自动验证
+- 如果依赖字段没有 Handler 支持，会显示清晰的错误信息
 
 ### Q3: 如何添加新的市场支持？
 
@@ -750,6 +824,7 @@ src/value_investment/pipeline/
 ├── api.py              # 高层 API
 ├── container.py        # 依赖注入容器 (注册 9 个 Handler)
 ├── fields.py           # 标准字段定义 (IFRSFields)
+├── validator.py        # 依赖链验证工具
 ├── bus/
 │   ├── __init__.py
 │   ├── message.py      # Message 数据类
@@ -768,9 +843,11 @@ src/value_investment/pipeline/
 │   ├── us_indicator.py     # 美股财务指标 Handler
 │   └── us_market.py       # 美股市值数据 Handler
 ├── calculators/
-│   ├── __init__.py     # Calculator 注册
-│   ├── gross_profit.py
-│   └── inventory_turnover.py
+│   ├── __init__.py     # 导出 @calculator 装饰器
+│   ├── registry.py     # 装饰器实现 + 注册表
+│   ├── gross_profit.py # @calculator
+│   ├── implied_growth.py # @calculator
+│   └── inventory_turnover.py # @calculator
 └── data/
     ├── tushare_provider.py  # Tushare Provider
     ├── tushare_mapper.py    # Tushare 字段映射
@@ -800,3 +877,25 @@ A股           │ AStatement      AIndicator     AMarket
 | 日期 | 变更 |
 |------|------|
 | 2026-03-19 | 拆分为 9 个 Handler（3 市场 × 3 数据类型），实现快速拒绝模式 |
+
+### Q6: 忘记加 `@calculator` 装饰器会怎样？
+
+**后果**: Calculator **不会被注册**，请求该字段时会报错 "Missing fields"。
+
+**示例**:
+```python
+# ❌ 错误：忘记装饰器
+class ROICCalculator:
+    name = "roic"
+    ...
+
+# ✅ 正确
+from value_investment.pipeline.calculators import calculator
+
+@calculator
+class ROICCalculator:
+    name = "roic"
+    ...
+```
+
+**验证**: 运行 `pytest tests/pipeline/test_validator.py` 会显示缺失的 Calculator。

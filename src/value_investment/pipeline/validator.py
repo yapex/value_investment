@@ -1,6 +1,6 @@
 """Pipeline validator - Full validation including dry run"""
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Optional
 
 from value_investment.calculator_plugin import registry, get_calculators
 from value_investment.domain.fields import ALL_FIELDS
@@ -487,7 +487,7 @@ def validate_calculators(calculators: list) -> list[ValidationResult]:
         for field in handler.can_handle:
             field_sources.setdefault(field, []).append(type(handler).__name__)
     
-    def check_field_dependency(field: str, visited: set = None) -> tuple[bool, str]:
+    def check_field_dependency(field: str, visited: Optional[set] = None) -> tuple[bool, str]:
         """检查字段依赖，返回 (是否可用, 来源信息)
         
         Args:

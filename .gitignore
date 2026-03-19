@@ -57,10 +57,11 @@ Thumbs.db
 # Environment variables (contains sensitive data)
 .env
 
-# Pi agent config (skills are tracked in .pi/skills/)
-# 但排除敏感配置
-.pi/*.json
-!.pi/settings.json
+# Pi agent config
+.pi/
+# 但追踪 skills 目录
+!.pi/skills/
+!.pi/skills/**
 
 # Archived docs
 docs/_archived/

@@ -187,6 +187,7 @@ class CustomFields:
     这些字段通过 Calculator 计算得出，不是直接从数据源获取。
     """
     
+    # ========== 盈利能力类 ==========
     # 毛利率 = (营业收入 - 营业成本) / 营业收入 × 100%
     # 单位：百分比 (%)
     GROSS_MARGIN = "gross_margin"
@@ -199,6 +200,7 @@ class CustomFields:
     # 单位：元
     GROSS_PROFIT = "gross_profit"
     
+    # ========== 营运能力类 ==========
     # 存货周转率 = 营业成本 / 平均存货
     # 单位：次/年
     INVENTORY_TURNOVER = "inventory_turnover"
@@ -207,6 +209,7 @@ class CustomFields:
     # 单位：百分比 (%)
     ROIC = "roic"
     
+    # ========== 每股指标类 ==========
     # 流通市值 = 流通股本 × 股价
     # 单位：元
     CIRC_MARKET_CAP = "circ_market_cap"
@@ -215,6 +218,12 @@ class CustomFields:
     # 单位：股
     CIRC_SHARES = "circ_shares"
     
+    # ========== 估值指标类 ==========
+    # 隐含增长率 = 基于 DCF 模型反推的年增长率
+    # 单位：百分比 (%)
+    IMPLIED_GROWTH = "implied_growth"
+    
+    # ========== 资产负债表科目类 ==========
     # 商誉，企业合并时购买方支付的超过可辨认资产公允价值的溢价
     # 单位：元
     GOODWILL = "goodwill"

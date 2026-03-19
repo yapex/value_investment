@@ -24,33 +24,7 @@ if TYPE_CHECKING:
     from value_investment.core.cache import SmartCache
 
 
-# 港股财务指标映射 (AKShare stock_hk_financial_indicator_em 返回)
-HK_FINANCIAL_INDICATOR_MAPPING: dict[str, str] = {
-    # 市值字段
-    "总市值(港元)": "hk_market_cap",
-    "港股市值(港元)": "hk_market_cap",
-    # 每股指标
-    "基本每股收益(元)": "basic_eps",
-    "每股净资产(元)": "book_value_per_share",
-    "每股经营现金流(元)": "operating_cash_flow_per_share",
-    "每股股息TTM(港元)": "hk_dividend_per_share",
-    # 盈利能力
-    "股东权益回报率(%)": "roe",
-    "销售净利率(%)": "net_profit_margin",
-    "总资产回报率(%)": "roa",
-    # 估值指标
-    "市盈率": "pe_ratio",
-    "市净率": "pb_ratio",
-    "股息率TTM(%)": "hk_dividend_yield_ttm",
-    # 增长指标
-    "营业总收入滚动环比增长(%)": "hk_total_revenue_growth_qoq",
-    "净利润滚动环比增长(%)": "hk_net_profit_growth_qoq",
-    # 其他
-    "派息比率(%)": "hk_dividend_payout_ratio",
-    # 标准字段
-    "营业总收入": "total_revenue",
-    "净利润": "net_profit",
-}
+
 
 
 class HKProvider(BaseProvider):
@@ -122,6 +96,37 @@ class HKProvider(BaseProvider):
             "期初现金": "cash_begin",
             "期末现金": "cash_end",
             "现金净额": "net_cash_change",
+        },
+        "indicators": {
+            # AKShare stock_hk_financial_indicator_em 返回字段 -> 标准字段名
+            "总市值(港元)": "hk_market_cap",
+            "港股市值(港元)": "hk_market_cap",
+            "基本每股收益(元)": "basic_eps",
+            "每股净资产(元)": "book_value_per_share",
+            "每股经营现金流(元)": "operating_cash_flow_per_share",
+            "每股股息TTM(港元)": "hk_dividend_per_share",
+            "股东权益回报率(%)": "roe",
+            "销售净利率(%)": "net_profit_margin",
+            "总资产回报率(%)": "roa",
+            "市盈率": "pe_ratio",
+            "市净率": "pb_ratio",
+            "股息率TTM(%)": "hk_dividend_yield_ttm",
+            "营业总收入滚动环比增长(%)": "hk_total_revenue_growth_qoq",
+            "净利润滚动环比增长(%)": "hk_net_profit_growth_qoq",
+            "派息比率(%)": "hk_dividend_payout_ratio",
+            # 标准字段也支持
+            "营业总收入": "total_revenue",
+            "净利润": "net_profit",
+        },
+        "market": {
+            # AKShare stock_hk_financial_indicator_em 市值相关字段 -> 标准字段名
+            "总市值(港元)": "market_cap",
+            "港股市值(港元)": "market_cap",
+            "市盈率": "pe_ratio",
+            "市净率": "pb_ratio",
+            "股息率TTM(%)": "hk_dividend_yield_ttm",
+            "派息比率(%)": "hk_dividend_payout_ratio",
+            "每股股息TTM(港元)": "hk_dividend_per_share",
         },
     }
 
@@ -509,19 +514,21 @@ class HKProvider(BaseProvider):
                 return results
 
             current_year = datetime.now().year
-            market_mapping = HK_FINANCIAL_INDICATOR_MAPPING
+            mapping = self.FIELD_MAPPINGS.get("indicators", {})
 
             for field in fields:
-                hk_field = self._find_hk_field(field, market_mapping)
-                if hk_field is None:
+                # 反向查找：从 standard_field 找 native_field
+                native_field = self._find_mapped_field(field, mapping)
+                if native_field is None:
+                    # 字段名相同的情况
                     if field in df.columns:
                         value = df[field].iloc[0]
                         if pd.notna(value):
                             results[field] = {current_year: value}
                     continue
 
-                if hk_field in df.columns:
-                    value = df[hk_field].iloc[0]
+                if native_field in df.columns:
+                    value = df[native_field].iloc[0]
                     if pd.notna(value):
                         results[field] = {current_year: value}
 
@@ -571,32 +578,22 @@ class HKProvider(BaseProvider):
             if df is None or df.empty:
                 return results
 
-            market_mapping = HK_FINANCIAL_INDICATOR_MAPPING
+            mapping = self.FIELD_MAPPINGS.get("market", {})
 
             for field in needed_fields:
-                # Special handling for market_cap: use 总市值(港元) directly
-                if field == "market_cap":
-                    if "总市值(港元)" in df.columns:
-                        value = df["总市值(港元)"].iloc[0]
-                        if pd.notna(value):
-                            results["market_cap"] = value
-                    continue
-
-                hk_field = self._find_hk_field(field, market_mapping)
-                if hk_field is None:
+                # 反向查找：从 standard_field 找 native_field
+                native_field = self._find_mapped_field(field, mapping)
+                if native_field is None:
                     if field in df.columns:
                         value = df[field].iloc[0]
                         if pd.notna(value):
                             results[field] = value
                     continue
 
-                if hk_field in df.columns:
-                    value = df[hk_field].iloc[0]
+                if native_field in df.columns:
+                    value = df[native_field].iloc[0]
                     if pd.notna(value):
-                        if field == "hk_market_cap":
-                            results["market_cap"] = value
-                        else:
-                            results[field] = value
+                        results[field] = value
 
         except Exception:
             pass
@@ -648,10 +645,19 @@ class HKProvider(BaseProvider):
             "capital_expenditure",
         }
 
-    def _find_hk_field(self, standard_field: str, mapping: dict[str, str]) -> str | None:
-        for hk_field, std_field in mapping.items():
+    def _find_mapped_field(self, standard_field: str, mapping: dict[str, str]) -> str | None:
+        """从映射表中反向查找 native 字段名
+
+        Args:
+            standard_field: 标准字段名
+            mapping: {native_field: standard_field} 映射表
+
+        Returns:
+            native 字段名或 None
+        """
+        for native_field, std_field in mapping.items():
             if std_field == standard_field:
-                return hk_field
+                return native_field
         return None
 
     def _transform_financial_df(self, df: pd.DataFrame) -> pd.DataFrame:

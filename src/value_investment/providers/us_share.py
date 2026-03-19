@@ -24,31 +24,7 @@ if TYPE_CHECKING:
     from value_investment.core.cache import SmartCache
 
 
-# 美股财务指标映射 (AKShare stock_financial_us_analysis_indicator_em 返回)
-US_FINANCIAL_INDICATOR_MAPPING: dict[str, str] = {
-    # 营收指标
-    "OPERATE_INCOME": "total_revenue",
-    "GROSS_PROFIT": "gross_profit",
-    # 净利润指标
-    "PARENT_HOLDER_NETPROFIT": "net_profit",
-    # 每股指标
-    "BASIC_EPS": "basic_eps",
-    "DILUTED_EPS": "diluted_eps",
-    # 盈利能力
-    "GROSS_PROFIT_RATIO": "gross_margin",
-    "NET_PROFIT_RATIO": "net_profit_margin",
-    # ROE/ROA
-    "ROE_AVG": "roe",
-    "ROA": "roa",
-    # 偿债能力
-    "CURRENT_RATIO": "current_ratio",
-    "SPEED_RATIO": "quick_ratio",
-    "DEBT_ASSET_RATIO": "debt_ratio",
-    # 营运效率
-    "ACCOUNTS_RECE_TR": "receivable_turnover",
-    "INVENTORY_TR": "inventory_turnover",
-    "TOTAL_ASSETS_TR": "asset_turnover",
-}
+
 
 
 class USProvider(BaseProvider):
@@ -109,6 +85,31 @@ class USProvider(BaseProvider):
             "购买固定资产": "capital_expenditure",
             "净利润": "net_profit",
             "折旧及摊销": "depreciation_amortization",
+        },
+        "indicators": {
+            # AKShare stock_financial_us_analysis_indicator_em 返回字段 -> 标准字段名
+            "OPERATE_INCOME": "total_revenue",
+            "GROSS_PROFIT": "gross_profit",
+            "PARENT_HOLDER_NETPROFIT": "net_profit",
+            "BASIC_EPS": "basic_eps",
+            "DILUTED_EPS": "diluted_eps",
+            "GROSS_PROFIT_RATIO": "gross_margin",
+            "NET_PROFIT_RATIO": "net_profit_margin",
+            "ROE_AVG": "roe",
+            "ROA": "roa",
+            "CURRENT_RATIO": "current_ratio",
+            "SPEED_RATIO": "quick_ratio",
+            "DEBT_ASSET_RATIO": "debt_ratio",
+            "ACCOUNTS_RECE_TR": "receivable_turnover",
+            "INVENTORY_TR": "inventory_turnover",
+            "TOTAL_ASSETS_TR": "asset_turnover",
+        },
+        "market": {
+            # AKShare stock_financial_us_analysis_indicator_em 市值相关字段 -> 标准字段名
+            "MARKET_CAP": "market_cap",
+            "PE_TTM": "pe_ratio",
+            "PB": "pb_ratio",
+            "TOTAL_SHARES": "total_shares",
         },
     }
 
@@ -404,17 +405,20 @@ class USProvider(BaseProvider):
                 return results
 
             current_year = datetime.now().year
+            mapping = self.FIELD_MAPPINGS.get("indicators", {})
 
             for field in fields:
+                # 字段名相同的情况
                 if field in df.columns:
                     value = df[field].iloc[0]
                     if pd.notna(value):
                         results[field] = {current_year: value}
                     continue
 
-                us_field = self._find_us_field(field, US_FINANCIAL_INDICATOR_MAPPING)
-                if us_field and us_field in df.columns:
-                    value = df[us_field].iloc[0]
+                # 反向查找：从 standard_field 找 native_field
+                native_field = self._find_mapped_field(field, mapping)
+                if native_field and native_field in df.columns:
+                    value = df[native_field].iloc[0]
                     if pd.notna(value):
                         results[field] = {current_year: value}
 
@@ -439,9 +443,20 @@ class USProvider(BaseProvider):
         try:
             df = self._ak.stock_financial_us_analysis_indicator_em(symbol=stock_code)
             if df is not None and not df.empty:
+                mapping = self.FIELD_MAPPINGS.get("market", {})
+
                 for field in needed_fields:
+                    # 字段名相同的情况
                     if field in df.columns:
                         value = df[field].iloc[0]
+                        if pd.notna(value):
+                            results[field] = value
+                        continue
+
+                    # 反向查找：从 standard_field 找 native_field
+                    native_field = self._find_mapped_field(field, mapping)
+                    if native_field and native_field in df.columns:
+                        value = df[native_field].iloc[0]
                         if pd.notna(value):
                             results[field] = value
         except Exception:
@@ -487,13 +502,19 @@ class USProvider(BaseProvider):
             "capital_expenditure",
         }
 
-    def _find_us_field(
-        self, standard_field: str, mapping: dict[str, str]
-    ) -> str | None:
-        """从映射中查找 US 字段名"""
-        for us_field, std_field in mapping.items():
+    def _find_mapped_field(self, standard_field: str, mapping: dict[str, str]) -> str | None:
+        """从映射表中反向查找 native 字段名
+
+        Args:
+            standard_field: 标准字段名
+            mapping: {native_field: standard_field} 映射表
+
+        Returns:
+            native 字段名或 None
+        """
+        for native_field, std_field in mapping.items():
             if std_field == standard_field:
-                return us_field
+                return native_field
         return None
 
     def _transform_financial_df(self, df: pd.DataFrame) -> pd.DataFrame:

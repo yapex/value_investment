@@ -1,7 +1,9 @@
-"""港股 Pipeline Data Provider
+"""港股 Pipeline Data Provider - IoC 模式
 
-使用 BaseProvider Template Method 模式，自动包裹缓存逻辑。
-只需实现 _fetch_* 四个方法即可。
+职责：
+- 从 AKShare API 获取原始数据
+- 声明 FIELD_MAPPINGS（由 Handler 执行映射）
+- 缓存逻辑暂时保留在 Provider
 
 继承关系:
     BaseProvider (Template Method) → HKProvider (实现 fetch 方法)
@@ -16,71 +18,170 @@ import akshare as ak  # noqa: F401 - 模块级 import 以便测试 mock
 import pandas as pd
 
 from value_investment.core.constants import HISTORICAL_DATA_TTL
-# TODO (Task 7): Update import to value_investment.mapper after restructuring
-from value_investment.mapper import (
-    FINANCIAL_INDICATOR_MAPPING,
-    DataMapper,
-)
 from value_investment.providers.base import BaseProvider, get_ttl_until_june_next_year
 
 if TYPE_CHECKING:
     from value_investment.core.cache import SmartCache
 
 
-# HK Provider 支持的字段集合
-HK_PROVIDER_SUPPORTED_FIELDS: set[str] = {
-    # === 利润表 ===
-    "total_revenue",
-    "net_profit",
-    "operating_profit",
-    "gross_profit",
-    "operating_cost",
-    # === 资产负债表 ===
-    "total_assets",
-    "total_liabilities",
-    "total_equity",
-    "current_assets",
-    "current_liabilities",
-    "cash_and_equivalents",
-    "inventory",
-    "accounts_receivable",
-    "accounts_payable",
-    "fixed_assets",
-    # === 现金流量表 ===
-    "operating_cash_flow",
-    "investing_cash_flow",
-    "financing_cash_flow",
-    "capital_expenditure",
-    # === 财务指标 ===
-    "roe",
-    "roa",
-    "gross_margin",
-    "net_profit_margin",
-    # === 市场数据 ===
-    "market_cap",
-    "pe_ratio",
-    "pb_ratio",
-    "total_shares",
-    "basic_eps",
-    "diluted_eps",
-    "book_value_per_share",
-    # === 港股特有 ===
-    "hk_market_cap",
-    "hk_dividend_per_share",
-    "hk_dividend_yield_ttm",
-    "hk_dividend_payout_ratio",
-    "hk_total_revenue_growth_qoq",
-    "hk_net_profit_growth_qoq",
+# 港股财务指标映射 (AKShare stock_hk_financial_indicator_em 返回)
+HK_FINANCIAL_INDICATOR_MAPPING: dict[str, str] = {
+    # 市值字段
+    "总市值(港元)": "hk_market_cap",
+    "港股市值(港元)": "hk_market_cap",
+    # 每股指标
+    "基本每股收益(元)": "basic_eps",
+    "每股净资产(元)": "book_value_per_share",
+    "每股经营现金流(元)": "operating_cash_flow_per_share",
+    "每股股息TTM(港元)": "hk_dividend_per_share",
+    # 盈利能力
+    "股东权益回报率(%)": "roe",
+    "销售净利率(%)": "net_profit_margin",
+    "总资产回报率(%)": "roa",
+    # 估值指标
+    "市盈率": "pe_ratio",
+    "市净率": "pb_ratio",
+    "股息率TTM(%)": "hk_dividend_yield_ttm",
+    # 增长指标
+    "营业总收入滚动环比增长(%)": "hk_total_revenue_growth_qoq",
+    "净利润滚动环比增长(%)": "hk_net_profit_growth_qoq",
+    # 其他
+    "派息比率(%)": "hk_dividend_payout_ratio",
+    # 标准字段
+    "营业总收入": "total_revenue",
+    "净利润": "net_profit",
 }
 
 
 class HKProvider(BaseProvider):
-    """港股 Pipeline Data Provider
+    """港股数据 Provider - IoC 模式
 
-    使用 BaseProvider 的 Template Method 模式：
-    - 缓存逻辑自动包裹
-    - 只需实现 _fetch_* 四个方法
+    职责：
+    - 从 AKShare API 获取原始数据
+    - 声明 FIELD_MAPPINGS（由 Handler 执行映射）
+    - 缓存逻辑暂时保留
     """
+
+    # 字段映射声明 (Handler 执行映射)
+    # 结构: {statement_type: {native_field: standard_field}}
+    FIELD_MAPPINGS: dict[str, dict[str, str]] = {
+        "balance_sheet": {
+            "资产总值": "total_assets",
+            "总负债": "total_liabilities",
+            "权益总额": "total_equity",
+            "流动资产合计": "current_assets",
+            "非流动资产合计": "non_current_assets",
+            "流动负债合计": "current_liabilities",
+            "非流动负债合计": "non_current_liabilities",
+            "现金及等价物": "cash_and_equivalents",
+            "应收帐款": "accounts_receivable",
+            "存货": "inventory",
+            "固定资产": "fixed_assets",
+            "物业厂房及设备": "fixed_assets",
+            "无形资产": "intangible_assets",
+            "短期贷款": "short_term_debt",
+            "长期贷款": "long_term_debt",
+            "应付帐款": "accounts_payable",
+            "股东权益": "shareholders_equity",
+            "股本": "share_capital",
+            "股本溢价": "share_premium",
+            "保留溢利(累计亏损)": "retained_earnings",
+            "在建工程": "construction_in_progress",
+            "联营公司权益": "investment_in_associates",
+            "合营公司权益": "investment_in_joint_ventures",
+            "预付款项": "prepayment",
+            "合同资产": "contract_assets",
+            "合同负债": "contract_liab",
+            "预收款项": "adv_receipts",
+        },
+        "income_statement": {
+            "收益": "total_revenue",
+            "营业额": "total_revenue",
+            "经营溢利": "operating_profit",
+            "毛利": "gross_profit",
+            "除税前溢利": "profit_before_tax",
+            "除税后溢利": "profit_after_tax",
+            "股东应占溢利": "parent_net_profit",
+            "行政开支": "administrative_expenses",
+            "销售及分销费用": "selling_distribution_expenses",
+            "融资成本": "finance_cost",
+            "利息收入": "interest_income",
+            "折旧及摊销": "depreciation_amortization",
+        },
+        "cash_flow": {
+            "经营业务现金净额": "operating_cash_flow",
+            "投资业务现金净额": "investing_cash_flow",
+            "融资业务现金净额": "financing_cash_flow",
+            "购建固定资产": "capital_expenditure",
+            "购建无形资产及其他资产": "capital_expenditure_intangible",
+            "已付利息(经营)": "interest_paid_operating",
+            "已付利息(融资)": "interest_paid_financing",
+            "已付税项": "taxes_paid",
+            "已收利息(投资)": "interest_received",
+            "已收股息(投资)": "dividend_received",
+            "期初现金": "cash_begin",
+            "期末现金": "cash_end",
+            "现金净额": "net_cash_change",
+        },
+    }
+
+    # Provider 支持的字段集合
+    SUPPORTED_FIELDS: set[str] = {
+        # 利润表
+        "total_revenue",
+        "parent_net_profit",
+        "operating_profit",
+        "gross_profit",
+        "operating_cost",
+        # 资产负债表
+        "total_assets",
+        "total_liabilities",
+        "total_equity",
+        "current_assets",
+        "current_liabilities",
+        "cash_and_equivalents",
+        "inventory",
+        "accounts_receivable",
+        "accounts_payable",
+        "fixed_assets",
+        "non_current_assets",
+        "non_current_liabilities",
+        "short_term_debt",
+        "long_term_debt",
+        "intangible_assets",
+        "shareholders_equity",
+        "share_capital",
+        "share_premium",
+        "retained_earnings",
+        "construction_in_progress",
+        "investment_in_associates",
+        "investment_in_joint_ventures",
+        "prepayment",
+        "contract_assets",
+        "contract_liab",
+        "adv_receipts",
+        # 现金流量表
+        "operating_cash_flow",
+        "investing_cash_flow",
+        "financing_cash_flow",
+        "capital_expenditure",
+        "capital_expenditure_intangible",
+        # 财务指标
+        "roe",
+        "roa",
+        "gross_margin",
+        "net_profit_margin",
+        # 市场数据
+        "market_cap",
+        "pe_ratio",
+        "pb_ratio",
+        "total_shares",
+        "hk_dividend_per_share",
+        "hk_dividend_yield_ttm",
+        "hk_dividend_payout_ratio",
+        "hk_total_revenue_growth_qoq",
+        "hk_net_profit_growth_qoq",
+    }
 
     def __init__(self, cache: "SmartCache") -> None:
         """初始化 HK Provider
@@ -94,10 +195,68 @@ class HKProvider(BaseProvider):
     @property
     def supported_fields(self) -> set[str]:
         """该 Provider 支持的字段集合"""
-        return HK_PROVIDER_SUPPORTED_FIELDS
+        return self.SUPPORTED_FIELDS
 
     # ========================================================================
-    # BaseProvider 抽象方法实现
+    # 原始数据获取方法 (供 Handler 调用 - 无映射)
+    # ========================================================================
+
+    def fetch_raw_balance_sheet(
+        self,
+        stock_code: str,
+        end_year: int,
+        start_year: int,
+    ) -> pd.DataFrame:
+        """获取原始资产负债表数据（不做映射，返回原始字段名）"""
+        hk_code = self._normalize_hk_code(stock_code)
+        try:
+            df = self._ak.stock_financial_hk_report_em(
+                stock=hk_code, symbol="资产负债表", indicator="年度"
+            )
+            if df is None or df.empty:
+                return pd.DataFrame()
+            return self._transform_financial_df(df)
+        except Exception:
+            return pd.DataFrame()
+
+    def fetch_raw_income_statement(
+        self,
+        stock_code: str,
+        end_year: int,
+        start_year: int,
+    ) -> pd.DataFrame:
+        """获取原始利润表数据（不做映射，返回原始字段名）"""
+        hk_code = self._normalize_hk_code(stock_code)
+        try:
+            df = self._ak.stock_financial_hk_report_em(
+                stock=hk_code, symbol="利润表", indicator="年度"
+            )
+            if df is None or df.empty:
+                return pd.DataFrame()
+            return self._transform_financial_df(df)
+        except Exception:
+            return pd.DataFrame()
+
+    def fetch_raw_cash_flow(
+        self,
+        stock_code: str,
+        end_year: int,
+        start_year: int,
+    ) -> pd.DataFrame:
+        """获取原始现金流量表数据（不做映射，返回原始字段名）"""
+        hk_code = self._normalize_hk_code(stock_code)
+        try:
+            df = self._ak.stock_financial_hk_report_em(
+                stock=hk_code, symbol="现金流量表", indicator="年度"
+            )
+            if df is None or df.empty:
+                return pd.DataFrame()
+            return self._transform_financial_df(df)
+        except Exception:
+            return pd.DataFrame()
+
+    # ========================================================================
+    # BaseProvider 抽象方法实现 (保留映射逻辑，向后兼容)
     # ========================================================================
 
     def _fetch_balance_sheet(
@@ -106,19 +265,20 @@ class HKProvider(BaseProvider):
         end_year: int,
         start_year: int,
     ) -> pd.DataFrame:
-        """获取资产负债表"""
-        hk_code = self._normalize_hk_code(stock_code)
-        try:
-            df = self._ak.stock_financial_hk_report_em(
-                stock=hk_code, symbol="资产负债表", indicator="年度"
-            )
-            if df is None or df.empty:
-                return pd.DataFrame()
-            wide_df = self._transform_financial_df(df)
-            mapped = DataMapper.map_balance_sheet(wide_df)
-            return mapped if mapped is not None else wide_df
-        except Exception:
+        """获取资产负债表（带映射）"""
+        # 调用 fetch_raw_* 获取原始数据，然后手动映射
+        df = self.fetch_raw_balance_sheet(stock_code, end_year, start_year)
+        if df is None or df.empty:
             return pd.DataFrame()
+
+        # 手动应用映射
+        mapping = self.FIELD_MAPPINGS.get("balance_sheet", {})
+        rename_map = {
+            native: std for native, std in mapping.items() if native in df.columns
+        }
+        if rename_map:
+            df = df.rename(columns=rename_map)
+        return df
 
     def _fetch_income_statement(
         self,
@@ -126,19 +286,18 @@ class HKProvider(BaseProvider):
         end_year: int,
         start_year: int,
     ) -> pd.DataFrame:
-        """获取利润表"""
-        hk_code = self._normalize_hk_code(stock_code)
-        try:
-            df = self._ak.stock_financial_hk_report_em(
-                stock=hk_code, symbol="利润表", indicator="年度"
-            )
-            if df is None or df.empty:
-                return pd.DataFrame()
-            wide_df = self._transform_financial_df(df)
-            mapped = DataMapper.map_income_statement(wide_df)
-            return mapped if mapped is not None else wide_df
-        except Exception:
+        """获取利润表（带映射）"""
+        df = self.fetch_raw_income_statement(stock_code, end_year, start_year)
+        if df is None or df.empty:
             return pd.DataFrame()
+
+        mapping = self.FIELD_MAPPINGS.get("income_statement", {})
+        rename_map = {
+            native: std for native, std in mapping.items() if native in df.columns
+        }
+        if rename_map:
+            df = df.rename(columns=rename_map)
+        return df
 
     def _fetch_cash_flow(
         self,
@@ -146,19 +305,18 @@ class HKProvider(BaseProvider):
         end_year: int,
         start_year: int,
     ) -> pd.DataFrame:
-        """获取现金流量表"""
-        hk_code = self._normalize_hk_code(stock_code)
-        try:
-            df = self._ak.stock_financial_hk_report_em(
-                stock=hk_code, symbol="现金流量表", indicator="年度"
-            )
-            if df is None or df.empty:
-                return pd.DataFrame()
-            wide_df = self._transform_financial_df(df)
-            mapped = DataMapper.map_cash_flow(wide_df)
-            return mapped if mapped is not None else wide_df
-        except Exception:
+        """获取现金流量表（带映射）"""
+        df = self.fetch_raw_cash_flow(stock_code, end_year, start_year)
+        if df is None or df.empty:
             return pd.DataFrame()
+
+        mapping = self.FIELD_MAPPINGS.get("cash_flow", {})
+        rename_map = {
+            native: std for native, std in mapping.items() if native in df.columns
+        }
+        if rename_map:
+            df = df.rename(columns=rename_map)
+        return df
 
     def _fetch_indicators(
         self,
@@ -351,7 +509,7 @@ class HKProvider(BaseProvider):
                 return results
 
             current_year = datetime.now().year
-            market_mapping = FINANCIAL_INDICATOR_MAPPING.get("HK", {})
+            market_mapping = HK_FINANCIAL_INDICATOR_MAPPING
 
             for field in fields:
                 hk_field = self._find_hk_field(field, market_mapping)
@@ -413,7 +571,7 @@ class HKProvider(BaseProvider):
             if df is None or df.empty:
                 return results
 
-            market_mapping = FINANCIAL_INDICATOR_MAPPING.get("HK", {})
+            market_mapping = HK_FINANCIAL_INDICATOR_MAPPING
 
             for field in needed_fields:
                 # Special handling for market_cap: use 总市值(港元) directly
@@ -473,11 +631,11 @@ class HKProvider(BaseProvider):
         }
 
     def _get_income_fields(self) -> set[str]:
-        """港股净利润对应 parent_net_profit"""
         return {
             "total_revenue",
-            "parent_net_profit",
+            "net_profit",
             "operating_profit",
+            "gross_profit",
             "operating_cost",
         }
 

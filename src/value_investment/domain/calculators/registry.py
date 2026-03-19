@@ -145,12 +145,13 @@ def clear_registry() -> None:
 def load_builtin_calculators_from_dir(dir_path: str | None = None) -> None:
     """从目录加载内置 calculators
 
-    支持两种模式:
-    1. 打包状态 (wheel/zipapp): 使用 importlib.resources
-    2. 开发/源码状态: 使用文件系统路径
+    加载顺序（前者覆盖后者）:
+    1. 项目根目录 calculators/（优先）
+    2. 包内 calculators/（打包状态用 importlib.resources，开发模式用文件系统）
+    3. 外部指定路径
 
     Args:
-        dir_path: 目录路径，默认使用当前模块目录
+        dir_path: 目录路径，默认自动发现
     """
     from value_investment.domain.calculators.dynamic_loader import (
         CalculatorValidationError,
@@ -161,12 +162,19 @@ def load_builtin_calculators_from_dir(dir_path: str | None = None) -> None:
         # 外部指定路径，直接使用文件系统
         calculators_dir = Path(dir_path)
         _load_calcs_from_fs(calculators_dir, load_calculator, register_functional)
-    else:
-        # 尝试用 importlib.resources（支持打包状态）
-        if not _load_calcs_from_package(load_calculator, register_functional):
-            # 回退到文件系统（开发模式）
-            calculators_dir = Path(__file__).parent
-            _load_calcs_from_fs(calculators_dir, load_calculator, register_functional)
+        return
+
+    # 1. 优先加载项目根目录 calculators/（开发模式）
+    project_root = Path(__file__).resolve().parents[3]  # .../value_investment/
+    project_calculators_dir = project_root / "calculators"
+    if project_calculators_dir.is_dir():
+        _load_calcs_from_fs(project_calculators_dir, load_calculator, register_functional)
+
+    # 2. 尝试用 importlib.resources（支持打包状态）
+    if not _load_calcs_from_package(load_calculator, register_functional):
+        # 3. 回退到包内文件系统
+        calculators_dir = Path(__file__).parent
+        _load_calcs_from_fs(calculators_dir, load_calculator, register_functional)
 
 
 def _load_calcs_from_package(

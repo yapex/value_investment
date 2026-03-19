@@ -1,7 +1,7 @@
 """Tushare data provider for A 股 market - IoC 模式
 
 声明 FIELD_MAPPINGS（由 Handler 执行映射）。
-TushareFieldMapper 暂时保留用于生成映射。
+所有字段映射已硬编码，不再依赖 TushareFieldMapper。
 """
 from datetime import datetime
 from typing import Any
@@ -9,7 +9,6 @@ from typing import Any
 import pandas as pd
 
 from value_investment.providers.base import BaseProvider
-from value_investment.providers.tushare_mapper import TushareFieldMapper
 
 
 class TushareProvider(BaseProvider):
@@ -21,9 +20,70 @@ class TushareProvider(BaseProvider):
     - 缓存逻辑暂时保留
     """
 
+    # 所有支持的字段（硬编码，移除了 TushareFieldMapper 依赖）
+    # 来源: balance_sheet + income_statement + cash_flow + indicators + market
+    SUPPORTED_FIELDS: set[str] = {
+        # --- 资产负债表 ---
+        "total_assets",
+        "total_liabilities",
+        "total_equity",
+        "current_assets",
+        "current_liabilities",
+        "cash_and_equivalents",
+        "inventory",
+        "accounts_receivable",
+        "accounts_payable",
+        "fixed_assets",
+        "prepayment",
+        "contract_assets",
+        "contract_liab",
+        "adv_receipts",
+        "total_shares",
+        # --- 利润表 ---
+        "total_revenue",
+        "net_profit",
+        "operating_profit",
+        "operating_cost",
+        "parent_net_profit",
+        # --- 现金流量表 ---
+        "operating_cash_flow",
+        "investing_cash_flow",
+        "financing_cash_flow",
+        "capital_expenditure",
+        # --- 财务指标 (fina_indicator) ---
+        "roe",
+        "roa",
+        "gross_margin",
+        "net_profit_margin",
+        "current_ratio",
+        "quick_ratio",
+        "debt_ratio",
+        "asset_turnover",
+        "receivable_turnover",
+        "roic",
+        "basic_eps",
+        "diluted_eps",
+        "book_value_per_share",
+        # --- 市场数据 (daily_basic) ---
+        "market_cap",
+        "circ_market_cap",
+        "circ_shares",
+        "pe_ratio",
+        "pb_ratio",
+    }
+
+    # 市场数据字段（硬编码）
+    _MARKET_FIELDS: set[str] = {
+        "market_cap",
+        "circ_market_cap",
+        "circ_shares",
+        "pe_ratio",
+        "pb_ratio",
+        "total_shares",
+    }
+
     # 字段映射声明 (Handler 执行映射)
     # 结构: {statement_type: {native_field: standard_field}}
-    # 映射从 TushareFieldMapper 提取
     FIELD_MAPPINGS: dict[str, dict[str, str]] = {
         "balance_sheet": {
             # Tushare 列名 -> 标准字段名
@@ -57,6 +117,32 @@ class TushareProvider(BaseProvider):
             "n_cash_flows_fnc_act": "financing_cash_flow",
             "c_pay_acq_const_fiolta": "capital_expenditure",
         },
+        "indicators": {
+            # Tushare fina_indicator 列名 -> 标准字段名
+            "roe": "roe",
+            "roa": "roa",
+            # 注意: Tushare 的 gross_margin 是毛利润金额(元)，grossprofit_margin 才是毛利率(%)
+            "grossprofit_margin": "gross_margin",
+            "netprofit_margin": "net_profit_margin",
+            "current_ratio": "current_ratio",
+            "quick_ratio": "quick_ratio",
+            "debt_to_assets": "debt_ratio",
+            "assets_turn": "asset_turnover",
+            "ar_turn": "receivable_turnover",
+            "roic": "roic",
+            "eps": "basic_eps",
+            "dt_eps": "diluted_eps",
+            "bps": "book_value_per_share",
+        },
+        "market": {
+            # Tushare daily_basic 列名 -> 标准字段名
+            "total_mv": "market_cap",
+            "circ_mv": "circ_market_cap",
+            "float_share": "circ_shares",
+            "pe_ttm": "pe_ratio",
+            "pb": "pb_ratio",
+            "total_share": "total_shares",
+        },
     }
 
     def __init__(self, cache, token: str):
@@ -68,7 +154,6 @@ class TushareProvider(BaseProvider):
         """
         self._cache = cache
         self._token = token
-        self._mapper = TushareFieldMapper()
 
         # Initialize Tushare API
         import tushare as ts
@@ -78,7 +163,7 @@ class TushareProvider(BaseProvider):
 
     @property
     def supported_fields(self) -> set[str]:
-        return self._mapper.supported_fields
+        return self.SUPPORTED_FIELDS
 
     def _to_ts_code(self, stock_code: str) -> str:
         """Convert 6-digit stock code to ts_code format"""
@@ -216,7 +301,21 @@ class TushareProvider(BaseProvider):
         start_year = end_year - years + 1
 
         # Get indicator fields that we can fetch
-        indicator_fields = fields & set(self._mapper.reverse.indicators.keys())
+        indicator_fields = fields & {
+            "roe",
+            "roa",
+            "gross_margin",
+            "net_profit_margin",
+            "current_ratio",
+            "quick_ratio",
+            "debt_ratio",
+            "asset_turnover",
+            "receivable_turnover",
+            "roic",
+            "basic_eps",
+            "diluted_eps",
+            "book_value_per_share",
+        }
 
         if not indicator_fields:
             return {}
@@ -263,7 +362,12 @@ class TushareProvider(BaseProvider):
             return {}
 
         # 转换为标准字段名
-        df = self._mapper.map_dataframe(df, "market")
+        mapping = self.FIELD_MAPPINGS.get("market", {})
+        rename_map = {
+            native: std for native, std in mapping.items() if native in df.columns
+        }
+        if rename_map:
+            df = df.rename(columns=rename_map)
 
         # 提取单个值 (取最新一条)
         # 单位转换: Tushare 返回的市值单位是万元，需要乘以 10000 转换成元
@@ -281,20 +385,47 @@ class TushareProvider(BaseProvider):
         return results
 
     def _get_balance_fields(self) -> set[str]:
-        """Get standard fields mapped from balance sheet"""
-        return set(self._mapper.reverse.balance_sheet.keys())
+        """Get standard fields from balance sheet"""
+        return {
+            "total_assets",
+            "total_liabilities",
+            "total_equity",
+            "current_assets",
+            "current_liabilities",
+            "cash_and_equivalents",
+            "inventory",
+            "accounts_receivable",
+            "accounts_payable",
+            "fixed_assets",
+            "prepayment",
+            "contract_assets",
+            "contract_liab",
+            "adv_receipts",
+            "total_shares",
+        }
 
     def _get_income_fields(self) -> set[str]:
-        """Get standard fields mapped from income statement"""
-        return set(self._mapper.reverse.income_statement.keys())
+        """Get standard fields from income statement"""
+        return {
+            "total_revenue",
+            "net_profit",
+            "operating_profit",
+            "operating_cost",
+            "parent_net_profit",
+        }
 
     def _get_cash_flow_fields(self) -> set[str]:
-        """Get standard fields mapped from cash flow"""
-        return set(self._mapper.reverse.cash_flow.keys())
+        """Get standard fields from cash flow"""
+        return {
+            "operating_cash_flow",
+            "investing_cash_flow",
+            "financing_cash_flow",
+            "capital_expenditure",
+        }
 
     def _get_market_fields(self) -> set[str]:
         """Get standard fields from market data (daily_basic)"""
-        return set(self._mapper.reverse.market.keys())
+        return self._MARKET_FIELDS
 
     # ========================================================================
     # 原始数据获取方法 (供 Handler 调用 - 无映射)
@@ -487,8 +618,13 @@ class TushareProvider(BaseProvider):
         if "gross_margin" in df.columns and "grossprofit_margin" in df.columns:
             df = df.drop(columns=["gross_margin"])
 
-        # Map to standard field names using TushareFieldMapper
-        df = self._mapper.map_dataframe(df, "indicators")
+        # Map to standard field names using FIELD_MAPPINGS
+        mapping = self.FIELD_MAPPINGS.get("indicators", {})
+        rename_map = {
+            native: std for native, std in mapping.items() if native in df.columns
+        }
+        if rename_map:
+            df = df.rename(columns=rename_map)
 
         # Cache for future use
         self._cache.set(cache_key, df, ttl=self._get_ttl_until_june_next_year())

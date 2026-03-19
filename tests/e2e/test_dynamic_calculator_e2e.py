@@ -4,11 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from value_investment.domain.calculators.dynamic_loader import load_calculator
-from value_investment.domain.calculators.registry import (
-    get_registry,
-    register_dynamic_calculator,
+from value_investment.calculator_plugin import (
+    load_calculator,
+    registry,
     clear_registry,
+    load_builtin_calculators,
 )
 
 
@@ -18,6 +18,8 @@ def clean_registry():
     clear_registry()
     yield
     clear_registry()
+    # 重新加载内置 calculators
+    load_builtin_calculators()
 
 
 class TestDynamicCalculatorE2E:
@@ -46,8 +48,8 @@ def calculate(results):
             assert calc_dict["required_fields"] == {"net_income", "total_equity"}
 
             # Step 3: 注册
-            registry = get_registry()
-            registry.register_dynamic_from_dict(calc_dict)
+            
+            registry.register_from_dict(calc_dict)
 
             # Step 4: 使用
             calculators = registry.get_all()
@@ -82,8 +84,8 @@ def calculate(results):
 
             # When: 加载并注册
             calc_dict = load_calculator(str(calc_path))
-            registry = get_registry()
-            registry.register_dynamic_from_dict(calc_dict)
+            
+            registry.register_from_dict(calc_dict)
 
             # Then: 获取 calculators 时动态的覆盖内置的
             calculators = registry.get_all()
@@ -140,10 +142,10 @@ def calculate(results): return {"2023": 15}
             )
 
             # When
-            registry = get_registry()
+            
             for py_file in Path(tmpdir).glob("calc_*.py"):
                 calc_dict = load_calculator(str(py_file))
-                registry.register_dynamic_from_dict(calc_dict)
+                registry.register_from_dict(calc_dict)
 
             # Then
             calculators = registry.get_all()

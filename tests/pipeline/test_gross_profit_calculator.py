@@ -1,22 +1,22 @@
 """Tests for GrossProfit Calculator"""
-from value_investment.domain.calculators import CALCULATOR_MAP
+from value_investment.calculator_plugin import registry
 
 
 def test_gross_profit_required_fields():
     """Test GrossProfit declares required fields"""
-    calc = CALCULATOR_MAP["gross_profit"]
+    calc = registry.get_by_name("gross_profit")
     assert "total_revenue" in calc.required_fields
     assert "operating_cost" in calc.required_fields
 
 
 def test_gross_profit_name():
     """Test GrossProfit name"""
-    assert CALCULATOR_MAP["gross_profit"].name == "gross_profit"
+    assert registry.get_by_name("gross_profit").name == "gross_profit"
 
 
 def test_gross_profit_calculate():
     """Test gross profit calculation"""
-    calc = CALCULATOR_MAP["gross_profit"]
+    calc = registry.get_by_name("gross_profit")
     results = {
         "total_revenue": {2024: 1000.0, 2023: 900.0},
         "operating_cost": {2024: 600.0, 2023: 540.0},
@@ -30,7 +30,7 @@ def test_gross_profit_calculate():
 
 def test_gross_profit_missing_data():
     """Test gross profit with missing data"""
-    calc = CALCULATOR_MAP["gross_profit"]
+    calc = registry.get_by_name("gross_profit")
     results = {
         "total_revenue": {2024: 1000.0},
         # operating_cost missing

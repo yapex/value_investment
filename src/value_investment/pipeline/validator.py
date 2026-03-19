@@ -2,7 +2,11 @@
 from dataclasses import dataclass, field
 from typing import Any
 
+from value_investment.calculator_plugin import registry, get_calculators
 from value_investment.domain.fields import ALL_FIELDS
+
+# 构建 calculator 映射
+_CALCULATOR_MAP = {calc.name: calc for calc in get_calculators()}
 
 
 @dataclass
@@ -158,7 +162,7 @@ def validate_fields_registration(
     fields: list[str],
 ) -> dict[str, FieldStatus]:
     """检查字段是否在 ALL_FIELDS 中注册"""
-    from value_investment.domain.calculators import CALCULATOR_MAP
+    from value_investment.domain.calculators import _CALCULATOR_MAP
     
     statuses = {}
     
@@ -169,7 +173,7 @@ def validate_fields_registration(
                 category="registered",
                 available=True,
             )
-        elif field in CALCULATOR_MAP:
+        elif field in _CALCULATOR_MAP:
             statuses[field] = FieldStatus(
                 name=field,
                 category="calculator",
@@ -198,7 +202,7 @@ def check_field_consistency(
     1. Handler 声明了能力，但字段未在 ALL_FIELDS 中注册 (警告)
     2. 字段在 ALL_FIELDS 中注册，但没有任何 Handler 能处理 (错误)
     """
-    from value_investment.domain.calculators import CALCULATOR_MAP
+    from value_investment.domain.calculators import _CALCULATOR_MAP
     
     inconsistencies = []
     
@@ -211,7 +215,7 @@ def check_field_consistency(
     handler_only = handler_fields - ALL_FIELDS
     for field in sorted(handler_only):
         # 排除 calculator 字段 (它们本来就不在 ALL_FIELDS 中)
-        if field not in CALCULATOR_MAP:
+        if field not in _CALCULATOR_MAP:
             inconsistencies.append(FieldInconsistency(
                 field_name=field,
                 severity="warning",
@@ -221,7 +225,7 @@ def check_field_consistency(
     
     # 检查 ALL_FIELDS 注册了但 Handler 不能处理 (错误)
     # 只检查核心字段，不包括 calculator
-    registered_but_no_handler = ALL_FIELDS - handler_fields - set(CALCULATOR_MAP.keys())
+    registered_but_no_handler = ALL_FIELDS - handler_fields - set(_CALCULATOR_MAP.keys())
     for field in sorted(registered_but_no_handler):
         inconsistencies.append(FieldInconsistency(
             field_name=field,
@@ -237,14 +241,14 @@ def expand_required_fields(
     fields: list[str],
 ) -> tuple[set[str], list[str]]:
     """扩展字段以包含计算器依赖"""
-    from value_investment.domain.calculators import CALCULATOR_MAP
+    from value_investment.domain.calculators import _CALCULATOR_MAP
     
     expanded = set(fields)
     calculators_to_run = []
     
     for field in fields:
-        if field in CALCULATOR_MAP:
-            calc = CALCULATOR_MAP[field]
+        if field in _CALCULATOR_MAP:
+            calc = _CALCULATOR_MAP[field]
             expanded.update(calc.required_fields)
             calculators_to_run.append(field)
     
@@ -290,12 +294,12 @@ def validate_calculators_fields(
     handler_fields: set[str],
 ) -> dict[str, CalculatorStatus]:
     """验证计算器是否能运行"""
-    from value_investment.domain.calculators import CALCULATOR_MAP
+    from value_investment.domain.calculators import _CALCULATOR_MAP
     
     statuses = {}
     
     for field in calculator_fields:
-        calc = CALCULATOR_MAP[field]
+        calc = _CALCULATOR_MAP[field]
         required = calc.required_fields
         missing = required - handler_fields
         
@@ -326,7 +330,7 @@ def validate_pipeline(
     完整 pipeline 验证
     """
     from value_investment.pipeline.container import Container
-    from value_investment.domain.calculators import CALCULATOR_MAP
+    from value_investment.domain.calculators import _CALCULATOR_MAP
 
     # 重置并获取 container
     Container._instance = None
@@ -359,7 +363,7 @@ def validate_pipeline(
         market_available.update(h.fields)
 
     # 标准字段（非 calculator）必须有 handler 能提供
-    standard_fields = fields_expanded - set(CALCULATOR_MAP.keys())
+    standard_fields = fields_expanded - set(_CALCULATOR_MAP.keys())
     missing_in_market = standard_fields - market_available
     if missing_in_market:
         inconsistencies.append(FieldInconsistency(
@@ -450,7 +454,8 @@ class ValidationResult:
 def validate_calculators(calculators: list) -> list[ValidationResult]:
     """旧版: 验证计算器依赖"""
     from value_investment.pipeline.container import Container
-    from value_investment.domain.calculators import ALL_CALCULATORS
+    from value_investment.calculator_plugin import get_calculators
+    all_calcs = get_calculators()
     
     Container._instance = None
     container = Container.create()

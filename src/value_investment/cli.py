@@ -12,12 +12,12 @@ from rich.table import Table
 from value_investment.core.cache import SmartCache
 from value_investment.pipeline.api import PipelineAPI
 from value_investment.domain.fields import ALL_FIELDS
-from value_investment.domain.calculators.dynamic_loader import (
+from value_investment.calculator_plugin import (
+    registry,
     load_calculator,
     load_calculators_from_dir,
     CalculatorValidationError,
 )
-from value_investment.domain.calculators.registry import register_dynamic_calculator
 
 app = typer.Typer(name="v-invest", help="Value investment analysis tool")
 console = Console()
@@ -121,7 +121,7 @@ def query(
         for path in calculator:
             try:
                 calc_dict = load_calculator(path)
-                register_dynamic_calculator(**calc_dict)
+                registry.register_from_dict(calc_dict)
                 console.print(f"[green]✓[/green] Loaded calculator: {calc_dict['name']}")
             except CalculatorValidationError as e:
                 console.print(f"[red]✗[/red] Failed to load {path}: {e}")
@@ -131,7 +131,7 @@ def query(
             try:
                 calculators = load_calculators_from_dir(dir_path)
                 for calc_dict in calculators:
-                    register_dynamic_calculator(**calc_dict)
+                    registry.register_from_dict(calc_dict)
                     console.print(f"[green]✓[/green] Loaded calculator: {calc_dict['name']}")
             except Exception as e:
                 console.print(f"[red]✗[/red] Failed to load directory {dir_path}: {e}")
@@ -192,7 +192,7 @@ def validate(
         for path in calculator:
             try:
                 calc_dict = load_calculator(path)
-                register_dynamic_calculator(**calc_dict)
+                registry.register_from_dict(calc_dict)
                 console.print(f"[green]✓[/green] Loaded calculator: {calc_dict['name']}")
             except CalculatorValidationError as e:
                 console.print(f"[red]✗[/red] Failed to load {path}: {e}")
@@ -202,7 +202,7 @@ def validate(
             try:
                 calculators = load_calculators_from_dir(dir_path)
                 for calc_dict in calculators:
-                    register_dynamic_calculator(**calc_dict)
+                    registry.register_from_dict(calc_dict)
                     console.print(f"[green]✓[/green] Loaded calculator: {calc_dict['name']}")
             except Exception as e:
                 console.print(f"[red]✗[/red] Failed to load directory {dir_path}: {e}")

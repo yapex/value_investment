@@ -1,10 +1,10 @@
 """Tests for ImpliedGrowth Calculator"""
-from value_investment.domain.calculators import CALCULATOR_MAP
+from value_investment.calculator_plugin import registry
 
 
 class TestImpliedGrowth:
     def setup_method(self):
-        self.calc = CALCULATOR_MAP["implied_growth"]
+        self.calc = registry.get_by_name("implied_growth")
 
     def test_required_fields(self):
         """包含 FCF 和市值相关字段"""

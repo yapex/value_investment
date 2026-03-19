@@ -20,7 +20,9 @@ from value_investment.handlers.us_share import (
 from value_investment.providers.a_share import TushareProvider
 from value_investment.providers.hk_share import HKProvider
 from value_investment.providers.us_share import USProvider
-from value_investment.domain.calculators import ALL_CALCULATORS
+from value_investment.calculator_plugin import get_calculators
+
+ALL_CALCULATORS = get_calculators()
 
 
 class Container(containers.DeclarativeContainer):

@@ -1,22 +1,22 @@
 """Tests for InventoryTurnover Calculator"""
-from value_investment.domain.calculators import CALCULATOR_MAP
+from value_investment.calculator_plugin import registry
 
 
 def test_inventory_turnover_required_fields():
     """Test InventoryTurnover declares required fields"""
-    calc = CALCULATOR_MAP["inventory_turnover"]
+    calc = registry.get_by_name("inventory_turnover")
     assert "operating_cost" in calc.required_fields
     assert "inventory" in calc.required_fields
 
 
 def test_inventory_turnover_name():
     """Test InventoryTurnover name"""
-    assert CALCULATOR_MAP["inventory_turnover"].name == "inventory_turnover"
+    assert registry.get_by_name("inventory_turnover").name == "inventory_turnover"
 
 
 def test_inventory_turnover_calculate():
     """Test inventory turnover calculation"""
-    calc = CALCULATOR_MAP["inventory_turnover"]
+    calc = registry.get_by_name("inventory_turnover")
     results = {
         "operating_cost": {2024: 1000, 2023: 900, 2022: 800},
         "inventory": {2024: 200, 2023: 180, 2022: 160},
@@ -29,7 +29,7 @@ def test_inventory_turnover_calculate():
 
 def test_inventory_turnover_missing_data():
     """Test inventory turnover with missing data"""
-    calc = CALCULATOR_MAP["inventory_turnover"]
+    calc = registry.get_by_name("inventory_turnover")
     results = {
         "operating_cost": {2024: 1000},
         # inventory missing - can't calculate without inventory

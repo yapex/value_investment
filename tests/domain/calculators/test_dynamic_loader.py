@@ -1,10 +1,12 @@
 """Tests for DynamicCalculatorLoader"""
+import os
+import shutil
 import tempfile
 from pathlib import Path
 
 import pytest
 
-from value_investment.domain.calculators.dynamic_loader import (
+from value_investment.calculator_plugin import (
     CalculatorValidationError,
     load_calculator,
     load_calculators_from_dir,
@@ -45,26 +47,30 @@ def calculate(results):
 
     def test_infer_name_from_filename(self):
         """测试 name 从文件名推断"""
-        # Given
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", delete=False, prefix="calc_"
-        ) as f:
+        # Given: 创建固定文件名的测试文件
+        import tempfile
+        import os
+
+        tmpdir = tempfile.mkdtemp()
+        path = os.path.join(tmpdir, "calc_roic.py")
+
+        with open(path, "w") as f:
             f.write("""
 required_fields = ["net_income"]
 
 def calculate(results):
     return {}
 """)
-            path = f.name
 
         try:
             # When
             result = load_calculator(path)
 
-            # Then
-            assert result["name"] == Path(path).stem[5:]  # 去掉 calc_ 前缀
+            # Then: 推断出的 name 应该是 roic（从 calc_roic.py）
+            assert result["name"] == "roic"
         finally:
             Path(path).unlink()
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
     def test_explicit_name_override_filename(self):
         """测试显式 name 覆盖文件名推断"""

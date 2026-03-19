@@ -1,14 +1,14 @@
 """Tests for Calculator Registry"""
 import pytest
 
-from value_investment.domain.calculators.registry import (
+from value_investment.calculator_plugin import (
+    CalculatorAdapter,
     CalculatorRegistry,
-    DynamicCalculatorAdapter,
 )
 
 
-class TestDynamicCalculatorAdapter:
-    """测试 DynamicCalculatorAdapter"""
+class TestCalculatorAdapter:
+    """测试 CalculatorAdapter"""
 
     def test_adapter_implements_calculator_interface(self):
         """测试适配器实现 Calculator 接口"""
@@ -16,7 +16,7 @@ class TestDynamicCalculatorAdapter:
         def mock_calculate(results):
             return {"2023": 100}
 
-        adapter = DynamicCalculatorAdapter(
+        adapter = CalculatorAdapter(
             name="test",
             required_fields={"revenue"},
             calculate=mock_calculate,
@@ -33,7 +33,7 @@ class TestDynamicCalculatorAdapter:
         def mock_calculate(results):
             return {"2023": float(results["revenue"]["2023"]) * 0.1}
 
-        adapter = DynamicCalculatorAdapter(
+        adapter = CalculatorAdapter(
             name="test",
             required_fields={"revenue"},
             calculate=mock_calculate,
@@ -60,7 +60,7 @@ class TestCalculatorRegistry:
         registry = CalculatorRegistry()
 
         # When
-        registry.register_dynamic(
+        registry.register(
             name="custom",
             required_fields={"revenue"},
             calculate=custom_calculate,
@@ -80,7 +80,7 @@ class TestCalculatorRegistry:
         registry = CalculatorRegistry()
 
         # 注册动态 calculator（与内置同名）
-        registry.register_dynamic(
+        registry.register(
             name="gross_profit",
             required_fields={"revenue"},
             calculate=custom_calculate,
@@ -97,7 +97,7 @@ class TestCalculatorRegistry:
         """测试按名称获取 calculator"""
         # Given
         registry = CalculatorRegistry()
-        registry.register_dynamic(
+        registry.register(
             name="test_calc",
             required_fields=set(),
             calculate=lambda r: {},
@@ -133,7 +133,7 @@ class TestCalculatorRegistry:
         }
 
         # When
-        registry.register_dynamic_from_dict(calc_dict)
+        registry.register_from_dict(calc_dict)
 
         # Then
         calc = registry.get_by_name("from_dict")

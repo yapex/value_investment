@@ -1,10 +1,10 @@
 """Tests for OperatingProfitMargin Calculator"""
-from value_investment.domain.calculators import CALCULATOR_MAP
+from value_investment.calculator_plugin import registry
 
 
 class TestOperatingProfitMargin:
     def setup_method(self):
-        self.calc = CALCULATOR_MAP["operating_profit_margin"]
+        self.calc = registry.get_by_name("operating_profit_margin")
 
     def test_required_fields(self):
         """包含必要的依赖字段"""

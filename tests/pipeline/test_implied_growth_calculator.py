@@ -5,10 +5,15 @@ from value_investment.pipeline.fields import IFRSFields
 
 class TestImpliedGrowth:
     def test_required_fields(self):
-        """包含 FCF 相关字段"""
+        """包含 FCF 和市值相关字段"""
         calc = ImpliedGrowth()
         assert IFRSFields.OPERATING_CASH_FLOW in calc.required_fields
-        assert IFRSFields.CAPITAL_EXPENDITURE in calc.required_fields
+        assert IFRSFields.MARKET_CAP in calc.required_fields
+
+    def test_optional_fields(self):
+        """CAPEX 为可选，用于计算准确的 FCF"""
+        calc = ImpliedGrowth()
+        assert IFRSFields.CAPITAL_EXPENDITURE in calc.optional_fields
 
     def test_name(self):
         """字段名为 implied_growth"""

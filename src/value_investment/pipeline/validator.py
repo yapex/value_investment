@@ -326,30 +326,53 @@ def validate_pipeline(
     完整 pipeline 验证
     """
     from value_investment.pipeline.container import Container
-    
+    from value_investment.pipeline.calculators import CALCULATOR_MAP
+
     # 重置并获取 container
     Container._instance = None
     container = Container.create()
-    
+
     # Step 1: 检查字段注册
     field_statuses = validate_fields_registration(fields)
-    
+
     # Step 2: 检查一致性
     inconsistencies = check_field_consistency(container, market)
-    
+
     # Step 3: 扩展字段
     fields_expanded, calculator_fields = expand_required_fields(fields)
-    
+
     # Step 4: 检查 Handler
     handler_statuses = validate_handlers(container, fields_expanded, market)
-    
-    # 收集 Handler 能提供的字段
+
+    # 收集 Handler 能提供的字段（按市场）
     handler_fields: set[str] = set()
     for h in handler_statuses:
         if h.will_handle:
             handler_fields.update(h.fields)
-    
+
     # Step 5: 验证 Calculator
+
+    # Step 5.5: 检查该市场是否有有效的 Handler 能提供请求的字段
+    market_handlers = [h for h in handler_statuses if h.market == market and h.will_handle]
+    market_available: set[str] = set()
+    for h in market_handlers:
+        market_available.update(h.fields)
+
+    # 标准字段（非 calculator）必须有 handler 能提供
+    standard_fields = fields_expanded - set(CALCULATOR_MAP.keys())
+    missing_in_market = standard_fields - market_available
+    if missing_in_market:
+        inconsistencies.append(FieldInconsistency(
+            field_name="market_coverage",
+            severity="error",
+            description=(
+                f"Market '{market}': {len(missing_in_market)} field(s) cannot be fetched "
+                f"({sorted(missing_in_market)}). "
+                f"No working Handler with Provider found for this market."
+            ),
+            resolution="Implement Provider with fetch_financial_data for this market, "
+                      "or ensure Handler has Provider injected",
+        ))
     calculator_statuses = validate_calculators_fields(
         fields_expanded,
         calculator_fields,

@@ -28,8 +28,9 @@ CORE_CALCULATORS = [
 def _discover_calculators() -> list:
     """Auto-discover all Calculator classes in this directory
     
-    Scans all .py files (except __init__.py) and instantiates classes
-    that have 'Calculator' in their name.
+    Scans all .py files (except __init__.py) and instantiates classes that:
+    1. Have 'Calculator' in their name, OR
+    2. Are marked with @calculator decorator
     
     Validates required_fields against IFRSFields.all().
     
@@ -47,7 +48,7 @@ def _discover_calculators() -> list:
     
     # Scan all .py files
     for file in package_path.glob("*.py"):
-        if file.name in ("__init__.py",):
+        if file.name in ("__init__.py", "decorator.py"):
             continue
         if file.name.startswith("_"):
             continue
@@ -63,12 +64,17 @@ def _discover_calculators() -> list:
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
                 
-                # Check if it's a Calculator class (not imported)
-                if (isinstance(attr, type) and 
+                # Check if it's a Calculator class:
+                # 1. Has 'Calculator' in name, OR marked with @calculator
+                # 2. Not imported from elsewhere
+                is_calculator_by_name = (
+                    isinstance(attr, type) and 
                     "Calculator" in attr_name and
-                    attr.__module__ == full_module_name):
-                    
-                    # Instantiate and validate
+                    attr.__module__ == full_module_name
+                )
+                is_calculator_by_decorator = getattr(attr, '_is_calculator', False)
+                
+                if is_calculator_by_name or is_calculator_by_decorator:
                     try:
                         calc = attr()
                         
@@ -85,13 +91,11 @@ def _discover_calculators() -> list:
                             seen_names.add(calc.name)
                             
                     except ValueError:
-                        # Re-raise validation errors
                         raise
                     except Exception as e:
                         print(f"⚠️  Warning: Failed to instantiate {attr_name}: {e}")
                         
         except Exception as e:
-            # Re-raise import/validation errors
             if "invalid required_fields" in str(e):
                 raise
             print(f"⚠️  Warning: Failed to import {full_module_name}: {e}")

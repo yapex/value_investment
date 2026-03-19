@@ -19,7 +19,16 @@ console = Console()
 def _get_market(market: str | None, symbol: str) -> str:
     """Get market, auto-detect from symbol if not specified"""
     if market:
-        return market
+        # Normalize market name to full form
+        market_map = {
+            "A": "A股",
+            "HK": "港股",
+            "US": "美股",
+            "A股": "A股",
+            "港股": "港股",
+            "美股": "美股",
+        }
+        return market_map.get(market, market)
     # Auto-detect market
     if len(symbol) == 5 and symbol.isdigit():
         return "港股"

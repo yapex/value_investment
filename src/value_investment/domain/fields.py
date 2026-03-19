@@ -187,18 +187,53 @@ class CustomFields:
     这些字段通过 Calculator 计算得出，不是直接从数据源获取。
     """
     
-    # 盈利能力指标
+    # 毛利率 = (营业收入 - 营业成本) / 营业收入 × 100%
+    # 单位：百分比 (%)
     GROSS_MARGIN = "gross_margin"
+    
+    # 营业利润率 = 营业利润 / 营业收入 × 100%
+    # 单位：百分比 (%)
     OPERATING_PROFIT_MARGIN = "operating_profit_margin"
+    
+    # 毛利润 = 营业收入 - 营业成本
+    # 单位：元
     GROSS_PROFIT = "gross_profit"
+    
+    # 存货周转率 = 营业成本 / 平均存货
+    # 单位：次/年
     INVENTORY_TURNOVER = "inventory_turnover"
     
-    # 投资回报指标
+    # ROIC = 税后净营业利润 / 投入资本 × 100%
+    # 单位：百分比 (%)
     ROIC = "roic"
     
-    # 市场特有指标
+    # 流通市值 = 流通股本 × 股价
+    # 单位：元
     CIRC_MARKET_CAP = "circ_market_cap"
+    
+    # 流通股本 = 总股本 - 限售股
+    # 单位：股
     CIRC_SHARES = "circ_shares"
+    
+    # 商誉，企业合并时购买方支付的超过可辨认资产公允价值的溢价
+    # 单位：元
+    GOODWILL = "goodwill"
+    
+    # 无形资产，专利权、商标权、土地使用权等非实物资产
+    # 单位：元
+    INTANGIBLE_ASSETS = "intangible_assets"
+    
+    # 长期借款，一年以上到期的借款/债券
+    # 单位：元
+    LONG_TERM_DEBT = "long_term_debt"
+    
+    # 短期借款，一年内到期的借款/债券
+    # 单位：元
+    SHORT_TERM_DEBT = "short_term_debt"
+    
+    # 归属母公司净利润，合并报表中去除非控股子公司损益后的净利润
+    # 单位：元
+    PARENT_NET_PROFIT = "parent_net_profit"
     
     @classmethod
     def all(cls) -> frozenset:
@@ -210,6 +245,9 @@ class CustomFields:
 
 # All valid fields for calculators
 ALL_FIELDS = IFRSFields.all() | CustomFields.all()
+
+
+
 
 
 def validate_fields(calculator_cls) -> None:

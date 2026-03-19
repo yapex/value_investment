@@ -56,6 +56,7 @@ class IFRSFields:
     ROA = "roa"
     GROSS_MARGIN = "gross_margin"
     NET_PROFIT_MARGIN = "net_profit_margin"
+    OPERATING_PROFIT_MARGIN = "operating_profit_margin"
     CURRENT_RATIO = "current_ratio"
     QUICK_RATIO = "quick_ratio"
     DEBT_RATIO = "debt_ratio"

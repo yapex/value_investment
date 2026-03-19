@@ -26,10 +26,16 @@ class ImpliedGrowth:
 
     name = "implied_growth"
 
-    # capital_expenditure 是可选的 - 如果没有，将使用 operating_cash_flow 作为 FCF 近似
+    # CAPEX 是可选的 - 如果没有，将使用 operating_cash_flow 作为 FCF 近似
+    # 注意：这会低估隐含增长率（因为 OCF > FCF）
     required_fields = {
         IFRSFields.OPERATING_CASH_FLOW,
         IFRSFields.MARKET_CAP,
+    }
+    
+    # 可选依赖 - CAPEX 用于计算准确的自由现金流
+    optional_fields = {
+        IFRSFields.CAPITAL_EXPENDITURE,
     }
 
     def __init__(
@@ -52,14 +58,15 @@ class ImpliedGrowth:
             results: {field: {year: value}}
                 必须包含:
                 - operating_cash_flow 或 free_cash_flow
-                - capital_expenditure (若无 free_cash_flow)
                 - market_cap
+                可选:
+                - capital_expenditure (如无，则使用 OCF 近似，计算结果会偏低)
 
         Returns:
             {year: implied_growth_rate}
         """
-        # 获取 FCF
-        fcf_data = self._get_fcf(results)
+        # 获取 FCF 和是否近似
+        fcf_data, is_approximated = self._get_fcf(results)
         if not fcf_data:
             return {}
 
@@ -81,29 +88,41 @@ class ImpliedGrowth:
             g = self._calculate_implied_growth(fcf, market_cap)
             if g is not None:
                 implied_growth[year] = g
+        
+        # 如果使用了近似，打印警告
+        if is_approximated:
+            import warnings as _warnings
+            _warnings.warn(
+                f"implied_growth: 使用 OCF 近似 FCF (无 CAPEX 数据)，"
+                f"隐含增长率可能偏低。FCF = OCF - CAPEX 更为准确。",
+                UserWarning,
+                stacklevel=2,
+            )
 
         return implied_growth
 
-    def _get_fcf(self, results: dict[str, dict[int, Any]]) -> dict[int, float]:
+    def _get_fcf(self, results: dict[str, dict[int, Any]]) -> tuple[dict[int, float], bool]:
         """获取自由现金流数据
-
-        优先使用 free_cash_flow，否则用 operating_cash_flow - capital_expenditure。
-        如果没有 capital_expenditure，则直接使用 operating_cash_flow（近似自由现金流）。
+        
+        Returns:
+            (fcf_data, is_approximated): 
+                - fcf_data: {year: fcf_value}
+                - is_approximated: 是否使用 OCF 近似（无 CAPEX）
         """
         # 优先使用 free_cash_flow
         if "free_cash_flow" in results:
             fcf_data = results["free_cash_flow"]
-            # 确保都是正数
-            return {year: val for year, val in fcf_data.items() if val > 0}
+            return {year: val for year, val in fcf_data.items() if val > 0}, False
 
-        # 使用 OCF - CAPEX
+        # 获取 OCF 和 CAPEX
         ocf_data = results.get(IFRSFields.OPERATING_CASH_FLOW, {})
         capex_data = results.get(IFRSFields.CAPITAL_EXPENDITURE, {})
-
-        # 如果没有 capex 数据，直接使用 OCF 作为 FCF 的近似
+        
+        # 如果没有 CAPEX，使用 OCF 作为近似
         if not capex_data:
-            return {year: val for year, val in ocf_data.items() if val > 0}
+            return {year: val for year, val in ocf_data.items() if val > 0}, True
 
+        # 正常计算 FCF = OCF - CAPEX
         fcf_data = {}
         for year in ocf_data:
             ocf = ocf_data.get(year, 0)
@@ -111,8 +130,8 @@ class ImpliedGrowth:
             fcf = ocf - capex
             if fcf > 0:
                 fcf_data[year] = fcf
-
-        return fcf_data
+        
+        return fcf_data, False
 
     def _calculate_implied_growth(
         self,

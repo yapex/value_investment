@@ -10,7 +10,7 @@ from rich.table import Table
 
 from value_investment.core.cache import SmartCache
 from value_investment.pipeline.api import PipelineAPI
-from value_investment.pipeline.fields import ALL_FIELDS
+from value_investment.domain.fields import ALL_FIELDS
 
 app = typer.Typer(name="v-invest", help="Value investment analysis tool")
 console = Console()

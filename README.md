@@ -1,84 +1,20 @@
 # value_investment
 
-A股/港股/美股基本面分析工具，基于 **tushare** (A股) + akshare (港股美股) 数据源。
+A 股/港股/美股基本面分析工具，支持动态计算器扩展。
 
-## 一分钟快速上手
+## 核心特性
 
-### 第一步：配置 Tushare Token
-
-A股数据需要配置 Tushare Token（环境变量）：
-
-```bash
-# 方式一：临时设置（当前终端有效）
-export TUSHARE_TOKEN=你的token
-
-# 方式二：写入 ~/.bashrc 或 ~/.zshrc（永久生效）
-echo 'export TUSHARE_TOKEN=你的token' >> ~/.bashrc  # 或 ~/.zshrc
-source ~/.bashrc
-```
-
-获取 Token: https://tushare.pro/user/token
-
-### 第二步：安装工具
-
-```bash
-# 使用 uv 安装（推荐）
-uv tool install -e .
-
-# 或使用 pip
-pip install -e .
-```
-
-### 第三步：开始分析
-
-```bash
-# 查看股票基本信息
-v-invest info 600519
-
-# 查看历史股价
-v-invest hist 600519 --end 20241231
-
-# 查看财务指标（当前值）
-v-invest indicator roe -s 600519 -m A
-
-# 查看财务指标（10年历史）
-v-invest indicator roe -s 600519 -m A -y 10
-
-# 查看利润表
-v-invest income 600519
-```
+- **三市场支持**：A 股、港股、美股统一接口
+- **Pipeline 架构**：基于 MessageBus 的数据处理流水线
+- **Calculator 插件**：动态加载自定义财务指标计算器
+- **IFRS 标准字段**：统一的字段命名规范
+- **智能缓存**：多级 TTL 缓存策略
 
 ---
 
-## 安装
+## 快速开始
 
-### 1. 克隆仓库
-
-```bash
-git clone https://github.com/yapex/value_investment.git
-cd value_investment
-```
-
-### 2. 配置 Tushare Token
-
-**A股数据必须配置 Tushare Token（环境变量）**：
-
-```bash
-# 方式一：临时设置（当前终端有效）
-export TUSHARE_TOKEN=你的token
-
-# 方式二：写入 ~/.bashrc 或 ~/.zshrc（永久生效）
-echo 'export TUSHARE_TOKEN=你的token' >> ~/.bashrc  # 或 ~/.zshrc
-source ~/.bashrc
-```
-
-获取 Token: https://tushare.pro/user/token
-
-> **说明**：
-> - A股数据：需要 Tushare Token
-> - 港股/美股数据：无需 Token（使用 akshare + yfinance）
-
-### 3. 安装工具
+### 安装
 
 ```bash
 # 使用 uv（推荐）
@@ -88,42 +24,128 @@ uv tool install -e .
 pip install -e .
 ```
 
-安装后，`v-invest` 命令将全局可用。
+### 查询数据
+
+```bash
+# 查询单个字段（支持 10 年历史）
+v-invest query 600519 --requires roe --years 10
+
+# 查询多个字段
+v-invest query 600519 --requires roe,roic,gross_margin --years 5
+
+# 指定市场
+v-invest query 00700 --requires roe --market HK --years 10
+v-invest query AAPL --requires net_profit_margin --market US --years 10
+
+# 输出格式（支持 markdown/json/plain）
+v-invest query 600519 --requires roe --format json
+```
+
+### 验证配置
+
+```bash
+# 验证字段配置是否正确（dry run，不获取数据）
+v-invest validate 600519 --requires implied_growth --market A
+```
+
+### 其他命令
+
+```bash
+# 列出所有可用字段
+v-invest fields
+
+# 按前缀筛选
+v-invest fields --prefix ro
+
+# 清除缓存
+v-invest cache-clear          # 清除所有缓存
+v-invest cache-clear 600519   # 清除指定股票缓存
+
+# 查看版本
+v-invest version
+```
 
 ---
 
-## 快速命令
+## 可用字段
 
-| 功能 | 命令 |
+| 类别 | 字段 |
 |------|------|
-| 基本信息 | `v-invest info 600519` |
-| 历史股价 | `v-invest hist 600519 --end 20241231` |
-| 利润表 | `v-invest income 600519` |
-| 资产负债表 | `v-invest balance 600519` |
-| 现金流量表 | `v-invest cashflow 600519` |
-| 财务指标 | `v-invest finind 600519` |
-| 指标当前值 | `v-invest indicator roe -s 600519 -m A` |
-| 指标10年历史 | `v-invest indicator roe -s 600519 -m A -y 10` |
-| PE百分位 | `v-invest indicator PEPct -s 600519 -m A -y 10` |
-| 股票筛选 | `v-invest scan --filter "roe 连续5年 ≥15%"` |
-| 查看缓存 | `v-invest scan-list` |
+| 盈利能力 | `roe`, `roa`, `roic`, `gross_margin`, `net_profit_margin`, `operating_profit_margin` |
+| 财务数据 | `total_revenue`, `net_profit`, `gross_profit`, `operating_profit`, `parent_net_profit` |
+| 资产负债表 | `total_assets`, `total_liabilities`, `total_equity`, `current_assets`, `current_liabilities` |
+| 现金流量 | `operating_cash_flow`, `investing_cash_flow`, `financing_cash_flow` |
+| 估值指标 | `pe_ratio`, `pb_ratio`, `market_cap`, `circ_market_cap` |
+| 周转率 | `inventory_turnover`, `asset_turnover`, `receivable_turnover` |
+| 增长指标 | `implied_growth` |
 
 ### 市场代码格式
 
 | 市场 | 代码格式 | 示例 | 参数 |
 |-----|---------|------|------|
-| A股 | 6位数字 | 600519 | `A` |
-| 港股 | 5位数字 | 00700 | `HK` |
+| A 股 | 6 位数字 | 600519 | `A` |
+| 港股 | 5 位数字 | 00700 | `HK` |
 | 美股 | 字母 | AAPL | `US` |
 
 ---
 
-## 常用选项
+## 自定义计算器
 
-- `-m` / `--market`：指定市场（A/HK/US）
-- `-y` / `--years`：指定年数（当 > 1 时返回多年历史数据）
-- `-s` / `--stock`：指定股票代码
-- `--refresh` / `-r`：强制刷新缓存
+在 `calculators/` 目录下创建 `calc_xxx.py` 文件即可扩展指标：
+
+```python
+# calculators/calc_my_metric.py
+
+name = "my_metric"
+
+required_fields = [
+    "total_revenue",
+    "net_profit",
+]
+
+def calculate(results):
+    if "total_revenue" not in results or "net_profit" not in results:
+        return None
+    return results["net_profit"] / results["total_revenue"] * 100
+```
+
+加载外部计算器：
+
+```bash
+v-invest query 600519 --requires my_metric --calculator ./my_calc.py
+```
+
+---
+
+## 架构
+
+```
+value_investment/
+├── pipeline/          # Pipeline 架构
+│   ├── api.py        # PipelineAPI（高层接口）
+│   ├── bus.py        # MessageBus（消息总线）
+│   ├── container.py  # Container（依赖注入）
+│   └── validator.py  # 验证器
+├── handlers/         # 市场处理器
+│   ├── a_share.py    # A 股
+│   ├── hk_share.py   # 港股
+│   └── us_share.py   # 美股
+├── domain/
+│   └── fields.py     # IFRS 标准字段定义
+├── core/
+│   ├── cache.py      # 智能缓存
+│   └── types.py     # 类型定义
+└── calculators/      # 内置计算器
+    ├── calc_gross_profit.py
+    ├── calc_roic.py
+    └── ...
+```
+
+### 数据流
+
+```
+用户请求 → PipelineAPI → MessageBus → Handler（自动路由）→ Calculator → 结果
+```
 
 ---
 
@@ -131,11 +153,11 @@ pip install -e .
 
 | 数据类型 | TTL |
 |---------|-----|
-| 个股信息 | 次日凌晨 (A股) / 次年6月底 (港美) |
-| 历史价格 | 1年 |
-| 财务报表 | 次年6月底 |
+| 个股信息 | 次日凌晨 (A 股) / 次年 6 月底 (港/美) |
+| 历史价格 | 1 年 |
+| 财务报表 | 次年 6 月底 |
 
-缓存支持范围复用：缓存[2015-2024]可服务于[2020-2024]查询。
+缓存支持范围复用：缓存 [2015-2024] 可服务于 [2020-2024] 查询。
 
 ---
 
@@ -149,7 +171,11 @@ uv sync --group dev
 uv run python -m pytest tests/ -v
 
 # 启动 Python 交互
-uv run python -c "from value_investment import ValueInvestment; vi = ValueInvestment()"
+uv run python -c "from value_investment.pipeline.api import PipelineAPI; api = PipelineAPI()"
 ```
 
-> 注意：`uv run` 需要在项目根目录执行。
+---
+
+## 版本
+
+当前版本：**0.3.0**

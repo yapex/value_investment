@@ -1,24 +1,116 @@
-# Pipeline 架构速查
+# Pipeline 架构详解
 
-> 面向 Agent 的精简指南，快速上手 Pipeline 开发。
+> 本文档是 [开发者指南](./developer-guide.md) 的详细参考，涵盖架构细节、设计决策和实现细节。
 
 ---
 
-## 1. 核心架构
+## 目录
+
+1. [核心组件](#1-核心组件)
+2. [数据流](#2-数据流)
+3. [9 Handler 矩阵](#3-9-handler-矩阵)
+4. [字段体系](#4-字段体系)
+5. [Calculator 机制](#5-calculator-机制)
+6. [依赖注入](#6-依赖注入)
+7. [验证机制](#7-验证机制)
+
+---
+
+## 1. 核心组件
+
+### 1.1 PipelineAPI
+
+高层入口，负责：
+- 接收用户请求
+- 扩展字段依赖
+- 调用 MessageBus
+- 应用 Calculator
+
+```python
+from value_investment.pipeline.api import PipelineAPI
+
+api = PipelineAPI()
+result = await api.get_data(
+    symbol="600519",
+    fields=["roe", "roic"],
+    end="2024",
+    years=10,
+    market="A股",
+)
+```
+
+### 1.2 MessageBus
+
+消息总线，负责 Handler 的调度：
+
+```python
+class MessageBus:
+    def process(self, message: Message) -> Any:
+        while message.require:
+            for handler in self.handlers:
+                await handler.handle(message)
+```
+
+特点：
+- **多轮执行**：直到 `message.require` 为空或无进展
+- **并行处理**：所有 Handler 都有机会处理消息
+
+### 1.3 Message
+
+消息对象，携带请求上下文：
+
+```python
+@dataclass
+class Message:
+    symbol: str           # 股票代码
+    market: str           # 市场 (A股/港股/美股)
+    end: str             # 结束日期
+    years: int           # 年数
+    require: set[str]    # 需要的字段
+    results: dict         # 结果 {field: {year: value}}
+```
+
+### 1.4 Container
+
+依赖注入容器，使用 `dependency-injector`：
+
+```python
+class Container(containers.DeclarativeContainer):
+    bus = providers.Singleton(MessageBus)
+    tushare_provider = providers.Singleton(TushareProvider, ...)
+    # ... 9 个 Handler
+```
+
+---
+
+## 2. 数据流
 
 ```
-用户请求字段
+用户请求
     ↓
-PipelineAPI.get_data(symbol, fields)
+PipelineAPI.get_data()
     ↓
-MessageBus.process(message)  ← 9 Handler 并行处理
+┌─────────────────────────────────────────┐
+│  Step 1: 扩展字段依赖                    │
+│  Calculator.required_fields → require   │
+└─────────────────────────────────────────┘
     ↓
-Calculator 计算派生字段
+┌─────────────────────────────────────────┐
+│  Step 2: MessageBus.process()           │
+│  多轮执行，每个 Handler 尝试处理消息    │
+└─────────────────────────────────────────┘
     ↓
-返回结果
+┌─────────────────────────────────────────┐
+│  Step 3: 应用 Calculator                │
+│  根据 results 计算派生字段              │
+└─────────────────────────────────────────┘
+    ↓
+返回 {field: {year: value}}
 ```
 
-**9 Handler 矩阵** (3 市场 × 3 数据类型):
+---
+
+## 3. 9 Handler 矩阵
 
 | 市场 | 财务报表 | 财务指标 | 市值数据 |
 |-----|---------|---------|---------|
@@ -26,140 +118,190 @@ Calculator 计算派生字段
 | 港股 | HKStatement | HKIndicator | HKMarket |
 | 美股 | USStatement | USIndicator | USMarket |
 
----
-
-## 2. 新增字段
-
-### 2.1 原始字段（从数据源获取）
-
-1. **定义字段**: `src/value_investment/pipeline/fields.py`
-   ```python
-   class IFRSFields:
-       NEW_FIELD = "new_field"
-   ```
-
-2. **添加映射**: `src/value_investment/data/mapper.py`
-   ```python
-   CORE_FIELD_MAPPING = {
-       "new_field": {
-           "A股": "字段名",
-           "港股": "字段名",
-           "美股": "fieldName",
-       }
-   }
-   ```
-
-3. **Handler 支持**: 在对应 Handler 的字段集合中添加
-   ```python
-   # AStockStatementHandler
-   A_STOCK_STATEMENT_FIELDS = {..., IFRSFields.NEW_FIELD}
-   ```
-
-### 2.2 派生字段（通过计算）
-
-**三步完成**:
+### 3.1 Handler 结构
 
 ```python
-# 1. 创建 Calculator 文件
-# src/value_investment/pipeline/calculators/xxx.py
-
-from value_investment.pipeline.calculators import calculator
-from value_investment.pipeline.fields import IFRSFields
-
-@calculator  # ← 必须！
-class ImpliedGrowth:
-    name = IFRSFields.XXX
-    required_fields = {
-        IFRSFields.FIELD_A,
-        IFRSFields.FIELD_B,
-    }
+class BaseHandler:
+    target_market: str        # 目标市场
+    data_type: str            # 数据类型
+    can_handle: set[str]      # 能处理的字段
+    provider: DataProvider    # 数据源
     
-    def calculate(self, results):
-        field_a = results.get(IFRSFields.FIELD_A, {})
-        field_b = results.get(IFRSFields.FIELD_B, {})
-        return {year: field_a.get(year, 0) / field_b.get(year, 1)
-                for year in field_a}
+    async def handle(self, message: Message) -> None:
+        # 检查是否目标市场
+        # 检查是否有需要的字段
+        # 调用 provider 获取数据
+        # 填充 message.results
 ```
 
-```bash
-# 2. 运行测试自动验证依赖链
-uv run python -m pytest tests/pipeline/test_validator.py -v
+### 3.2 Handler 文件位置
 
-# 3. 完成！无需手动注册
 ```
+src/value_investment/
+├── handlers/
+│   ├── a_share.py       # A股 3 Handler
+│   ├── hk_share.py       # 港股 3 Handler
+│   └── us_share.py       # 美股 3 Handler
+```
+
+### 3.3 数据类型对应
+
+| Handler | 数据来源 | 说明 |
+|---------|---------|------|
+| StatementHandler | `fetch_financial_statement()` | 资产负债表、利润表、现金流量表 |
+| IndicatorHandler | `fetch_financial_indicator()` | ROE、ROA、毛利率等指标 |
+| MarketHandler | `fetch_market_data()` | 市值、PE、PB |
 
 ---
 
-## 3. 关键文件速查
+## 4. 字段体系
 
-| 文件 | 用途 |
-|-----|------|
-| `pipeline/fields.py` | 定义标准字段 `IFRSFields` |
-| `data/mapper.py` | 字段映射 `CORE_FIELD_MAPPING` |
-| `pipeline/calculators/*.py` | 派生字段计算器 |
-| `pipeline/handlers/*_handler.py` | 9 个 Handler 实现 |
-| `pipeline/container.py` | 依赖注入容器，注册 Handler |
-| `tests/pipeline/test_validator.py` | 自动验证依赖链 |
+### 4.1 IFRSFields
 
----
-
-## 4. 常见操作
-
-### 添加新 Calculator
-```bash
-# 创建文件 → 加 @calculator → 运行测试
-uv run python -m pytest tests/pipeline/test_validator.py
-```
-
-### 验证依赖链
-```bash
-# 检查所有 Calculator 的依赖字段是否有 Handler 支持
-uv run python -m pytest tests/pipeline/test_validator.py -v
-```
-
-### 运行测试
-```bash
-# 全部测试
-uv run python -m pytest tests/pipeline/ -v
-
-# 单个 Calculator
-uv run python -m pytest tests/pipeline/test_xxx_calculator.py -v
-```
-
----
-
-## 5. 注意事项
-
-1. **必须加 `@calculator`** - 否则 Calculator 不会被注册
-2. **依赖链自动验证** - 测试失败会提示缺少的 Handler
-3. **无需手动注册** - `@calculator` 自动完成
-4. **字段命名** - 统一使用 `snake_case`
-
----
-
-## 附录：完整字段列表
+国际标准字段，定义在 `domain/fields.py`：
 
 ```python
-# 资产负债表
-total_assets, total_liabilities, total_equity
-current_assets, current_liabilities
-cash_and_equivalents, inventory
-accounts_receivable, accounts_payable
-
-# 利润表
-total_revenue, net_profit, operating_profit
-gross_profit, operating_cost
-
-# 现金流量表
-operating_cash_flow, investing_cash_flow
-financing_cash_flow, capital_expenditure
-
-# 指标
-roe, roa, gross_margin, net_profit_margin
-current_ratio, quick_ratio, debt_ratio
-asset_turnover, inventory_turnover, receivable_turnover
-
-# 市场数据
-pe_ratio, pb_ratio, market_cap
-basic_eps, diluted_eps, book_value_per_share
+class IFRSFields(metaclass=IFRSFieldsMeta):
+    """已冻结，禁止添加新字段"""
+    TOTAL_ASSETS = "total_assets"
+    TOTAL_EQUITY = "total_equity"
+    NET_PROFIT = "net_profit"
+    # ...
 ```
+
+**规则**：
+- 冻结后禁止添加新字段
+- 新字段必须添加到 `CustomFields`
+
+### 4.2 CustomFields
+
+自定义字段，通过 Calculator 计算：
+
+```python
+class CustomFields:
+    ROIC = "roic"
+    GROSS_MARGIN = "gross_margin"
+    # ...
+```
+
+### 4.3 字段分类
+
+| 类型 | 来源 | 示例 |
+|-----|------|------|
+| 原始字段 | Provider 直接获取 | `total_assets`, `net_profit` |
+| 指标字段 | Provider 计算返回 | `roe`, `pe_ratio` |
+| 派生字段 | Calculator 计算 | `roic`, `gross_margin` |
+
+---
+
+## 5. Calculator 机制
+
+### 5.1 Calculator 文件
+
+```python
+# calculators/calc_xxx.py
+
+name = "my_metric"
+required_fields = ["field_a", "field_b"]
+
+def calculate(results):
+    # results: {field: {year: value}}
+    a = results.get("field_a", {})
+    b = results.get("field_b", {})
+    return {
+        year: a.get(year, 0) / b.get(year, 1)
+        for year in a
+    }
+```
+
+### 5.2 加载机制
+
+```
+load_builtin_calculators()
+    ↓
+1. 包内 calculators/ (package://)
+2. 项目 calculators/ (项目根目录)
+3. 用户 calculators/ ({cwd}/calculators)
+```
+
+优先级：3 > 2 > 1（后者覆盖前者）
+
+### 5.3 依赖扩展
+
+```python
+# PipelineAPI._expand_required_fields()
+for field in message.require:
+    if field in CALCULATOR_MAP:
+        message.require.update(
+            CALCULATOR_MAP[field].required_fields
+        )
+```
+
+---
+
+## 6. 依赖注入
+
+### 6.1 Provider 注入
+
+```
+Container
+    ├── tushare_provider → TushareProvider (A股)
+    ├── hk_provider → HKProvider (港股)
+    └── us_provider → USProvider (美股)
+```
+
+### 6.2 Handler 注入
+
+```
+Container
+    ├── a_share_statement_handler → AShareStatementHandler(tushare_provider)
+    ├── a_share_indicator_handler → AShareIndicatorHandler(tushare_provider)
+    └── ...
+```
+
+### 6.3 Container 单例
+
+```python
+Container._instance = None  # 类变量
+container = Container.create()  # 创建或返回单例
+```
+
+---
+
+## 7. 验证机制
+
+### 7.1 Validator
+
+```python
+from value_investment.pipeline.validator import validate_pipeline
+
+report = validate_pipeline(
+    fields=["roic", "roe"],
+    symbol="600519",
+    market="A股",
+)
+print(report.summary())
+```
+
+### 7.2 验证内容
+
+| 检查项 | 说明 |
+|-------|------|
+| 字段注册 | 字段是否在 `ALL_FIELDS` 中 |
+| Handler 支持 | 是否有 Handler 能提供字段 |
+| Calculator 依赖 | Calculator 的 `required_fields` 是否满足 |
+| 市场覆盖 | 该市场的 Handler 是否完整 |
+
+### 7.3 CLI 验证
+
+```bash
+# Dry run，不获取数据
+v-invest validate 600519 --requires implied_growth
+```
+
+---
+
+## 相关文档
+
+- [开发者指南](./developer-guide.md) - 快速上手
+- [IFRS 标准字段](./ifrs_standard_fields.md) - 字段定义

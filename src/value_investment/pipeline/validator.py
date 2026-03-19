@@ -162,7 +162,9 @@ def validate_fields_registration(
     fields: list[str],
 ) -> dict[str, FieldStatus]:
     """检查字段是否在 ALL_FIELDS 中注册"""
-    from value_investment.domain.calculators import _CALCULATOR_MAP
+    from value_investment.calculator_plugin import get_calculators
+
+    _CALCULATOR_MAP = {calc.name: calc for calc in get_calculators()}
     
     statuses = {}
     
@@ -202,7 +204,9 @@ def check_field_consistency(
     1. Handler 声明了能力，但字段未在 ALL_FIELDS 中注册 (警告)
     2. 字段在 ALL_FIELDS 中注册，但没有任何 Handler 能处理 (错误)
     """
-    from value_investment.domain.calculators import _CALCULATOR_MAP
+    from value_investment.calculator_plugin import get_calculators
+
+    _CALCULATOR_MAP = {calc.name: calc for calc in get_calculators()}
     
     inconsistencies = []
     
@@ -241,7 +245,9 @@ def expand_required_fields(
     fields: list[str],
 ) -> tuple[set[str], list[str]]:
     """扩展字段以包含计算器依赖"""
-    from value_investment.domain.calculators import _CALCULATOR_MAP
+    from value_investment.calculator_plugin import get_calculators
+
+    _CALCULATOR_MAP = {calc.name: calc for calc in get_calculators()}
     
     expanded = set(fields)
     calculators_to_run = []
@@ -294,7 +300,9 @@ def validate_calculators_fields(
     handler_fields: set[str],
 ) -> dict[str, CalculatorStatus]:
     """验证计算器是否能运行"""
-    from value_investment.domain.calculators import _CALCULATOR_MAP
+    from value_investment.calculator_plugin import get_calculators
+
+    _CALCULATOR_MAP = {calc.name: calc for calc in get_calculators()}
     
     statuses = {}
     
@@ -330,7 +338,9 @@ def validate_pipeline(
     完整 pipeline 验证
     """
     from value_investment.pipeline.container import Container
-    from value_investment.domain.calculators import _CALCULATOR_MAP
+    from value_investment.calculator_plugin import get_calculators
+
+    _CALCULATOR_MAP = {calc.name: calc for calc in get_calculators()}
 
     # 重置并获取 container
     Container._instance = None

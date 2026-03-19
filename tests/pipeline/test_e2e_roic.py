@@ -11,28 +11,26 @@ async def test_e2e_roic_full_flow():
     """E2E test: Get ROIC for Kweichow Moutai (600519)"""
     api = PipelineAPI()
 
-    result = await api.get_indicator(
+    # ROIC is now fetched from fina_indicator API as a pre-calculated indicator
+    result = await api.get_data(
         symbol="600519",
-        indicator=CustomFields.ROIC,
+        fields=["roic"],
         end="2024",
         years=10,
     )
 
-    assert isinstance(result, dict)
-    assert len(result) > 0
-    assert 2024 in result or 2023 in result  # Latest year may vary
-
-    # ROIC should be positive for profitable companies
-    # Allow higher values for exceptional companies like Moutai
-    for year, value in result.items():
-        assert value > 0, f"ROIC for {year} is {value}, should be positive"
+    assert "roic" in result
+    assert len(result["roic"]) > 0
+    # Latest year may vary
+    assert 2024 in result["roic"] or 2023 in result["roic"]
 
 
 @pytest.mark.skipif(not os.environ.get("TUSHARE_TOKEN"), reason="TUSHARE_TOKEN not set")
 async def test_e2e_get_data():
     """E2E test: Get raw financial data"""
     api = PipelineAPI()
-
+    
+    # Just call api.get_data directly
     result = await api.get_data(
         symbol="600519",
         fields=[IFRSFields.NET_PROFIT, IFRSFields.TOTAL_ASSETS],

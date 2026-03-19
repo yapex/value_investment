@@ -3,7 +3,7 @@ from typing import Any
 
 from value_investment.pipeline.bus.message import Message
 from value_investment.pipeline.container import Container
-from value_investment.pipeline.fields import CustomFields
+from value_investment.pipeline.calculators import CALCULATOR_MAP
 
 
 class PipelineAPI:
@@ -11,7 +11,7 @@ class PipelineAPI:
 
     Usage:
         api = PipelineAPI()
-        result = await api.get_indicator("600519", "roic", end="2024", years=10)
+        result = await api.get_data("600519", ["roic", "roe"], end="2024", years=10)
     """
 
     def __init__(self, container: Container | None = None):
@@ -21,56 +21,6 @@ class PipelineAPI:
     def container(self) -> Container:
         return self._container
 
-    async def get_indicator(
-        self,
-        symbol: str,
-        indicator: str,
-        end: str = "2024",
-        years: int = 10,
-        market: str | None = None,
-    ) -> dict[int, float]:
-        """Get financial indicator
-
-        Args:
-            symbol: Stock code
-            indicator: Indicator name (e.g., "roic", "roe")
-            end: End year
-            years: Number of years
-            market: Market (auto-detected if None)
-
-        Returns:
-            {year: indicator_value}
-
-        Raises:
-            ValueError: If indicator unknown or fields missing
-        """
-        # 自动检测市场
-        if market is None:
-            market = self._detect_market(symbol)
-
-        # 获取计算器
-        calculator = self._get_calculator(indicator)
-
-        # 创建消息
-        message = Message(
-            symbol=symbol,
-            market=market,
-            end=end,
-            years=years,
-            require=calculator.required_fields.copy(),
-        )
-
-        # 通过消息总线获取数据
-        await self._container.bus().process(message)
-
-        # 检查是否所有字段都获取到了
-        if message.require:
-            missing = message.require
-            raise ValueError(f"Missing fields: {missing}")
-
-        # 计算指标
-        return calculator.calculate(message.results)
-
     async def get_data(
         self,
         symbol: str,
@@ -79,7 +29,7 @@ class PipelineAPI:
         years: int = 10,
         market: str | None = None,
     ) -> dict[str, dict[int, Any]]:
-        """Get raw financial data (no calculation)
+        """Get financial data with calculated fields
 
         Args:
             symbol: Stock code
@@ -107,8 +57,11 @@ class PipelineAPI:
             require=set(fields),
         )
 
-        # 通过消息总线获取数据
+        # 通过消息总线获取数据（Handler 自动路由）
         await self._container.bus().process(message)
+
+        # 计算派生字段 (Calculator)
+        self._apply_calculators(message)
 
         # 检查是否所有字段都获取到了
         if message.require:
@@ -116,6 +69,28 @@ class PipelineAPI:
             raise ValueError(f"Missing fields: {missing}")
 
         return message.results
+
+    def _apply_calculators(self, message: Message) -> None:
+        """Apply calculators for derived fields
+
+        Args:
+            message: Message with require set and results dict
+        """
+        # 找出需要计算的字段
+        fields_to_calculate = message.require & set(CALCULATOR_MAP.keys())
+
+        for field in fields_to_calculate:
+            calculator = CALCULATOR_MAP[field]
+            # 检查 required_fields 是否都已获取
+            missing_required = calculator.required_fields - set(message.results.keys())
+            if missing_required:
+                continue
+
+            # 执行计算
+            calculated = calculator.calculate(message.results)
+            if calculated:
+                message.results[field] = calculated
+                message.require.discard(field)
 
     def _detect_market(self, symbol: str) -> str:
         """Detect market from symbol"""
@@ -128,19 +103,3 @@ class PipelineAPI:
         # 美股: 字母
         else:
             return "美股"
-
-    def _get_calculator(self, name: str):
-        """Get calculator by name"""
-        from value_investment.pipeline.calculators.roic import ROICCalculator
-
-        calculators = {
-            CustomFields.ROIC: ROICCalculator,
-        }
-
-        if name not in calculators:
-            raise ValueError(
-                f"Unknown indicator: {name}. "
-                f"Available: {list(calculators.keys())}"
-            )
-
-        return calculators[name]()

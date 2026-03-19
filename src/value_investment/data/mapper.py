@@ -290,13 +290,13 @@ CUSTOM_FIELD_MAPPING: dict[str, dict[str, str]] = {
     "surplus_reserve": {"A股": "surplus_rese"},  # Tushare 使用 surplus_rese
     "undistributed_profit": {"A股": "undist_profit"},  # Tushare 使用 undist_profit
     
-    # 利润表
-    "total_revenue": {"A股": "total_operate_income"},  # Tushare 使用 total_operate_income
-    "operating_income": {"A股": "operate_income"},  # Tushare 使用 operate_income
-    "net_profit": {"A股": "netprofit"},  # Tushare 使用 netprofit
-    "parent_net_profit": {"A股": "parent_netprofit"},  # Tushare 使用 parent_netprofit
-    "total_operating_cost": {"A股": "total_operate_cost"},  # Tushare 使用 total_operate_cost
-    "operating_cost": {"A股": "operate_cost"},  # Tushare 使用 operate_cost
+    # 利润表 - 实际验证的 Tushare API 列名
+    # 基于 Tushare income() API 实际返回的列名
+    "total_revenue": {"A股": "total_revenue"},  # Tushare 使用 total_revenue
+    "net_profit": {"A股": "n_income"},  # Tushare 使用 n_income (净利润)
+    "continued_net_profit": {"A股": "continued_net_profit"},  # Tushare 使用 continued_net_profit
+    "parent_net_profit": {"A股": "n_income_attr_p"},  # Tushare 使用 n_income_attr_p (归属母公司净利润)
+    "operating_cost": {"A股": "oper_cost"},  # Tushare 使用 oper_cost
     "operating_profit": {"A股": "operate_profit"},  # Tushare 使用 operate_profit
     "total_profit": {"A股": "total_profit"},  # Tushare 使用 total_profit
     "income_tax": {"A股": "income_tax"},  # Tushare 使用 income_tax
@@ -305,7 +305,7 @@ CUSTOM_FIELD_MAPPING: dict[str, dict[str, str]] = {
     "operating_cash_flow": {"A股": "n_cashflow_act"},  # Tushare 使用 n_cashflow_act
     "investing_cash_flow": {"A股": "n_cashflow_inv_act"},  # Tushare 使用 n_cashflow_inv_act
     "financing_cash_flow": {"A股": "n_cash_flows_fnc_act"},  # Tushare 使用 n_cash_flows_fnc_act
-    "capital_expenditure": {"A股": "construct_long_asset"},  # Tushare 使用 construct_long_asset
+    "capital_expenditure": {"A股": "c_pay_acq_const_fiolta"},  # Tushare 使用 c_pay_acq_const_fiolta (购建固定资产等支付的现金)
 }
 
 

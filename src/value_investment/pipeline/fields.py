@@ -81,10 +81,6 @@ class IFRSFields:
 class CustomFields:
     """自定义字段 (Custom Calculated Fields)"""
 
-    # ROIC - 投入资本回报率
-    # Formula: Operating Profit / (Total Assets - Cash - Current Liabilities)
-    ROIC = "roic"
-
     @classmethod
     def all(cls) -> frozenset:
         """Get all custom fields as a set"""

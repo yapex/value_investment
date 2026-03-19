@@ -56,7 +56,6 @@ class IFRSFields:
     ROA = "roa"
     GROSS_MARGIN = "gross_margin"
     NET_PROFIT_MARGIN = "net_profit_margin"
-    OPERATING_PROFIT_MARGIN = "operating_profit_margin"
     CURRENT_RATIO = "current_ratio"
     QUICK_RATIO = "quick_ratio"
     DEBT_RATIO = "debt_ratio"
@@ -80,8 +79,15 @@ class IFRSFields:
 
 
 class CustomFields:
-    """自定义字段 (Custom Calculated Fields)"""
-
+    """自定义字段 (Custom Calculated Fields)
+    
+    这些字段通过 Calculator 计算得出，不是直接从数据源获取。
+    命名规范：使用 snake_case，清晰描述计算逻辑。
+    """
+    
+    # === 利润率指标 (Profit Margins) ===
+    OPERATING_PROFIT_MARGIN = "operating_profit_margin"  # 营业利润率 = 营业利润 / 营业收入
+    
     @classmethod
     def all(cls) -> frozenset:
         """Get all custom fields as a set"""

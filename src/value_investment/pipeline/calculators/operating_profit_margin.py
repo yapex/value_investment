@@ -2,7 +2,7 @@
 from typing import Any
 
 from value_investment.pipeline.calculators import calculator
-from value_investment.pipeline.fields import IFRSFields
+from value_investment.pipeline.fields import CustomFields
 
 
 @calculator
@@ -16,11 +16,11 @@ class OperatingProfitMargin:
     衡量企业营业利润占营业收入的比例，反映主营业务的盈利能力。
     """
 
-    name = IFRSFields.OPERATING_PROFIT_MARGIN
+    name = CustomFields.OPERATING_PROFIT_MARGIN
 
     required_fields = {
-        IFRSFields.OPERATING_PROFIT,  # 营业利润
-        IFRSFields.TOTAL_REVENUE,     # 营业总收入
+        "operating_profit",  # 营业利润
+        "total_revenue",     # 营业总收入
     }
 
     def calculate(self, results: dict[str, dict[int, Any]]) -> dict[int, float]:
@@ -32,8 +32,8 @@ class OperatingProfitMargin:
         Returns:
             {year: operating_profit_margin_percentage}
         """
-        operating_profit = results.get(IFRSFields.OPERATING_PROFIT, {})
-        revenue = results.get(IFRSFields.TOTAL_REVENUE, {})
+        operating_profit = results.get("operating_profit", {})
+        revenue = results.get("total_revenue", {})
         
         # Calculate margin for each year
         margin = {}

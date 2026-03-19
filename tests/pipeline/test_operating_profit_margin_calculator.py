@@ -1,26 +1,26 @@
 """Tests for OperatingProfitMargin"""
 from value_investment.pipeline.calculators.operating_profit_margin import OperatingProfitMargin
-from value_investment.pipeline.fields import IFRSFields
+from value_investment.pipeline.fields import CustomFields
 
 
 class TestOperatingProfitMargin:
     def test_required_fields(self):
         """包含必要的依赖字段"""
         calc = OperatingProfitMargin()
-        assert IFRSFields.OPERATING_PROFIT in calc.required_fields
-        assert IFRSFields.TOTAL_REVENUE in calc.required_fields
+        assert "operating_profit" in calc.required_fields
+        assert "total_revenue" in calc.required_fields
 
     def test_name(self):
         """字段名为 operating_profit_margin"""
         calc = OperatingProfitMargin()
-        assert calc.name == IFRSFields.OPERATING_PROFIT_MARGIN
+        assert calc.name == CustomFields.OPERATING_PROFIT_MARGIN
 
     def test_calculate_basic(self):
         """基本计算：营业利润/营业收入"""
         calc = OperatingProfitMargin()
         results = {
-            IFRSFields.OPERATING_PROFIT: {2024: 50e8, 2023: 45e8},
-            IFRSFields.TOTAL_REVENUE: {2024: 500e8, 2023: 450e8},
+            "operating_profit": {2024: 50e8, 2023: 45e8},
+            "total_revenue": {2024: 500e8, 2023: 450e8},
         }
 
         calculated = calc.calculate(results)
@@ -35,8 +35,8 @@ class TestOperatingProfitMargin:
         """不同年份不同利润率"""
         calc = OperatingProfitMargin()
         results = {
-            IFRSFields.OPERATING_PROFIT: {2024: 100e8, 2023: 50e8},
-            IFRSFields.TOTAL_REVENUE: {2024: 500e8, 2023: 400e8},
+            "operating_profit": {2024: 100e8, 2023: 50e8},
+            "total_revenue": {2024: 500e8, 2023: 400e8},
         }
 
         calculated = calc.calculate(results)
@@ -50,8 +50,8 @@ class TestOperatingProfitMargin:
         """营收为零时不计算"""
         calc = OperatingProfitMargin()
         results = {
-            IFRSFields.OPERATING_PROFIT: {2024: 50e8},
-            IFRSFields.TOTAL_REVENUE: {2024: 0},
+            "operating_profit": {2024: 50e8},
+            "total_revenue": {2024: 0},
         }
 
         calculated = calc.calculate(results)
@@ -63,7 +63,7 @@ class TestOperatingProfitMargin:
         """缺少营业利润返回空"""
         calc = OperatingProfitMargin()
         results = {
-            IFRSFields.TOTAL_REVENUE: {2024: 500e8},
+            "total_revenue": {2024: 500e8},
         }
 
         calculated = calc.calculate(results)
@@ -74,7 +74,7 @@ class TestOperatingProfitMargin:
         """缺少营业收入返回空"""
         calc = OperatingProfitMargin()
         results = {
-            IFRSFields.OPERATING_PROFIT: {2024: 50e8},
+            "operating_profit": {2024: 50e8},
         }
 
         calculated = calc.calculate(results)

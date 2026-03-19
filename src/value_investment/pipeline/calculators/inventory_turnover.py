@@ -1,9 +1,11 @@
 """Inventory Turnover Calculator"""
 from typing import Any
 
+from value_investment.pipeline.calculators import calculator
 from value_investment.pipeline.fields import IFRSFields
 
 
+@calculator
 class InventoryTurnoverCalculator:
     """Inventory Turnover Calculator
     

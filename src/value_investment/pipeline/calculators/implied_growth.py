@@ -1,9 +1,11 @@
 """Implied Growth Rate Calculator based on DCF model"""
 from typing import Any
 
+from value_investment.pipeline.calculators import calculator
 from value_investment.pipeline.fields import IFRSFields
 
 
+@calculator
 class ImpliedGrowthCalculator:
     """Implied Growth Rate Calculator
 

@@ -2,7 +2,7 @@
 from typing import Any
 
 from value_investment.pipeline.calculators import calculator
-from value_investment.pipeline.fields import IFRSFields
+from value_investment.pipeline.fields import CustomFields, IFRSFields
 
 
 @calculator
@@ -12,7 +12,7 @@ class GrossProfit:
     Gross Profit = Total Revenue - Operating Cost
     """
 
-    name = IFRSFields.GROSS_PROFIT
+    name = CustomFields.GROSS_PROFIT
 
     required_fields = {
         IFRSFields.TOTAL_REVENUE,

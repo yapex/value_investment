@@ -90,7 +90,6 @@ class TushareFieldMapper:
             IFRSFields.TOTAL_REVENUE,
             IFRSFields.NET_PROFIT,
             IFRSFields.OPERATING_PROFIT,
-            IFRSFields.GROSS_PROFIT,
             IFRSFields.OPERATING_COST,
         }
 

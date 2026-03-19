@@ -26,11 +26,6 @@ CORE_FIELD_MAPPING: dict[str, dict[str, str]] = {
         "港股": "营业溢利",
         "美股": "operatingIncome",
     },
-    "gross_profit": {
-        "A股": "毛利",
-        "港股": "毛利",
-        "美股": "grossProfit",
-    },
     "operating_cost": {
         "A股": "营业成本",
         "港股": "已售存货成本",
@@ -211,11 +206,6 @@ CORE_FIELD_MAPPING: dict[str, dict[str, str]] = {
         "A股": "总资产周转率(次)",
         "港股": "总资产周转率",
         "美股": "assetTurnover",
-    },
-    "inventory_turnover": {
-        "A股": "存货周转率(次)",
-        "港股": "存货周转率",
-        "美股": "inventoryTurnover",
     },
     "receivable_turnover": {
         "A股": "应收账款周转率(次)",

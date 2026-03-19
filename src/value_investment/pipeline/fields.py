@@ -9,19 +9,48 @@ Usage:
 
     class ROICCalculator:
         required_fields = {
-            IFRSFields.OPERATING_PROFIT,
-            IFRSFields.TOTAL_ASSETS,
-            IFRSFields.CASH_AND_EQUIVALENTS,
-            IFRSFields.CURRENT_LIABILITIES,
+            IFRSFields.NET_PROFIT,
+            IFRSFields.TOTAL_EQUITY,
         }
+
+Constraints:
+    - IFRSFields 是冻结的，不允许添加新字段
+    - 新字段必须添加到 CustomFields
+    - 通过 test_ifrs_fields_lock.py 测试锁定
 """
 
 from value_investment.data.mapper import CORE_FIELD_MAPPING
 
 
-class IFRSFields:
-    """国际标准字段 (IFRS Standard Fields)"""
+class IFRSFieldsMeta(type):
+    """IFRSFields 元类，用于阻止动态添加新字段"""
+    
+    def __setattr__(cls, name, value):
+        # 检查是否是尝试添加新的字段常量
+        if (name.startswith('_') or name in ('all',)) and name != '_frozen':
+            # 允许内部属性和方法
+            super().__setattr__(name, value)
+        elif name.isupper():
+            # 大写名称是常量，冻结后不允许添加
+            if getattr(cls, '_frozen', False):
+                raise AttributeError(
+                    f"IFRSFields 已冻结，禁止添加新字段 '{name}'。"
+                    f"新字段必须添加到 CustomFields。"
+                )
+            super().__setattr__(name, value)
+        else:
+            super().__setattr__(name, value)
 
+
+class IFRSFields(metaclass=IFRSFieldsMeta):
+    """国际标准字段 (IFRS Standard Fields)
+    
+    注意：此类在模块加载完成后会自动冻结，任何尝试添加新字段的操作都会失败。
+    """
+    
+    # 冻结标记，模块加载完成后设为 True
+    _frozen: bool = False
+    
     # --- 资产负债表 (Balance Sheet) ---
     TOTAL_ASSETS = "total_assets"
     TOTAL_LIABILITIES = "total_liabilities"
@@ -42,7 +71,6 @@ class IFRSFields:
     TOTAL_REVENUE = "total_revenue"
     NET_PROFIT = "net_profit"
     OPERATING_PROFIT = "operating_profit"
-    GROSS_PROFIT = "gross_profit"
     OPERATING_COST = "operating_cost"
 
     # --- 现金流量表 (Cash Flow Statement) ---
@@ -60,7 +88,6 @@ class IFRSFields:
     QUICK_RATIO = "quick_ratio"
     DEBT_RATIO = "debt_ratio"
     ASSET_TURNOVER = "asset_turnover"
-    INVENTORY_TURNOVER = "inventory_turnover"
     RECEIVABLE_TURNOVER = "receivable_turnover"
 
     # --- 市场数据 (Market Data) ---
@@ -78,6 +105,10 @@ class IFRSFields:
         return frozenset(CORE_FIELD_MAPPING.keys())
 
 
+# 模块加载完成后冻结 IFRSFields
+IFRSFields._frozen = True
+
+
 class CustomFields:
     """自定义字段 (Custom Calculated Fields)
     
@@ -87,6 +118,8 @@ class CustomFields:
     
     # === 利润率指标 (Profit Margins) ===
     OPERATING_PROFIT_MARGIN = "operating_profit_margin"  # 营业利润率 = 营业利润 / 营业收入
+    GROSS_PROFIT = "gross_profit"  # 毛利润 = 营业收入 - 营业成本
+    INVENTORY_TURNOVER = "inventory_turnover"  # 存货周转率 = 营业成本 / 平均存货
     
     @classmethod
     def all(cls) -> frozenset:

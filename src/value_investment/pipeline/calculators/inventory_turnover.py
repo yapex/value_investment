@@ -2,7 +2,7 @@
 from typing import Any
 
 from value_investment.pipeline.calculators import calculator
-from value_investment.pipeline.fields import IFRSFields
+from value_investment.pipeline.fields import CustomFields, IFRSFields
 
 
 @calculator
@@ -13,7 +13,7 @@ class InventoryTurnover:
     Average Inventory = (Beginning Inventory + Ending Inventory) / 2
     """
 
-    name = IFRSFields.INVENTORY_TURNOVER
+    name = CustomFields.INVENTORY_TURNOVER
 
     required_fields = {
         IFRSFields.OPERATING_COST,

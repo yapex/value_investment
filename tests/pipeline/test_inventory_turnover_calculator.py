@@ -1,7 +1,7 @@
 """Tests for InventoryTurnover"""
 import pytest
 from value_investment.pipeline.calculators.inventory_turnover import InventoryTurnover
-from value_investment.pipeline.fields import IFRSFields
+from value_investment.pipeline.fields import CustomFields, IFRSFields
 
 
 def test_inventory_turnover_required_fields():
@@ -13,7 +13,7 @@ def test_inventory_turnover_required_fields():
 
 def test_inventory_turnover_name():
     """Test InventoryTurnover name"""
-    assert InventoryTurnover.name == IFRSFields.INVENTORY_TURNOVER
+    assert InventoryTurnover.name == CustomFields.INVENTORY_TURNOVER
 
 
 def test_inventory_turnover_calculate():

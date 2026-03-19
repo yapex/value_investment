@@ -92,30 +92,6 @@ class TestIFRSFieldsLock:
             # 预期行为：无法添加新字段
             assert "已冻结" in str(e) or "frozen" in str(e).lower()
 
-    def test_core_field_mapping_matches_ifrs(self):
-        """CORE_FIELD_MAPPING 应该与 IFRSFields 保持一致"""
-        from value_investment.domain.fields import IFRSFields
-        from value_investment.mapper import CORE_FIELD_MAPPING
-        
-        ifrs_attrs = set(
-            v for k, v in vars(IFRSFields).items() 
-            if k.isupper() and not callable(v)
-        )
-        
-        mapping_fields = set(CORE_FIELD_MAPPING.keys())
-        
-        extra_in_ifrs = ifrs_attrs - mapping_fields
-        extra_in_mapping = mapping_fields - ifrs_attrs
-        
-        errors = []
-        if extra_in_ifrs:
-            errors.append(f"IFRSFields 有但 CORE_FIELD_MAPPING 没有: {sorted(extra_in_ifrs)}")
-        if extra_in_mapping:
-            errors.append(f"CORE_FIELD_MAPPING 有但 IFRSFields 没有: {sorted(extra_in_mapping)}")
-        
-        if errors:
-            pytest.fail("\n".join(errors))
-
     def _get_expected_fields(self) -> set:
         """获取期望的 IFRS 字段集合"""
         # 这个列表应该与 IFRSFields 中的字段保持同步

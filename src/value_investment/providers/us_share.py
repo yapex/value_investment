@@ -1,7 +1,9 @@
-"""美股 Pipeline Data Provider
+"""美股 Pipeline Data Provider - IoC 模式
 
-使用 BaseProvider Template Method 模式，自动包裹缓存逻辑。
-只需实现 _fetch_* 四个方法即可。
+职责：
+- 从 AKShare API 获取原始数据
+- 声明 FIELD_MAPPINGS（由 Handler 执行映射）
+- 缓存逻辑暂时保留在 Provider
 
 继承关系:
     BaseProvider (Template Method) → USProvider (实现 fetch 方法)
@@ -16,87 +18,221 @@ import akshare as ak  # noqa: F401 - 模块级 import 以便测试 mock
 import pandas as pd
 
 from value_investment.core.constants import HISTORICAL_DATA_TTL
-# TODO (Task 7): Update import to value_investment.mapper after restructuring
-from value_investment.mapper import (
-    FINANCIAL_INDICATOR_MAPPING,
-    DataMapper,
-)
 from value_investment.providers.base import BaseProvider, get_ttl_until_june_next_year
 
 if TYPE_CHECKING:
     from value_investment.core.cache import SmartCache
 
 
-# US Provider 支持的字段集合
-US_PROVIDER_SUPPORTED_FIELDS: set[str] = {
-    # === 利润表 ===
-    "total_revenue",
-    "net_profit",
-    "operating_profit",
-    "gross_profit",
-    "operating_cost",
-    "parent_net_profit",
-    # === 资产负债表 ===
-    "total_assets",
-    "total_liabilities",
-    "total_equity",
-    "current_assets",
-    "current_liabilities",
-    "cash_and_equivalents",
-    "inventory",
-    "accounts_receivable",
-    "accounts_payable",
-    "fixed_assets",
-    # === 现金流量表 ===
-    "operating_cash_flow",
-    "investing_cash_flow",
-    "financing_cash_flow",
-    "capital_expenditure",
-    # === 财务指标 ===
-    "roe",
-    "roa",
-    # === 市场数据 ===
-    "market_cap",
-    "pe_ratio",
-    "pb_ratio",
-    "total_shares",
-    "gross_margin",
-    "net_profit_margin",
-    # === 每股指标 ===
-    "basic_eps",
-    "diluted_eps",
-    "book_value_per_share",
+# 美股财务指标映射 (AKShare stock_financial_us_analysis_indicator_em 返回)
+US_FINANCIAL_INDICATOR_MAPPING: dict[str, str] = {
+    # 营收指标
+    "OPERATE_INCOME": "total_revenue",
+    "GROSS_PROFIT": "gross_profit",
+    # 净利润指标
+    "PARENT_HOLDER_NETPROFIT": "net_profit",
+    # 每股指标
+    "BASIC_EPS": "basic_eps",
+    "DILUTED_EPS": "diluted_eps",
+    # 盈利能力
+    "GROSS_PROFIT_RATIO": "gross_margin",
+    "NET_PROFIT_RATIO": "net_profit_margin",
+    # ROE/ROA
+    "ROE_AVG": "roe",
+    "ROA": "roa",
+    # 偿债能力
+    "CURRENT_RATIO": "current_ratio",
+    "SPEED_RATIO": "quick_ratio",
+    "DEBT_ASSET_RATIO": "debt_ratio",
+    # 营运效率
+    "ACCOUNTS_RECE_TR": "receivable_turnover",
+    "INVENTORY_TR": "inventory_turnover",
+    "TOTAL_ASSETS_TR": "asset_turnover",
 }
 
 
 class USProvider(BaseProvider):
-    """美股 Pipeline Data Provider
+    """美股数据 Provider - IoC 模式
 
-    使用 AkShare 东财美股数据源：
-    - stock_financial_us_report_em: 三大报表（年报/季报）
-    - stock_financial_us_analysis_indicator_em: 财务指标
-
-    使用 BaseProvider 的 Template Method 模式：
-    - 缓存逻辑自动包裹
-    - 只需实现 _fetch_* 四个方法
+    职责：
+    - 从 AKShare API 获取原始数据
+    - 声明 FIELD_MAPPINGS（由 Handler 执行映射）
+    - 缓存逻辑暂时保留
     """
 
-    def __init__(self, cache: "SmartCache") -> None:
-        """初始化 US Provider
+    # 字段映射声明 (Handler 执行映射)
+    FIELD_MAPPINGS: dict[str, dict[str, str]] = {
+        "balance_sheet": {
+            "总资产": "total_assets",
+            "总负债": "total_liabilities",
+            "流动资产合计": "current_assets",
+            "非流动资产合计": "non_current_assets",
+            "流动负债合计": "current_liabilities",
+            "非流动负债合计": "non_current_liabilities",
+            "现金及现金等价物": "cash_and_equivalents",
+            "应收账款": "accounts_receivable",
+            "存货": "inventory",
+            "物业、厂房及设备": "fixed_assets",
+            "无形资产": "intangible_assets",
+            "商誉": "goodwill",
+            "应付账款": "accounts_payable",
+            "短期债务": "short_term_debt",
+            "长期负债": "long_term_debt",
+            "普通股": "common_stock",
+            "优先股": "preferred_stock",
+            "留存收益": "retained_earnings",
+            "股本溢价": "share_premium",
+            "其他综合收益": "other_comprehensive_income",
+            "股东权益合计": "total_equity",
+        },
+        "income_statement": {
+            "主营收入": "total_revenue",
+            "营业收入": "operating_income",
+            "主营成本": "cost_of_revenue",
+            "营业成本": "operating_cost",
+            "毛利": "gross_profit",
+            "营业利润": "operating_profit",
+            "持续经营税前利润": "profit_before_tax",
+            "所得税": "income_tax",
+            "持续经营净利润": "net_profit_from_continuing_operations",
+            "净利润": "net_profit",
+            "归属于母公司股东净利润": "net_profit",
+            "归属于普通股股东净利润": "parent_net_profit",
+            "每股股息-普通股": "dividend_per_share",
+            "基本每股收益-普通股": "basic_eps",
+            "摊薄每股收益-普通股": "diluted_eps",
+        },
+        "cash_flow": {
+            "经营活动产生的现金流量净额": "operating_cash_flow",
+            "投资活动产生的现金流量净额": "investing_cash_flow",
+            "筹资活动产生的现金流量净额": "financing_cash_flow",
+            "购买固定资产": "capital_expenditure",
+            "净利润": "net_profit",
+            "折旧及摊销": "depreciation_amortization",
+        },
+    }
 
-        Args:
-            cache: SmartCache 实例
-        """
+    # Provider 支持的字段集合
+    SUPPORTED_FIELDS: set[str] = {
+        # 利润表
+        "total_revenue",
+        "net_profit",
+        "parent_net_profit",
+        "operating_profit",
+        "gross_profit",
+        "operating_cost",
+        "basic_eps",
+        "diluted_eps",
+        # 资产负债表
+        "total_assets",
+        "total_liabilities",
+        "total_equity",
+        "current_assets",
+        "current_liabilities",
+        "cash_and_equivalents",
+        "inventory",
+        "accounts_receivable",
+        "accounts_payable",
+        "fixed_assets",
+        "intangible_assets",
+        "goodwill",
+        "short_term_debt",
+        "long_term_debt",
+        "common_stock",
+        "preferred_stock",
+        "retained_earnings",
+        "share_premium",
+        "other_comprehensive_income",
+        # 现金流量表
+        "operating_cash_flow",
+        "investing_cash_flow",
+        "financing_cash_flow",
+        "capital_expenditure",
+        "depreciation_amortization",
+        # 财务指标
+        "roe",
+        "roa",
+        "gross_margin",
+        "net_profit_margin",
+        "current_ratio",
+        "quick_ratio",
+        "debt_ratio",
+        "asset_turnover",
+        "receivable_turnover",
+        # 市场数据
+        "market_cap",
+        "pe_ratio",
+        "pb_ratio",
+        "total_shares",
+    }
+
+    def __init__(self, cache: "SmartCache") -> None:
+        """初始化 US Provider"""
         super().__init__(cache)
         self._ak = ak
 
     @property
     def supported_fields(self) -> set[str]:
         """该 Provider 支持的字段集合"""
-        return US_PROVIDER_SUPPORTED_FIELDS
+        return self.SUPPORTED_FIELDS
 
     # ========================================================================
-    # BaseProvider 抽象方法实现
+    # 原始数据获取方法 (供 Handler 调用 - 无映射)
+    # ========================================================================
+
+    def fetch_raw_balance_sheet(
+        self,
+        stock_code: str,
+        end_year: int,
+        start_year: int,
+    ) -> pd.DataFrame:
+        """获取原始资产负债表数据（不做映射，返回原始字段名）"""
+        try:
+            df = self._ak.stock_financial_us_report_em(
+                stock=stock_code, symbol="资产负债表", indicator="年报"
+            )
+            if df is None or df.empty:
+                return pd.DataFrame()
+            return self._transform_financial_df(df)
+        except Exception:
+            return pd.DataFrame()
+
+    def fetch_raw_income_statement(
+        self,
+        stock_code: str,
+        end_year: int,
+        start_year: int,
+    ) -> pd.DataFrame:
+        """获取原始利润表数据（不做映射，返回原始字段名）"""
+        try:
+            df = self._ak.stock_financial_us_report_em(
+                stock=stock_code, symbol="综合损益表", indicator="年报"
+            )
+            if df is None or df.empty:
+                return pd.DataFrame()
+            return self._transform_financial_df(df)
+        except Exception:
+            return pd.DataFrame()
+
+    def fetch_raw_cash_flow(
+        self,
+        stock_code: str,
+        end_year: int,
+        start_year: int,
+    ) -> pd.DataFrame:
+        """获取原始现金流量表数据（不做映射，返回原始字段名）"""
+        try:
+            df = self._ak.stock_financial_us_report_em(
+                stock=stock_code, symbol="现金流量表", indicator="年报"
+            )
+            if df is None or df.empty:
+                return pd.DataFrame()
+            return self._transform_financial_df(df)
+        except Exception:
+            return pd.DataFrame()
+
+    # ========================================================================
+    # BaseProvider 抽象方法实现 (保留映射逻辑，向后兼容)
     # ========================================================================
 
     def _fetch_balance_sheet(
@@ -105,18 +241,18 @@ class USProvider(BaseProvider):
         end_year: int,
         start_year: int,
     ) -> pd.DataFrame:
-        """获取资产负债表"""
-        try:
-            df = self._ak.stock_financial_us_report_em(
-                stock=stock_code, symbol="资产负债表", indicator="年报"
-            )
-            if df is None or df.empty:
-                return pd.DataFrame()
-            wide_df = self._transform_financial_df(df)
-            mapped = DataMapper.map_balance_sheet(wide_df)
-            return mapped if mapped is not None else wide_df
-        except Exception:
+        """获取资产负债表（带映射）"""
+        df = self.fetch_raw_balance_sheet(stock_code, end_year, start_year)
+        if df is None or df.empty:
             return pd.DataFrame()
+
+        mapping = self.FIELD_MAPPINGS.get("balance_sheet", {})
+        rename_map = {
+            native: std for native, std in mapping.items() if native in df.columns
+        }
+        if rename_map:
+            df = df.rename(columns=rename_map)
+        return df
 
     def _fetch_income_statement(
         self,
@@ -124,18 +260,18 @@ class USProvider(BaseProvider):
         end_year: int,
         start_year: int,
     ) -> pd.DataFrame:
-        """获取利润表"""
-        try:
-            df = self._ak.stock_financial_us_report_em(
-                stock=stock_code, symbol="综合损益表", indicator="年报"
-            )
-            if df is None or df.empty:
-                return pd.DataFrame()
-            wide_df = self._transform_financial_df(df)
-            mapped = DataMapper.map_income_statement(wide_df)
-            return mapped if mapped is not None else wide_df
-        except Exception:
+        """获取利润表（带映射）"""
+        df = self.fetch_raw_income_statement(stock_code, end_year, start_year)
+        if df is None or df.empty:
             return pd.DataFrame()
+
+        mapping = self.FIELD_MAPPINGS.get("income_statement", {})
+        rename_map = {
+            native: std for native, std in mapping.items() if native in df.columns
+        }
+        if rename_map:
+            df = df.rename(columns=rename_map)
+        return df
 
     def _fetch_cash_flow(
         self,
@@ -143,18 +279,18 @@ class USProvider(BaseProvider):
         end_year: int,
         start_year: int,
     ) -> pd.DataFrame:
-        """获取现金流量表"""
-        try:
-            df = self._ak.stock_financial_us_report_em(
-                stock=stock_code, symbol="现金流量表", indicator="年报"
-            )
-            if df is None or df.empty:
-                return pd.DataFrame()
-            wide_df = self._transform_financial_df(df)
-            mapped = DataMapper.map_cash_flow(wide_df)
-            return mapped if mapped is not None else wide_df
-        except Exception:
+        """获取现金流量表（带映射）"""
+        df = self.fetch_raw_cash_flow(stock_code, end_year, start_year)
+        if df is None or df.empty:
             return pd.DataFrame()
+
+        mapping = self.FIELD_MAPPINGS.get("cash_flow", {})
+        rename_map = {
+            native: std for native, std in mapping.items() if native in df.columns
+        }
+        if rename_map:
+            df = df.rename(columns=rename_map)
+        return df
 
     def _fetch_indicators(
         self,
@@ -185,10 +321,7 @@ class USProvider(BaseProvider):
         force_refresh: bool,
         fetch_method,
     ) -> pd.DataFrame:
-        """US Provider 的年份过滤方式（重写基类方法）
-
-        US 数据使用整数年份，不适用 pd.to_datetime 过滤。
-        """
+        """US Provider 的年份过滤方式（重写基类方法）"""
         if start_year is None:
             start_year = end_year - 10 + 1
 
@@ -203,7 +336,6 @@ class USProvider(BaseProvider):
                 return df
             if "year" not in df.columns:
                 return df
-            # 整数年份过滤
             result = df[(df["year"] >= start_year) & (df["year"] <= end_year)]
             return result
 
@@ -223,13 +355,7 @@ class USProvider(BaseProvider):
         end_year: int,
         years: int = 10,
     ) -> dict[str, dict[int, Any]]:
-        """获取财务报表数据（多年）
-
-        Pipeline Protocol 方法。
-
-        Returns:
-            {field: {year: value}}
-        """
+        """获取财务报表数据（多年）"""
         start_year = end_year - years + 1
         results: dict[str, dict[int, Any]] = {}
 
@@ -241,12 +367,11 @@ class USProvider(BaseProvider):
         if not needed:
             return results
 
-        # 使用继承的 Template Method 获取数据
         if needed & balance_fields:
             df = self.get_balance_sheet(stock_code, end_year, start_year)
             self._df_add_results(df, results, needed & balance_fields)
 
-        if needed & (income_fields - {"gross_profit", "operating_profit"}):
+        if needed & income_fields:
             df = self.get_income_statement(stock_code, end_year, start_year)
             self._df_add_results(df, results, needed & income_fields)
 
@@ -264,40 +389,30 @@ class USProvider(BaseProvider):
         end_year: int,
         years: int = 10,
     ) -> dict[str, dict[int, Any]]:
-        """获取财务指标数据
-
-        Pipeline Protocol 方法。
-
-        Returns:
-            {field: {year: value}}
-        """
-        hk_code = stock_code  # US uses ticker directly
-        cache_key = self._get_cache_key("us_indicators", hk_code)
+        """获取财务指标数据"""
+        cache_key = self._get_cache_key("us_indicators", stock_code)
         ttl = get_ttl_until_june_next_year(datetime.now().year)
         results: dict[str, dict[int, Any]] = {}
 
         try:
             df = self._cache.get_or_fetch(
                 cache_key,
-                lambda: self._ak.stock_financial_us_analysis_indicator_em(symbol=hk_code),
+                lambda: self._ak.stock_financial_us_analysis_indicator_em(symbol=stock_code),
                 ttl=ttl,
             )
             if df is None or df.empty:
                 return results
 
             current_year = datetime.now().year
-            market_mapping = FINANCIAL_INDICATOR_MAPPING.get("US", {})
 
             for field in fields:
-                # 先尝试直接在 df.columns 中查找（某些字段可能直接同名）
                 if field in df.columns:
                     value = df[field].iloc[0]
                     if pd.notna(value):
                         results[field] = {current_year: value}
                     continue
 
-                # 尝试通过映射查找
-                us_field = self._find_us_field(field, market_mapping)
+                us_field = self._find_us_field(field, US_FINANCIAL_INDICATOR_MAPPING)
                 if us_field and us_field in df.columns:
                     value = df[us_field].iloc[0]
                     if pd.notna(value):
@@ -313,27 +428,15 @@ class USProvider(BaseProvider):
         stock_code: str,
         fields: set[str],
     ) -> dict[str, Any]:
-        """获取市值数据
-
-        Pipeline Protocol 方法。
-
-        Returns:
-            {field: value}
-        """
+        """获取市值数据"""
         results: dict[str, Any] = {}
 
-        market_fields = {
-            "market_cap",
-            "pe_ratio",
-            "pb_ratio",
-            "total_shares",
-        }
+        market_fields = {"market_cap", "pe_ratio", "pb_ratio", "total_shares"}
         needed_fields = fields & market_fields
         if not needed_fields:
             return results
 
         try:
-            # 尝试从 indicators API 获取
             df = self._ak.stock_financial_us_analysis_indicator_em(symbol=stock_code)
             if df is not None and not df.empty:
                 for field in needed_fields:
@@ -367,8 +470,10 @@ class USProvider(BaseProvider):
     def _get_income_fields(self) -> set[str]:
         return {
             "total_revenue",
+            "net_profit",
             "parent_net_profit",
             "operating_profit",
+            "gross_profit",
             "operating_cost",
             "basic_eps",
             "diluted_eps",
@@ -407,7 +512,6 @@ class USProvider(BaseProvider):
 
         if "REPORT_DATE" in df.columns:
             df = df.copy()
-            # 处理美股日期格式（如 "2023-09-30"）
             df["year"] = pd.to_datetime(df["REPORT_DATE"]).dt.year
 
         try:

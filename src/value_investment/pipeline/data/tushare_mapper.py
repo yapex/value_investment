@@ -261,6 +261,7 @@ class TushareFieldMapper:
             "income_statement": self.income_statement,
             "cash_flow": self.cash_flow,
             "indicators": self.indicators,
+            "market": self.market,
         }
         return mapping_map.get(statement_type, {})
 

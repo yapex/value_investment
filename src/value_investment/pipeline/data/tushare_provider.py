@@ -422,11 +422,16 @@ class TushareProvider(DataProvider):
         df = self._mapper.map_dataframe(df, "market")
 
         # 提取单个值 (取最新一条)
+        # 单位转换: Tushare 返回的市值单位是万元，需要乘以 10000 转换成元
+        market_cap_fields = {"market_cap", "circ_market_cap"}
         results: dict[str, Any] = {}
         for field in market_fields:
             if field in df.columns:
                 # 取最新一条记录的值
                 value = df[field].iloc[0]
+                # 市值字段单位转换: 万元 -> 元
+                if field in market_cap_fields:
+                    value = value * 10000
                 results[field] = value
 
         return results

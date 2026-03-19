@@ -1,5 +1,6 @@
 """Tests for AShareStatementHandler"""
 import pytest
+import pandas as pd
 from unittest.mock import MagicMock
 
 from value_investment.handlers.a_share import AShareStatementHandler
@@ -11,12 +12,29 @@ class TestAShareStatementHandler:
     def mock_provider(self):
         provider = MagicMock()
         provider.supported_fields = {"total_revenue", "net_profit", "total_assets"}
-        provider.fetch_financial_data = MagicMock(
-            return_value={
-                "total_revenue": {2024: 100e9, 2023: 90e9},
-                "net_profit": {2024: 50e9, 2023: 45e9},
-            }
+        # fetch_raw_* 返回原始（未映射）数据，_standardize 执行映射
+        provider.fetch_raw_income_statement = MagicMock(
+            return_value=pd.DataFrame({
+                "year": [2024, 2023],
+                "total_operate_income": [100e9, 90e9],
+                "netprofit": [50e9, 45e9],
+            })
         )
+        provider.fetch_raw_balance_sheet = MagicMock(
+            return_value=pd.DataFrame()
+        )
+        provider.fetch_raw_cash_flow = MagicMock(
+            return_value=pd.DataFrame()
+        )
+        # Tushare 字段映射
+        provider.FIELD_MAPPINGS = {
+            "income_statement": {
+                "total_operate_income": "total_revenue",
+                "netprofit": "net_profit",
+            },
+            "balance_sheet": {},
+            "cash_flow": {},
+        }
         return provider
 
     def test_market_filter(self, mock_provider):
@@ -42,10 +60,9 @@ class TestAShareStatementHandler:
 
         await handler.handle(message)
 
-        mock_provider.fetch_financial_data.assert_called_once()
-        call_args = mock_provider.fetch_financial_data.call_args
-        assert "600519" in call_args.kwargs.get("stock_code", call_args.args)
-        assert "total_revenue" in call_args.kwargs.get("fields", call_args.args[1] if len(call_args.args) > 1 else set())
+        # 调用了 fetch_raw_income_statement
+        mock_provider.fetch_raw_income_statement.assert_called_once()
+        call_args = mock_provider.fetch_raw_income_statement.call_args
         # 已处理的字段应从 require 中移除
         assert "total_revenue" not in message.require
         assert "net_profit" not in message.require
@@ -65,8 +82,8 @@ class TestAShareStatementHandler:
 
         await handler.handle(message)
 
-        # 只调用了一次 fetch_financial_data（处理 total_revenue）
-        mock_provider.fetch_financial_data.assert_called_once()
+        # 调用了 fetch_raw_income_statement
+        mock_provider.fetch_raw_income_statement.assert_called_once()
         # roe 仍在 require 中（statement handler 无法处理）
         assert "roe" in message.require
 

@@ -1,6 +1,7 @@
-"""Tushare data provider for A 股 market
+"""Tushare data provider for A 股 market - IoC 模式
 
-Uses TushareFieldMapper as single source of truth for field mappings.
+声明 FIELD_MAPPINGS（由 Handler 执行映射）。
+TushareFieldMapper 暂时保留用于生成映射。
 """
 from datetime import datetime
 from typing import Any
@@ -12,10 +13,51 @@ from value_investment.providers.tushare_mapper import TushareFieldMapper
 
 
 class TushareProvider(BaseProvider):
-    """Tushare data provider for A 股 market
+    """Tushare data provider for A 股 market - IoC 模式
 
-    Uses TushareFieldMapper to map Tushare column names to standard field names.
+    职责：
+    - 从 Tushare API 获取原始数据
+    - 声明 FIELD_MAPPINGS（由 Handler 执行映射）
+    - 缓存逻辑暂时保留
     """
+
+    # 字段映射声明 (Handler 执行映射)
+    # 结构: {statement_type: {native_field: standard_field}}
+    # 映射从 TushareFieldMapper 提取
+    FIELD_MAPPINGS: dict[str, dict[str, str]] = {
+        "balance_sheet": {
+            # Tushare 列名 -> 标准字段名
+            "total_assets": "total_assets",
+            "total_liab": "total_liabilities",
+            "total_hldr_eqy_exc_min_int": "total_equity",
+            "total_cur_liab": "current_liabilities",
+            "money_cap": "cash_and_equivalents",
+            "inventories": "inventory",
+            "accounts_receiv": "accounts_receivable",
+            "fix_assets": "fixed_assets",
+            "total_cur_assets": "current_assets",
+            "accounts_pay": "accounts_payable",
+            "prepayment": "prepayment",
+            "contract_assets": "contract_assets",
+            "contract_liab": "contract_liab",
+            "adv_receipts": "adv_receipts",
+            "total_share": "total_shares",
+        },
+        "income_statement": {
+            "total_operate_income": "total_revenue",
+            "netprofit": "net_profit",
+            "operate_profit": "operating_profit",
+            "oper_cost": "operating_cost",
+            "n_income": "net_profit",
+            "n_income_attr_p": "parent_net_profit",
+        },
+        "cash_flow": {
+            "n_cashflow_act": "operating_cash_flow",
+            "n_cashflow_inv_act": "investing_cash_flow",
+            "n_cash_flows_fnc_act": "financing_cash_flow",
+            "c_pay_acq_const_fiolta": "capital_expenditure",
+        },
+    }
 
     def __init__(self, cache, token: str):
         """Initialize Tushare provider
@@ -254,25 +296,21 @@ class TushareProvider(BaseProvider):
         """Get standard fields from market data (daily_basic)"""
         return set(self._mapper.reverse.market.keys())
 
-    def _fetch_balance_sheet(self, ts_code: str, start_year: int, end_year: int) -> pd.DataFrame:
-        """Fetch balance sheet data from Tushare
-        
-        Returns DataFrame with standard field names as columns.
-        """
-        cache_key = f"pipeline:balance:{ts_code}"
+    # ========================================================================
+    # 原始数据获取方法 (供 Handler 调用 - 无映射)
+    # ========================================================================
 
-        # Check cache first
+    def fetch_raw_balance_sheet(self, ts_code: str, start_year: int, end_year: int) -> pd.DataFrame:
+        """获取原始资产负债表数据（不做映射，返回 Tushare 原始列名）"""
+        cache_key = f"pipeline:raw:balance:{ts_code}"
+
         cached = self._cache.get(cache_key)
         if cached is not None and not cached.empty:
             if "year" in cached.columns:
-                return cached[
-                    (cached["year"] >= start_year) & (cached["year"] <= end_year)
-                ]
+                return cached[(cached["year"] >= start_year) & (cached["year"] <= end_year)]
             return cached
 
-        # Fetch from Tushare
         today = datetime.now().strftime("%Y%m%d")
-
         df = self._api.balancesheet(
             ts_code=ts_code,
             start_date=f"{start_year}0101",
@@ -284,38 +322,23 @@ class TushareProvider(BaseProvider):
 
         df = self._filter_latest_by_update_flag(df)
         df = self._extract_year(df)
-
-        # Map to standard field names using TushareFieldMapper
-        df = self._mapper.map_dataframe(df, "balance_sheet")
-
-        # Cache for future use
         self._cache.set(cache_key, df, ttl=self._get_ttl_until_june_next_year())
 
-        # Filter by year range
         if "year" in df.columns:
             df = df[(df["year"] >= start_year) & (df["year"] <= end_year)]
-
         return df if isinstance(df, pd.DataFrame) else pd.DataFrame()
 
-    def _fetch_income_statement(self, ts_code: str, start_year: int, end_year: int) -> pd.DataFrame:
-        """Fetch income statement data from Tushare
-        
-        Returns DataFrame with standard field names as columns.
-        """
-        cache_key = f"pipeline:income:{ts_code}"
+    def fetch_raw_income_statement(self, ts_code: str, start_year: int, end_year: int) -> pd.DataFrame:
+        """获取原始利润表数据（不做映射，返回 Tushare 原始列名）"""
+        cache_key = f"pipeline:raw:income:{ts_code}"
 
-        # Check cache first
         cached = self._cache.get(cache_key)
         if cached is not None and not cached.empty:
             if "year" in cached.columns:
-                return cached[
-                    (cached["year"] >= start_year) & (cached["year"] <= end_year)
-                ]
+                return cached[(cached["year"] >= start_year) & (cached["year"] <= end_year)]
             return cached
 
-        # Fetch from Tushare
         today = datetime.now().strftime("%Y%m%d")
-
         df = self._api.income(
             ts_code=ts_code,
             start_date=f"{start_year}0101",
@@ -327,38 +350,23 @@ class TushareProvider(BaseProvider):
 
         df = self._filter_latest_by_update_flag(df)
         df = self._extract_year(df)
-
-        # Map to standard field names using TushareFieldMapper
-        df = self._mapper.map_dataframe(df, "income_statement")
-
-        # Cache for future use
         self._cache.set(cache_key, df, ttl=self._get_ttl_until_june_next_year())
 
-        # Filter by year range
         if "year" in df.columns:
             df = df[(df["year"] >= start_year) & (df["year"] <= end_year)]
-
         return df if isinstance(df, pd.DataFrame) else pd.DataFrame()
 
-    def _fetch_cash_flow(self, ts_code: str, start_year: int, end_year: int) -> pd.DataFrame:
-        """Fetch cash flow statement data from Tushare
-        
-        Returns DataFrame with standard field names as columns.
-        """
-        cache_key = f"pipeline:cashflow:{ts_code}"
+    def fetch_raw_cash_flow(self, ts_code: str, start_year: int, end_year: int) -> pd.DataFrame:
+        """获取原始现金流量表数据（不做映射，返回 Tushare 原始列名）"""
+        cache_key = f"pipeline:raw:cashflow:{ts_code}"
 
-        # Check cache first
         cached = self._cache.get(cache_key)
         if cached is not None and not cached.empty:
             if "year" in cached.columns:
-                return cached[
-                    (cached["year"] >= start_year) & (cached["year"] <= end_year)
-                ]
+                return cached[(cached["year"] >= start_year) & (cached["year"] <= end_year)]
             return cached
 
-        # Fetch from Tushare
         today = datetime.now().strftime("%Y%m%d")
-
         df = self._api.cashflow(
             ts_code=ts_code,
             start_date=f"{start_year}0101",
@@ -370,18 +378,57 @@ class TushareProvider(BaseProvider):
 
         df = self._filter_latest_by_update_flag(df)
         df = self._extract_year(df)
-
-        # Map to standard field names using TushareFieldMapper
-        df = self._mapper.map_dataframe(df, "cash_flow")
-
-        # Cache for future use
         self._cache.set(cache_key, df, ttl=self._get_ttl_until_june_next_year())
 
-        # Filter by year range
         if "year" in df.columns:
             df = df[(df["year"] >= start_year) & (df["year"] <= end_year)]
-
         return df if isinstance(df, pd.DataFrame) else pd.DataFrame()
+
+    # ========================================================================
+    # BaseProvider 抽象方法实现 (保留映射逻辑，向后兼容)
+    # ========================================================================
+
+    def _fetch_balance_sheet(self, ts_code: str, start_year: int, end_year: int) -> pd.DataFrame:
+        """获取资产负债表（带映射）"""
+        df = self.fetch_raw_balance_sheet(ts_code, start_year, end_year)
+        if df is None or df.empty:
+            return pd.DataFrame()
+
+        mapping = self.FIELD_MAPPINGS.get("balance_sheet", {})
+        rename_map = {
+            native: std for native, std in mapping.items() if native in df.columns
+        }
+        if rename_map:
+            df = df.rename(columns=rename_map)
+        return df
+
+    def _fetch_income_statement(self, ts_code: str, start_year: int, end_year: int) -> pd.DataFrame:
+        """获取利润表（带映射）"""
+        df = self.fetch_raw_income_statement(ts_code, start_year, end_year)
+        if df is None or df.empty:
+            return pd.DataFrame()
+
+        mapping = self.FIELD_MAPPINGS.get("income_statement", {})
+        rename_map = {
+            native: std for native, std in mapping.items() if native in df.columns
+        }
+        if rename_map:
+            df = df.rename(columns=rename_map)
+        return df
+
+    def _fetch_cash_flow(self, ts_code: str, start_year: int, end_year: int) -> pd.DataFrame:
+        """获取现金流量表（带映射）"""
+        df = self.fetch_raw_cash_flow(ts_code, start_year, end_year)
+        if df is None or df.empty:
+            return pd.DataFrame()
+
+        mapping = self.FIELD_MAPPINGS.get("cash_flow", {})
+        rename_map = {
+            native: std for native, std in mapping.items() if native in df.columns
+        }
+        if rename_map:
+            df = df.rename(columns=rename_map)
+        return df
 
     def _fetch_indicators(
         self, stock_code: str, end_year: int, start_year: int

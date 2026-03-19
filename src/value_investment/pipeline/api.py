@@ -1,9 +1,11 @@
 """Pipeline API - High-level interface for financial data pipeline"""
+import warnings
 from typing import Any
 
 from value_investment.pipeline.bus.message import Message
 from value_investment.pipeline.container import Container
 from value_investment.pipeline.calculators import CALCULATOR_MAP
+from value_investment.pipeline.fields import ALL_FIELDS
 
 
 class PipelineAPI:
@@ -44,6 +46,15 @@ class PipelineAPI:
         Raises:
             ValueError: If fields missing
         """
+        # 检测未知字段并警告
+        unknown_fields = set(fields) - ALL_FIELDS
+        if unknown_fields:
+            warnings.warn(
+                f"Unknown fields requested (will be ignored): {sorted(unknown_fields)}",
+                UserWarning,
+                stacklevel=2,
+            )
+
         # 自动检测市场
         if market is None:
             market = self._detect_market(symbol)

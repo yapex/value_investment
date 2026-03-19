@@ -250,3 +250,34 @@ def _load_calcs_from_fs(
             )
         except CalculatorValidationError as e:
             print(f"⚠️  Failed to load {py_file}: {e}")
+
+
+def load_user_calculators_from_cwd() -> None:
+    """从当前执行目录的 calculators/ 子目录加载用户 calculators
+
+    如果存在 {cwd}/calculators/ 目录，自动加载其中的 calc_*.py 文件。
+    这些 calculators 会覆盖内置 calculators（同 name）。
+    """
+    import os
+
+    from value_investment.domain.calculators.dynamic_loader import (
+        CalculatorValidationError,
+        load_calculator,
+    )
+
+    cwd_calculators_dir = Path.cwd() / "calculators"
+
+    if cwd_calculators_dir.is_dir():
+        for py_file in cwd_calculators_dir.glob("calc_*.py"):
+            try:
+                calc_dict = load_calculator(str(py_file))
+                # 用户 calculators 注册到 _global_registry，覆盖内置
+                _global_registry.register_dynamic(
+                    name=calc_dict["name"],
+                    required_fields=calc_dict["required_fields"],
+                    calculate=calc_dict["calculate"],
+                    _source=calc_dict.get("_source"),
+                )
+                print(f"✓ Loaded user calculator: {calc_dict['name']} from {py_file}")
+            except CalculatorValidationError as e:
+                print(f"⚠️  Failed to load {py_file}: {e}")

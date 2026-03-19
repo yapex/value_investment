@@ -1,6 +1,8 @@
 # Pipeline 架构指南
 
 > 本文档介绍 value_investment 项目的 Pipeline 架构设计和使用方法。
+> 
+> **核心特性**: 9 Handler 拆分架构 | 强制 @calculator 装饰器 | 自动依赖链验证
 
 **更新时间**: 2026-03-19
 
@@ -8,18 +10,108 @@
 
 ## 目录
 
-1. [架构概述](#1-架构概述)
-2. [核心组件](#2-核心组件)
-3. [数据流](#3-数据流)
-4. [字段系统](#4-字段系统)
-5. [Handler 开发](#5-handler-开发)
-6. [Calculator 开发](#6-calculator-开发)
-7. [测试指南](#7-测试指南)
-8. [常见问题](#8-常见问题)
+1. [完整流程总结](#1-完整流程总结) ⭐ **新增**
+2. [架构概述](#2-架构概述)
+3. [核心组件](#3-核心组件)
+4. [数据流](#4-数据流)
+5. [字段系统](#5-字段系统)
+6. [Handler 开发](#6-handler-开发)
+7. [Calculator 开发](#7-calculator-开发)
+8. [测试指南](#8-测试指南)
+9. [常见问题](#9-常见问题)
 
 ---
 
-## 1. 架构概述
+## 1. 完整流程总结 ⭐
+
+### 1.1 架构概览
+
+```
+用户请求字段
+    ↓
+PipelineAPI.get_data(symbol, fields)
+    ↓
+创建 Message(symbol, market, require={fields})
+    ↓
+MessageBus.process(message) - 多轮处理
+    ↓
+┌─────────────────────────────────────────┐
+│  9 个 Handler 并行处理（快速拒绝模式）   │
+│  - A/HK/US StatementHandler (财务三表)  │
+│  - A/HK/US IndicatorHandler (财务指标)  │
+│  - A/HK/US MarketHandler (市值数据)     │
+└─────────────────────────────────────────┘
+    ↓
+数据存入 message.results
+    ↓
+Calculator 计算派生字段（gross_profit, inventory_turnover...）
+    ↓
+返回完整结果
+```
+
+### 1.2 新增 Calculator 完整流程
+
+**步骤 1**: 创建 Calculator 文件
+```python
+# src/value_investment/pipeline/calculators/roic.py
+from value_investment.pipeline.calculators import calculator
+from value_investment.pipeline.fields import IFRSFields
+
+@calculator  # ← 必须！
+class ROIC:
+    name = "roic"  # 或 CustomFields.ROIC
+    required_fields = {
+        IFRSFields.NET_PROFIT,
+        IFRSFields.TOTAL_EQUITY,
+    }
+    
+    def calculate(self, results):
+        profit = results.get(IFRSFields.NET_PROFIT, {})
+        equity = results.get(IFRSFields.TOTAL_EQUITY, {})
+        return {year: profit.get(year, 0) / equity.get(year, 1) 
+                for year in profit}
+```
+
+**步骤 2**: 运行测试自动验证
+```bash
+# 自动验证依赖链完整性
+uv run python -m pytest tests/pipeline/test_validator.py -v
+
+# 输出示例
+============================================================
+Pipeline Calculator Validation
+============================================================
+
+✅ roic
+    ✓ net_profit                        → AStockStatementHandler
+    ✓ total_equity                      → AStockStatementHandler
+
+============================================================
+Total: 4 OK, 0 Missing
+============================================================
+```
+
+**步骤 3**: 完成！无需手动注册
+
+### 1.3 字段分类标准
+
+| 字段类型 | 定义 | 位置 | 示例 |
+|---------|------|------|------|
+| **标准字段** | 直接从数据源获取的原始数据 | `IFRSFields` + `CORE_FIELD_MAPPING` | `total_revenue`, `net_profit`, `roe` |
+| **自定义字段** | 通过 Calculator 计算的派生字段 | `CustomFields` + `CORE_FIELD_MAPPING` | `gross_profit`, `operating_profit_margin` |
+
+### 1.4 核心设计决策
+
+| 决策 | 说明 | 原因 |
+|------|------|------|
+| **9 Handler 拆分** | 3 市场 × 3 数据类型 | 职责分离，快速拒绝 |
+| **强制 @calculator** | 必须装饰器注册 | 显式优于隐式，无命名约定 |
+| **自动依赖验证** | 测试时自动检查 | 提前发现问题 |
+| **Duck Typing** | 不强制继承/Protocol | 简单灵活 |
+
+---
+
+## 2. 架构概述
 
 Pipeline 是一个基于消息总线模式的财务数据获取和处理框架，支持 A 股/港股/美股三市场。
 
@@ -89,9 +181,9 @@ async def handle(self, message: Message) -> None:
 
 ---
 
-## 2. 核心组件
+## 3. 核心组件
 
-### 2.1 Container (依赖注入容器)
+### 3.1 Container (依赖注入容器)
 
 ```python
 from value_investment.pipeline.container import Container
@@ -123,7 +215,7 @@ hk_handler = container.hk_stock_indicator_handler()
 | USStockIndicatorHandler | 美股 | 财务指标 | YFinance/Akshare |
 | USStockMarketHandler | 美股 | 市值/PE/PB | YFinance/Akshare |
 
-### 2.2 MessageBus (消息总线)
+### 3.2 MessageBus (消息总线)
 
 ```python
 from value_investment.pipeline.bus.message_bus import MessageBus
@@ -138,7 +230,7 @@ await bus.process(message)
 
 **职责**: 协调多个 Handler 处理消息，实现多轮数据获取。
 
-### 2.3 Message (消息)
+### 3.3 Message (消息)
 
 ```python
 from value_investment.pipeline.bus.message import Message
@@ -160,7 +252,7 @@ message = Message(
 - `require`: 待获取字段集合
 - `results`: 已获取字段数据 `{field: {year: value}}`
 
-### 2.4 Handler (处理器)
+### 3.4 Handler (处理器)
 
 Handler 负责从数据源获取特定字段的数据。每个 Handler 继承自 `BaseHandler`，实现快速拒绝模式。
 
@@ -207,7 +299,7 @@ class BaseHandler(ABC):
 | IndicatorHandler | ~17 | fina_indicator API |
 | MarketHandler | ~6 | daily_basic API |
 
-### 2.5 Calculator (计算器)
+### 3.5 Calculator (计算器)
 
 Calculator 负责计算派生字段。**所有 Calculator 必须使用 `@calculator` 装饰器注册**。
 
@@ -241,9 +333,9 @@ class GrossProfitCalculator:
 
 ---
 
-## 3. 数据流
+## 4. 数据流
 
-### 3.1 完整数据流
+### 4.1 完整数据流
 
 ```
 1. 用户调用 API
@@ -302,7 +394,7 @@ class GrossProfitCalculator:
    └─────────────────────────────────────────────┘
 ```
 
-### 3.2 多市场支持
+### 4.2 多市场支持
 
 | 市场 | 代码格式 | Handler | 数据源 |
 |-----|---------|---------|--------|
@@ -323,9 +415,9 @@ def _detect_market(self, symbol: str) -> str:
 
 ---
 
-## 4. 字段系统
+## 5. 字段系统
 
-### 4.1 标准字段 (IFRSFields)
+### 5.1 标准字段 (IFRSFields)
 
 项目定义了 40 个标准财务字段：
 
@@ -356,7 +448,7 @@ pe_ratio, pb_ratio, market_cap
 basic_eps, diluted_eps, book_value_per_share
 ```
 
-### 4.2 字段映射 (CORE_FIELD_MAPPING)
+### 5.2 字段映射 (CORE_FIELD_MAPPING)
 
 每个标准字段定义了 A 股/港股/美股的具体字段名：
 
@@ -376,7 +468,7 @@ CORE_FIELD_MAPPING = {
 }
 ```
 
-### 4.3 Calculator 字段
+### 5.3 Calculator 字段
 
 派生字段通过 Calculator 计算，需要声明依赖字段：
 
@@ -391,9 +483,9 @@ class InventoryTurnoverCalculator:
 
 ---
 
-## 5. Handler 开发
+## 6. Handler 开发
 
-### 5.1 创建新 Handler
+### 6.1 创建新 Handler
 
 继承 `BaseHandler` 实现快速拒绝模式：
 
@@ -433,7 +525,7 @@ class MyStockStatementHandler(BaseHandler):
                 message.add_result(field, values)
 ```
 
-### 5.2 Handler 示例 (AStockStatementHandler)
+### 6.2 Handler 示例 (AStockStatementHandler)
 
 ```python
 from value_investment.pipeline.handlers.a_statement import AStockStatementHandler
@@ -473,7 +565,7 @@ class AStockStatementHandler(BaseHandler):
                 message.add_result(field, values)
 ```
 
-### 5.3 注册 Handler
+### 6.3 注册 Handler
 
 在 `Container.create()` 中注册:
 
@@ -489,9 +581,9 @@ def create(cls) -> "Container":
 
 ---
 
-## 6. Calculator 开发
+## 7. Calculator 开发
 
-### 6.1 创建新 Calculator
+### 7.1 创建新 Calculator
 
 **重要**: 所有 Calculator 必须使用 `@calculator` 装饰器，否则不会被发现。
 
@@ -535,7 +627,7 @@ class XxxCalculator:
         }
 ```
 
-### 6.2 自动注册
+### 7.2 自动注册
 
 **无需手动注册**！使用 `@calculator` 装饰器后，Calculator 会自动被发现并注册。
 
@@ -544,7 +636,7 @@ class XxxCalculator:
 # 不需要手动添加到 ALL_CALCULATORS
 ```
 
-### 6.3 验证依赖链
+### 7.3 验证依赖链
 
 每次运行测试时，会自动验证所有 Calculator 的依赖字段是否可获取：
 
@@ -571,7 +663,7 @@ Total: 3 OK, 0 Missing
 ============================================================
 ```
 
-### 6.4 计算器执行时机
+### 7.4 计算器执行时机
 
 Calculator 在 `PipelineAPI.get_data()` 中，数据获取完成后执行：
 
@@ -592,9 +684,9 @@ async def get_data(self, symbol, fields, ...):
 
 ---
 
-## 7. 测试指南
+## 8. 测试指南
 
-### 7.1 测试 Calculator
+### 8.1 测试 Calculator
 
 ```python
 # tests/pipeline/test_xxx_calculator.py
@@ -634,7 +726,7 @@ class TestXxxCalculator:
         assert calculated[2023] == 4.0
 ```
 
-### 7.2 测试依赖链验证
+### 8.2 测试依赖链验证
 
 ```python
 # tests/pipeline/test_validator.py
@@ -646,7 +738,7 @@ def test_all_calculators_have_valid_dependencies():
     assert_all_valid(ALL_CALCULATORS)  # 失败会抛出 AssertionError
 ```
 
-### 7.3 测试 Handler
+### 8.3 测试 Handler
 
 ```python
 # tests/pipeline/test_my_handler.py
@@ -735,7 +827,7 @@ uv run python -m pytest tests/pipeline/test_e2e_roic.py -v
 
 ---
 
-## 8. 常见问题
+## 9. 常见问题
 
 ### Q1: 新增字段需要修改哪些文件？
 

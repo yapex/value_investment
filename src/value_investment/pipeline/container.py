@@ -12,6 +12,7 @@ from value_investment.pipeline.handlers.us_statement import USStockStatementHand
 from value_investment.pipeline.handlers.us_indicator import USStockIndicatorHandler
 from value_investment.pipeline.handlers.us_market import USStockMarketHandler
 from value_investment.pipeline.data.tushare_provider import TushareProvider
+from value_investment.pipeline.data.hk_provider import HKProvider
 from value_investment.pipeline.calculators import ALL_CALCULATORS
 
 
@@ -55,10 +56,23 @@ class Container(containers.DeclarativeContainer):
     )
 
     # === 港股 Handlers ===
-    # TODO: 待 HK Provider 实现后注入
-    hk_stock_statement_handler = providers.Singleton(HKStockStatementHandler)
-    hk_stock_indicator_handler = providers.Singleton(HKStockIndicatorHandler)
-    hk_stock_market_handler = providers.Singleton(HKStockMarketHandler)
+    # HK Provider - 使用 AkShare
+    hk_provider = providers.Singleton(
+        HKProvider,
+        cache=cache,
+    )
+    hk_stock_statement_handler = providers.Singleton(
+        HKStockStatementHandler,
+        provider=hk_provider,
+    )
+    hk_stock_indicator_handler = providers.Singleton(
+        HKStockIndicatorHandler,
+        provider=hk_provider,
+    )
+    hk_stock_market_handler = providers.Singleton(
+        HKStockMarketHandler,
+        provider=hk_provider,
+    )
 
     # === 美股 Handlers ===
     # TODO: 待 US Provider 实现后注入

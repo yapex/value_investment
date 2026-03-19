@@ -58,23 +58,23 @@ class DataProvider(Protocol):
 
 ## 任务拆分
 
-### Task 1: 创建 `HKDataProvider` 基础结构
+### Task 1: 创建 `HKProvider` 基础结构 ✅ DONE
 
 **文件**: `src/value_investment/pipeline/data/hk_provider.py`
 
 **内容**:
-- 类 `HKDataProvider` 实现 `DataProvider` Protocol
+- 类 `HKProvider` 实现 `DataProvider` Protocol
 - 属性 `supported_fields` 返回该 Provider 支持的字段集合
 - 初始化 AkShare 客户端
 - 缓存配置
 
 **验收标准**:
-- [ ] 类实现 `DataProvider` Protocol
-- [ ] `supported_fields` 返回正确的字段集合
+- [x] 类实现 `DataProvider` Protocol
+- [x] `supported_fields` 返回正确的字段集合
 
 ---
 
-### Task 2: 实现 `fetch_financial_data` - 财务报表
+### Task 2: 实现 `fetch_financial_data` - 财务报表 ✅ DONE
 
 **数据源**: AkShare `stock_financial_hk_report_em()`
 
@@ -95,13 +95,13 @@ class DataProvider(Protocol):
 ```
 
 **验收标准**:
-- [ ] 能获取多年（~10年）财务报表数据
-- [ ] 字段映射正确
-- [ ] 无数据时发出警告
+- [x] 能获取多年（~10年）财务报表数据
+- [x] 字段映射正确
+- [x] 无数据时发出警告
 
 ---
 
-### Task 3: 实现 `fetch_indicators` - 财务指标
+### Task 3: 实现 `fetch_indicators` - 财务指标 ✅ DONE
 
 **数据源**: AkShare `stock_hk_financial_indicator_em()`
 
@@ -116,9 +116,9 @@ class DataProvider(Protocol):
 **返回值格式**:
 ```python
 {
-    "roe": {2024: 21.13},  # 只有一年
-    "roa": {2024: 11.77},
-    "basic_eps": {2024: 24.75},
+    "roe": {2026: 21.13},  # 只有一年
+    "roa": {2026: 11.77},
+    "basic_eps": {2026: 24.75},
     ...
 }
 ```
@@ -133,15 +133,15 @@ warnings.warn(
 ```
 
 **验收标准**:
-- [ ] 能获取当前年度财务指标
-- [ ] 字段映射正确
-- [ ] 发出数据限制警告
+- [x] 能获取当前年度财务指标
+- [x] 字段映射正确
+- [x] 发出数据限制警告
 
 ---
 
-### Task 4: 实现 `fetch_market_data` - 市值数据
+### Task 4: 实现 `fetch_market_data` - 市值数据 ✅ DONE
 
-**数据源**: AkShare `stock_hk_financial_indicator_em()` 或 `stock_hk_company_profile_em()`
+**数据源**: AkShare `stock_hk_financial_indicator_em()` (与 Task 3 同一 API)
 
 **需要获取的字段**:
 - `market_cap` - 总市值
@@ -153,7 +153,7 @@ warnings.warn(
 - `book_value_per_share` - 每股净资产
 
 **实现逻辑**:
-1. 调用 AkShare API 获取市值数据
+1. 调用 AkShare API 获取市值数据（复用 Task 3 的 API）
 2. 映射字段名
 3. 返回单时间点数据
 
@@ -168,12 +168,12 @@ warnings.warn(
 ```
 
 **验收标准**:
-- [ ] 能获取市值相关字段
-- [ ] 发出数据限制警告（如适用）
+- [x] 能获取市值相关字段
+- [x] 发出数据限制警告（如适用）
 
 ---
 
-### Task 5: 集成测试
+### Task 5: 集成测试 ✅ DONE
 
 **测试文件**: `tests/pipeline/test_hk_provider.py`
 
@@ -183,26 +183,26 @@ warnings.warn(
 - 警告测试：验证警告信息正确发出
 
 **验收标准**:
-- [ ] 所有测试通过
-- [ ] 警告测试验证 `warnings.warn` 被正确调用
+- [x] 所有测试通过 (13/13)
+- [x] 警告测试验证 `warnings.warn` 被正确调用
 
 ---
 
-### Task 6: 注册到 Container
+### Task 6: 注册到 Container ✅ DONE
 
 **文件**: `src/value_investment/pipeline/container.py`
 
 **修改**:
-- 添加 `hk_data_provider()` 方法
+- 添加 `hk_provider()` 方法
 - 更新 Handler 注入
 
 **验收标准**:
-- [ ] `Container` 能提供 `HKDataProvider`
-- [ ] Handler 能正确注入 Provider
+- [x] `Container` 能提供 `HKProvider`
+- [x] Handler 能正确注入 Provider
 
 ---
 
-### Task 7: 端到端验证
+### Task 7: 端到端验证 ⏳ 待验证
 
 **验证场景**:
 1. 通过 `PipelineAPI` 获取港股 `00700`（腾讯）的 ROE、ROA 等
@@ -213,6 +213,17 @@ warnings.warn(
 - [ ] 能成功获取数据
 - [ ] 警告信息正确
 - [ ] Calculator 依赖链完整
+
+**手动验证命令**:
+```bash
+uv run python -c "
+from value_investment.pipeline.container import Container
+container = Container.create()
+provider = container.hk_provider()
+result = provider.fetch_indicators('00700', {'roe', 'roa'}, 2024)
+print(result)
+"
+```
 
 ---
 

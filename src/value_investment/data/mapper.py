@@ -18,12 +18,12 @@ CORE_FIELD_MAPPING: dict[str, dict[str, str]] = {
     },
     "net_profit": {
         "A股": "净利润",
-        "港股": "期内溢利",
+        "港股": "股东应占溢利",  # 归属母公司净利润
         "美股": "netIncome",
     },
     "operating_profit": {
         "A股": "营业利润",
-        "港股": "营业溢利",
+        "港股": "经营溢利",  # 经营利润
         "美股": "operatingIncome",
     },
     "operating_cost": {
@@ -358,7 +358,7 @@ FINANCIAL_INDICATOR_MAPPING = {
     '除税前溢利': 'profit_before_tax',  # 港股
     '除税后溢利': 'profit_after_tax',  # 港股
     '股东应占溢利': 'parent_net_profit',  # 港股
-    '期内溢利': 'net_profit',  # 港股
+    '股东应占溢利': 'net_profit',  # 港股 - 归属母公司净利润
 
     # 现金流量
     '经营业务现金净额': 'operating_cash_flow',  # 港股
@@ -588,27 +588,27 @@ FINANCIAL_INDICATOR_MAPPING = {
         'update_flag': 'update_flag',
     },
     'HK': {
-        # 市值字段
+        # 市值字段 (无空格版本 - AkShare 实际返回)
         '总市值(港元)': 'hk_market_cap',
         '港股市值(港元)': 'hk_market_cap',
-        # 每股指标
-        '基本每股收益 (元)': 'basic_eps',
-        '每股净资产 (元)': 'book_value_per_share',
-        '每股经营现金流 (元)': 'operating_cash_flow_per_share',
-        '每股股息 TTM(港元)': 'hk_dividend_per_share',
-        # 盈利能力
-        '股东权益回报率 (%)': 'roe',
-        '销售净利率 (%)': 'net_profit_margin',
-        '总资产回报率 (%)': 'roa',
+        # 每股指标 (无空格版本 - AkShare 实际返回)
+        '基本每股收益(元)': 'basic_eps',
+        '每股净资产(元)': 'book_value_per_share',
+        '每股经营现金流(元)': 'operating_cash_flow_per_share',
+        '每股股息TTM(港元)': 'hk_dividend_per_share',
+        # 盈利能力 (无空格版本)
+        '股东权益回报率(%)': 'roe',
+        '销售净利率(%)': 'net_profit_margin',
+        '总资产回报率(%)': 'roa',
         # 估值指标
         '市盈率': 'pe_ratio',
         '市净率': 'pb_ratio',
-        '股息率 TTM(%)': 'hk_dividend_yield_ttm',
-        # 增长指标
-        '营业总收入滚动环比增长 (%)': 'hk_total_revenue_growth_qoq',
-        '净利润滚动环比增长 (%)': 'hk_net_profit_growth_qoq',
+        '股息率TTM(%)': 'hk_dividend_yield_ttm',
+        # 增长指标 (无空格版本)
+        '营业总收入滚动环比增长(%)': 'hk_total_revenue_growth_qoq',
+        '净利润滚动环比增长(%)': 'hk_net_profit_growth_qoq',
         # 其他
-        '派息比率 (%)': 'hk_dividend_payout_ratio',
+        '派息比率(%)': 'hk_dividend_payout_ratio',
         # 标准字段映射
         '营业总收入': 'total_revenue',
         '净利润': 'net_profit',
@@ -1608,8 +1608,9 @@ class DataMapper:
         "资产总值": "total_assets",
         "负债总额": "total_liabilities",
         "权益总额": "total_equity",
-        "收益": "total_revenue",
-        "期内溢利": "net_profit",
+        "营业额": "total_revenue",  # 港股营业收入
+        "股东应占溢利": "net_profit",  # 港股归属母公司净利润
+        "经营溢利": "operating_profit",  # 港股经营利润
         "经营业务现金净额": "operating_cash_flow",
         "投资业务现金净额": "investing_cash_flow",
         "融资业务现金净额": "financing_cash_flow",

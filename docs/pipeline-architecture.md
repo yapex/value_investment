@@ -67,7 +67,7 @@ from value_investment.pipeline.calculators import calculator
 from value_investment.pipeline.fields import IFRSFields
 
 @calculator  # ← 必须！
-class XXXCalculator:
+class ImpliedGrowth:
     name = IFRSFields.XXX
     required_fields = {
         IFRSFields.FIELD_A,

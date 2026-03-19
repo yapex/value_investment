@@ -1,20 +1,26 @@
 """Dependency Injection Container for Pipeline"""
 from dependency_injector import containers, providers
 
-from value_investment.pipeline.bus.message_bus import MessageBus
-from value_investment.pipeline.handlers.a_statement import AStockStatementHandler
-from value_investment.pipeline.handlers.a_indicator import AStockIndicatorHandler
-from value_investment.pipeline.handlers.a_market import AStockMarketHandler
-from value_investment.pipeline.handlers.hk_statement import HKStockStatementHandler
-from value_investment.pipeline.handlers.hk_indicator import HKStockIndicatorHandler
-from value_investment.pipeline.handlers.hk_market import HKStockMarketHandler
-from value_investment.pipeline.handlers.us_statement import USStockStatementHandler
-from value_investment.pipeline.handlers.us_indicator import USStockIndicatorHandler
-from value_investment.pipeline.handlers.us_market import USStockMarketHandler
-from value_investment.pipeline.data.tushare_provider import TushareProvider
-from value_investment.pipeline.data.hk_provider import HKProvider
-from value_investment.pipeline.data.us_provider import USProvider
-from value_investment.pipeline.calculators import ALL_CALCULATORS
+from value_investment.pipeline.bus import MessageBus
+from value_investment.handlers.a_share import (
+    AShareStatementHandler,
+    AShareIndicatorHandler,
+    AShareMarketHandler,
+)
+from value_investment.handlers.hk_share import (
+    HKShareStatementHandler,
+    HKShareIndicatorHandler,
+    HKShareMarketHandler,
+)
+from value_investment.handlers.us_share import (
+    USShareStatementHandler,
+    USShareIndicatorHandler,
+    USShareMarketHandler,
+)
+from value_investment.providers.a_share import TushareProvider
+from value_investment.providers.hk_share import HKProvider
+from value_investment.providers.us_share import USProvider
+from value_investment.domain.calculators import ALL_CALCULATORS
 
 
 class Container(containers.DeclarativeContainer):
@@ -43,16 +49,16 @@ class Container(containers.DeclarativeContainer):
     bus = providers.Singleton(MessageBus)
 
     # === A 股 Handlers ===
-    a_stock_statement_handler = providers.Singleton(
-        AStockStatementHandler,
+    a_share_statement_handler = providers.Singleton(
+        AShareStatementHandler,
         provider=tushare_provider,
     )
-    a_stock_indicator_handler = providers.Singleton(
-        AStockIndicatorHandler,
+    a_share_indicator_handler = providers.Singleton(
+        AShareIndicatorHandler,
         provider=tushare_provider,
     )
-    a_stock_market_handler = providers.Singleton(
-        AStockMarketHandler,
+    a_share_market_handler = providers.Singleton(
+        AShareMarketHandler,
         provider=tushare_provider,
     )
 
@@ -62,16 +68,16 @@ class Container(containers.DeclarativeContainer):
         HKProvider,
         cache=cache,
     )
-    hk_stock_statement_handler = providers.Singleton(
-        HKStockStatementHandler,
+    hk_share_statement_handler = providers.Singleton(
+        HKShareStatementHandler,
         provider=hk_provider,
     )
-    hk_stock_indicator_handler = providers.Singleton(
-        HKStockIndicatorHandler,
+    hk_share_indicator_handler = providers.Singleton(
+        HKShareIndicatorHandler,
         provider=hk_provider,
     )
-    hk_stock_market_handler = providers.Singleton(
-        HKStockMarketHandler,
+    hk_share_market_handler = providers.Singleton(
+        HKShareMarketHandler,
         provider=hk_provider,
     )
 
@@ -81,16 +87,16 @@ class Container(containers.DeclarativeContainer):
         USProvider,
         cache=cache,
     )
-    us_stock_statement_handler = providers.Singleton(
-        USStockStatementHandler,
+    us_share_statement_handler = providers.Singleton(
+        USShareStatementHandler,
         provider=us_provider,
     )
-    us_stock_indicator_handler = providers.Singleton(
-        USStockIndicatorHandler,
+    us_share_indicator_handler = providers.Singleton(
+        USShareIndicatorHandler,
         provider=us_provider,
     )
-    us_stock_market_handler = providers.Singleton(
-        USStockMarketHandler,
+    us_share_market_handler = providers.Singleton(
+        USShareMarketHandler,
         provider=us_provider,
     )
 
@@ -104,16 +110,16 @@ class Container(containers.DeclarativeContainer):
             container = cls()
             # 注册 9 个 Handler 到 bus
             # A 股 - 使用 Tushare Provider
-            container.bus().register(container.a_stock_statement_handler())
-            container.bus().register(container.a_stock_indicator_handler())
-            container.bus().register(container.a_stock_market_handler())
+            container.bus().register(container.a_share_statement_handler())
+            container.bus().register(container.a_share_indicator_handler())
+            container.bus().register(container.a_share_market_handler())
             # 港股
-            container.bus().register(container.hk_stock_statement_handler())
-            container.bus().register(container.hk_stock_indicator_handler())
-            container.bus().register(container.hk_stock_market_handler())
+            container.bus().register(container.hk_share_statement_handler())
+            container.bus().register(container.hk_share_indicator_handler())
+            container.bus().register(container.hk_share_market_handler())
             # 美股
-            container.bus().register(container.us_stock_statement_handler())
-            container.bus().register(container.us_stock_indicator_handler())
-            container.bus().register(container.us_stock_market_handler())
+            container.bus().register(container.us_share_statement_handler())
+            container.bus().register(container.us_share_indicator_handler())
+            container.bus().register(container.us_share_market_handler())
             cls._instance = container
         return cls._instance

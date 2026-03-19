@@ -1,9 +1,11 @@
-"""MessageBus for processing messages through handlers"""
+"""Message bus for pipeline"""
 from typing import Any
+
+from value_investment.core.types import Message
 
 
 class MessageBus:
-    """Message bus for processing messages through registered handlers"""
+    """Message bus for processing messages through handlers"""
 
     def __init__(self):
         self.handlers: list = []
@@ -12,7 +14,7 @@ class MessageBus:
         """Register a handler to the bus"""
         self.handlers.append(handler)
 
-    async def process(self, message) -> Any:
+    async def process(self, message: Message) -> Any:
         """Process message through all handlers
 
         Multi-round execution: continues until no more fields can be processed

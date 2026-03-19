@@ -140,12 +140,13 @@ class HKShareStatementHandler(BaseHandler):
 
         # 累加每个字段的年份数据，最后通过 add_result 写入
         accumulated: dict[str, dict[int, Any]] = {}
+        columns = df.columns.tolist()
         for _, row in df.iterrows():
             year = int(row["year"])
             for field in fields:
-                if field in df.columns:
+                if field in columns:
                     value = row.get(field)
-                    if pd.notna(value):
+                    if value is not None and pd.notna(value):
                         try:
                             accumulated.setdefault(field, {})[year] = float(value)
                         except (ValueError, TypeError):

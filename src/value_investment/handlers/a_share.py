@@ -141,12 +141,13 @@ class AShareStatementHandler(BaseHandler):
             return
 
         accumulated: dict[str, dict[int, Any]] = {}
+        columns = df.columns.tolist()
         for _, row in df.iterrows():
             year = int(row["year"])
             for field in fields:
-                if field in df.columns:
+                if field in columns:
                     value = row.get(field)
-                    if pd.notna(value):
+                    if value is not None and pd.notna(value):
                         try:
                             accumulated.setdefault(field, {})[year] = float(value)
                         except (ValueError, TypeError):

@@ -4,8 +4,14 @@
 - HKShareStatementHandler: 财务报表 (资产负债表 + 利润表 + 现金流量表)
 - HKShareIndicatorHandler: 财务指标 (ROE, 毛利率等)
 - HKShareMarketHandler: 市场数据 (市值, PE, PB等)
+
+HKShareStatementHandler 使用 BaseHandler 的 _standardize() 执行字段映射。
 """
-from typing import TYPE_CHECKING
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+import pandas as pd
 
 from value_investment.handlers.base_handler import BaseHandler
 
@@ -86,7 +92,10 @@ HK_SHARE_MARKET_FIELDS: set[str] = {
 
 
 class HKShareStatementHandler(BaseHandler):
-    """港股财务报表 Handler"""
+    """港股财务报表 Handler
+
+    使用 BaseHandler 的 get_* 方法获取数据，自动执行字段映射。
+    """
 
     def __init__(self, provider=None):
         super().__init__(provider, "港股", HK_SHARE_STATEMENT_FIELDS)
@@ -100,16 +109,80 @@ class HKShareStatementHandler(BaseHandler):
         if not to_handle:
             return
 
-        if hasattr(self._provider, "fetch_financial_data"):
-            data = self._provider.fetch_financial_data(
-                stock_code=message.symbol,
-                fields=to_handle,
-                end_year=int(message.end[:4]),
-                years=message.years,
-            )
-            for field, values in data.items():
-                if values:
-                    message.add_result(field, values)
+        end_year = int(message.end[:4])
+        start_year = end_year - message.years + 1
+
+        # 使用 BaseHandler 的 get_* 方法，自动执行字段映射
+        balance_fields = to_handle & self._get_balance_fields()
+        if balance_fields:
+            df = self.get_balance_sheet(message.symbol, end_year, start_year)
+            self._add_results_from_df(df, message, balance_fields)
+
+        income_fields = to_handle & self._get_income_fields()
+        if income_fields:
+            df = self.get_income_statement(message.symbol, end_year, start_year)
+            self._add_results_from_df(df, message, income_fields)
+
+        cashflow_fields = to_handle & self._get_cashflow_fields()
+        if cashflow_fields:
+            df = self.get_cash_flow_statement(message.symbol, end_year, start_year)
+            self._add_results_from_df(df, message, cashflow_fields)
+
+    def _add_results_from_df(
+        self,
+        df: pd.DataFrame,
+        message: "Message",
+        fields: set[str],
+    ) -> None:
+        """从 DataFrame 提取结果到 Message"""
+        if df.empty or "year" not in df.columns:
+            return
+
+        # 累加每个字段的年份数据，最后通过 add_result 写入
+        accumulated: dict[str, dict[int, Any]] = {}
+        for _, row in df.iterrows():
+            year = int(row["year"])
+            for field in fields:
+                if field in df.columns:
+                    value = row.get(field)
+                    if pd.notna(value):
+                        try:
+                            accumulated.setdefault(field, {})[year] = float(value)
+                        except (ValueError, TypeError):
+                            pass
+
+        for field, values in accumulated.items():
+            if values:
+                message.add_result(field, values)
+
+    def _get_balance_fields(self) -> set[str]:
+        return {
+            "total_assets",
+            "total_liabilities",
+            "total_equity",
+            "current_assets",
+            "current_liabilities",
+            "cash_and_equivalents",
+            "inventory",
+            "accounts_receivable",
+            "accounts_payable",
+            "fixed_assets",
+            "contract_assets",
+            "prepayment",
+            "adv_receipts",
+            "contract_liab",
+        }
+
+    def _get_income_fields(self) -> set[str]:
+        return {"total_revenue", "net_profit", "operating_profit", "gross_profit", "operating_cost"}
+
+    def _get_cashflow_fields(self) -> set[str]:
+        return {
+            "operating_cash_flow",
+            "investing_cash_flow",
+            "financing_cash_flow",
+            "capital_expenditure",
+        }
 
 
 class HKShareIndicatorHandler(BaseHandler):

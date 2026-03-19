@@ -41,6 +41,11 @@ A_SHARE_STATEMENT_FIELDS: set[str] = {
     "contract_liab",
     "adv_receipts",
     "total_shares",
+    # 资产负债表 (Phase 1)
+    "goodwill",
+    "intangible_assets",
+    "long_term_investment",
+    "construction_in_progress",
     # 利润表
     "total_revenue",
     "net_profit",
@@ -174,6 +179,11 @@ class AShareStatementHandler(BaseHandler):
             "contract_liab",
             "adv_receipts",
             "total_shares",
+            # Phase 1 资产负债表核心字段
+            "goodwill",
+            "intangible_assets",
+            "long_term_investment",
+            "construction_in_progress",
         }
 
     def _get_income_fields(self) -> set[str]:

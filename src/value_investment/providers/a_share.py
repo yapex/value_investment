@@ -39,6 +39,11 @@ class TushareProvider(BaseProvider):
         "contract_liab",
         "adv_receipts",
         "total_shares",
+        # --- 资产负债表 (Phase 1) ---
+        "goodwill",
+        "intangible_assets",
+        "long_term_investment",
+        "construction_in_progress",
         # --- 利润表 ---
         "total_revenue",
         "net_profit",
@@ -102,6 +107,11 @@ class TushareProvider(BaseProvider):
             "contract_liab": "contract_liab",
             "adv_receipts": "adv_receipts",
             "total_share": "total_shares",
+            # Phase 1 资产负债表核心字段
+            "goodwill": "goodwill",
+            "intan_assets": "intangible_assets",
+            "lt_eqt_invest": "long_term_investment",
+            "cip": "construction_in_progress",
         },
         "income_statement": {
             # Tushare 列名与标准字段名相同

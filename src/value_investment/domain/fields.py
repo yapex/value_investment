@@ -223,6 +223,14 @@ class CustomFields:
     # 单位：元
     INTANGIBLE_ASSETS = "intangible_assets"
     
+    # 长期股权投资，对子公司、合营企业、联营企业的股权投资
+    # 单位：元
+    LONG_TERM_INVESTMENT = "long_term_investment"
+    
+    # 在建工程，正在建造尚未完工的固定资产
+    # 单位：元
+    CONSTRUCTION_IN_PROGRESS = "construction_in_progress"
+    
     # 长期借款，一年以上到期的借款/债券
     # 单位：元
     LONG_TERM_DEBT = "long_term_debt"

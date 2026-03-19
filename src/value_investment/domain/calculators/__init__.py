@@ -1,45 +1,50 @@
-"""Calculators for derived fields"""
-from value_investment.domain.calculators.registry import (
-    calculator,
-    get_registered_calculators,
-    instantiate_calculators,
-    clear_registry,
-)
-from value_investment.domain.fields import ALL_FIELDS
+"""Calculators for derived fields
 
-# Explicit imports for IDE support
-from value_investment.domain.calculators.gross_profit import GrossProfit
-from value_investment.domain.calculators.implied_growth import ImpliedGrowth
-from value_investment.domain.calculators.inventory_turnover import InventoryTurnover
-from value_investment.domain.calculators.operating_profit_margin import OperatingProfitMargin
+统一使用函数式格式:
+    required_fields = ["field_a", "field_b"]
+    def calculate(results, config=None): ...
+"""
+from value_investment.domain.calculators.registry import (
+    CalculatorRegistry,
+    DynamicCalculatorAdapter,
+    get_registry,
+    register_dynamic_calculator,
+    get_calculators,
+    clear_registry,
+    load_builtin_calculators_from_dir,
+)
 
 
 def _validate_fields(calc) -> None:
     """Validate calculator's required_fields are valid"""
+    from value_investment.domain.fields import ALL_FIELDS
+
     invalid = set(calc.required_fields) - ALL_FIELDS
     if invalid:
         raise ValueError(f"Calculator '{calc.name}' has invalid fields: {invalid}")
 
 
-# Instantiate all registered calculators
-ALL_CALCULATORS = instantiate_calculators()
+# 加载内置 calculators
+load_builtin_calculators_from_dir()
 
-# Validate fields
+# 获取所有 calculators
+ALL_CALCULATORS = get_calculators()
+
+# 验证字段
 for calc in ALL_CALCULATORS:
     _validate_fields(calc)
 
-# Build name -> calculator map
+# 构建 name -> calculator map
 CALCULATOR_MAP = {calc.name: calc for calc in ALL_CALCULATORS}
 
 __all__ = [
-    "calculator",  # Required decorator
-    "GrossProfit",
-    "ImpliedGrowth",
-    "InventoryTurnover",
-    "OperatingProfitMargin",
     "ALL_CALCULATORS",
     "CALCULATOR_MAP",
-    "get_registered_calculators",
+    "CalculatorRegistry",
+    "DynamicCalculatorAdapter",
+    "get_registry",
+    "register_dynamic_calculator",
+    "get_calculators",
     "clear_registry",
-    "validate_calculators",
+    "load_builtin_calculators_from_dir",
 ]

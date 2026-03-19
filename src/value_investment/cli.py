@@ -1,6 +1,7 @@
 """CLI for value investment analysis using PipelineAPI"""
 import asyncio
 import json
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -11,6 +12,12 @@ from rich.table import Table
 from value_investment.core.cache import SmartCache
 from value_investment.pipeline.api import PipelineAPI
 from value_investment.domain.fields import ALL_FIELDS
+from value_investment.domain.calculators.dynamic_loader import (
+    load_calculator,
+    load_calculators_from_dir,
+    CalculatorValidationError,
+)
+from value_investment.domain.calculators.registry import register_dynamic_calculator
 
 app = typer.Typer(name="v-invest", help="Value investment analysis tool")
 console = Console()
@@ -90,12 +97,44 @@ def query(
     years: int = typer.Option(10, "--years", "-y", help="Number of years"),
     market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US"),
     format: str = typer.Option("markdown", "--format", "-f", help="Output format: markdown, json, plain"),
+    calculator: list[str] = typer.Option(
+        None,
+        "--calculator",
+        "-c",
+        help="Dynamic calculator script path (can be repeated)",
+    ),
+    calculator_dir: list[str] = typer.Option(
+        None,
+        "--calculator-dir",
+        "-d",
+        help="Dynamic calculator directory path (can be repeated)",
+    ),
 ):
     """Query financial data using PipelineAPI"""
     fields = [f.strip() for f in requires.split(",") if f.strip()]
     if not fields:
         typer.echo("Error: --requires/-r must specify at least one field", err=True)
         raise typer.Exit(code=1)
+
+    # Load dynamic calculators
+    if calculator:
+        for path in calculator:
+            try:
+                calc_dict = load_calculator(path)
+                register_dynamic_calculator(**calc_dict)
+                console.print(f"[green]✓[/green] Loaded calculator: {calc_dict['name']}")
+            except CalculatorValidationError as e:
+                console.print(f"[red]✗[/red] Failed to load {path}: {e}")
+
+    if calculator_dir:
+        for dir_path in calculator_dir:
+            try:
+                calculators = load_calculators_from_dir(dir_path)
+                for calc_dict in calculators:
+                    register_dynamic_calculator(**calc_dict)
+                    console.print(f"[green]✓[/green] Loaded calculator: {calc_dict['name']}")
+            except Exception as e:
+                console.print(f"[red]✗[/red] Failed to load directory {dir_path}: {e}")
 
     detected_market = _get_market(market, symbol)
     api = PipelineAPI()
@@ -129,12 +168,44 @@ def validate(
         help="Comma-separated field names",
     ),
     market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US"),
+    calculator: list[str] = typer.Option(
+        None,
+        "--calculator",
+        "-c",
+        help="Dynamic calculator script path (can be repeated)",
+    ),
+    calculator_dir: list[str] = typer.Option(
+        None,
+        "--calculator-dir",
+        "-d",
+        help="Dynamic calculator directory path (can be repeated)",
+    ),
 ):
     """Validate pipeline configuration (dry run)"""
     fields = [f.strip() for f in requires.split(",") if f.strip()]
     if not fields:
         typer.echo("Error: --requires/-r must specify at least one field", err=True)
         raise typer.Exit(code=1)
+
+    # Load dynamic calculators
+    if calculator:
+        for path in calculator:
+            try:
+                calc_dict = load_calculator(path)
+                register_dynamic_calculator(**calc_dict)
+                console.print(f"[green]✓[/green] Loaded calculator: {calc_dict['name']}")
+            except CalculatorValidationError as e:
+                console.print(f"[red]✗[/red] Failed to load {path}: {e}")
+
+    if calculator_dir:
+        for dir_path in calculator_dir:
+            try:
+                calculators = load_calculators_from_dir(dir_path)
+                for calc_dict in calculators:
+                    register_dynamic_calculator(**calc_dict)
+                    console.print(f"[green]✓[/green] Loaded calculator: {calc_dict['name']}")
+            except Exception as e:
+                console.print(f"[red]✗[/red] Failed to load directory {dir_path}: {e}")
 
     detected_market = _get_market(market, symbol)
     api = PipelineAPI()

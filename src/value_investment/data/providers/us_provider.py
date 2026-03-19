@@ -1,7 +1,10 @@
 """US market data provider
 
-Provides data access for US stocks using AkShare.
+.. deprecated::
+    请使用 pipeline/data/us_provider.py 替代。
+    此模块将在未来版本中移除。
 """
+import warnings
 from datetime import datetime
 from typing import TYPE_CHECKING, cast
 
@@ -16,18 +19,18 @@ if TYPE_CHECKING:
 
 
 class USProvider:
-    """AkShare data provider for US stocks"""
+    """AkShare data provider for US stocks
+
+    .. deprecated::
+        请使用 pipeline/data/us_provider.py 替代。
+    """
 
     def __init__(self, cache, market: str = "US", **kwargs):
-        """Initialize USProvider
-
-        Args:
-            cache: Cache instance
-            market: Market type (default: "US")
-            **kwargs: Additional arguments
-        """
-        self._cache = cache
-        self._market = market
+        warnings.warn(
+            "USProvider 已deprecated，请使用 pipeline/data/us_provider.py",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     def get_stock_info(self, stock_code: str, force_refresh: bool = False) -> pd.DataFrame:
         """Get US stock info

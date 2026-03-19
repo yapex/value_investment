@@ -1,20 +1,187 @@
-"""CLI for value investment analysis"""
+"""CLI for value investment analysis
+
+New design using PipelineAPI for unified data access.
+"""
+import asyncio
+import json
+from typing import Any
 
 import pandas as pd
 import typer
+from rich.console import Console
+from rich.table import Table
 
 from value_investment.api import ValueInvestment
+from value_investment.data.cache import SmartCache
 from value_investment.data.mapper import DataMapper
+from value_investment.pipeline.api import PipelineAPI
+from value_investment.pipeline.fields import ALL_FIELDS
 from value_investment.scanner import Scanner, parse_filter
 
-app = typer.Typer(name="v-investment", help="Value investment analysis tool")
+app = typer.Typer(name="v-invest", help="Value investment analysis tool")
+console = Console()
 
 
 def _get_market(market: str | None, symbol: str) -> str:
     """Get market, auto-detect from symbol if not specified"""
     if market:
         return market
-    return ValueInvestment.detect_market(symbol)
+    # Auto-detect market
+    if len(symbol) == 5 and symbol.isdigit():
+        return "港股"
+    elif len(symbol) == 6 and symbol.isdigit() and symbol.startswith(("0", "3", "6")):
+        return "A股"
+    else:
+        return "美股"
+
+
+def _format_output(
+    data: dict[str, dict[int, Any]],
+    fmt: str = "markdown",
+) -> str:
+    """Format pipeline data for display
+
+    Args:
+        data: {field: {year: value}} format from PipelineAPI
+        fmt: Output format - markdown, json, plain
+
+    Returns:
+        Formatted string
+    """
+    if fmt == "json":
+        # Convert year keys to strings for JSON serialization
+        serializable = {k: {str(yr): v for yr, v in years.items()} for k, years in data.items()}
+        return json.dumps(serializable, indent=2, ensure_ascii=False)
+
+    # Convert to DataFrame for markdown/plain
+    if not data:
+        return "No data"
+
+    # Find all years
+    all_years = set()
+    for years in data.values():
+        all_years.update(years.keys())
+    all_years = sorted(all_years, reverse=True)
+
+    # Build rows
+    rows = []
+    for field, years in sorted(data.items()):
+        row = {"field": field}
+        for year in all_years:
+            row[str(year)] = years.get(year, "N/A")
+        rows.append(row)
+
+    df = pd.DataFrame(rows)
+
+    if fmt == "plain":
+        # Simple text format
+        lines = []
+        header = "field\t" + "\t".join(str(y) for y in all_years)
+        lines.append(header)
+        for _, row in df.iterrows():
+            line = row["field"] + "\t" + "\t".join(str(row.get(str(y), "")) for y in all_years)
+            lines.append(line)
+        return "\n".join(lines)
+
+    # markdown (default)
+    md_output = df.to_markdown(index=False)
+    return md_output if md_output is not None else ""
+
+
+@app.command()
+def query(
+    symbol: str = typer.Argument(..., help="Stock code (e.g., 600519, 00700, AAPL)"),
+    requires: str = typer.Option(
+        ...,
+        "--requires",
+        "-r",
+        help="Comma-separated field names to fetch (e.g., roe,net_profit)",
+    ),
+    end: str = typer.Option("20241231", "--end", "-e", help="End date (YYYYMMDD)"),
+    years: int = typer.Option(10, "--years", "-y", help="Number of years to fetch"),
+    market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+    format: str = typer.Option("markdown", "--format", "-f", help="Output format: markdown, json, plain"),
+):
+    """Query financial data using PipelineAPI
+
+    Examples:
+        v-invest query 600519 -r roe,net_profit
+        v-invest query 00700 -r roe --years 5
+        v-invest query AAPL -r roe,pe_ratio -f json
+    """
+    # Parse fields
+    fields = [f.strip() for f in requires.split(",") if f.strip()]
+    if not fields:
+        typer.echo("Error: --requires/-r must specify at least one field", err=True)
+        raise typer.Exit(code=1)
+
+    # Detect market
+    detected_market = _get_market(market, symbol)
+
+    # Run async query
+    api = PipelineAPI()
+    try:
+        result = asyncio.run(api.get_data(
+            symbol=symbol,
+            fields=fields,
+            end=end,
+            years=years,
+            market=detected_market,
+        ))
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    # Format and output
+    output = _format_output(result, format)
+    typer.echo(output)
+
+
+@app.command()
+def validate(
+    symbol: str = typer.Argument(..., help="Stock code (e.g., 600519, 00700, AAPL)"),
+    requires: str = typer.Option(
+        ...,
+        "--requires",
+        "-r",
+        help="Comma-separated field names to validate (e.g., roe,net_profit)",
+    ),
+    market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
+):
+    """Validate pipeline configuration without fetching actual data (dry run)
+
+    This command checks:
+    - All requested fields are registered
+    - Calculator dependencies can be satisfied
+    - Which Handlers will process the request
+
+    Examples:
+        v-invest validate 600519 -r roe,net_profit
+        v-invest validate 00700 -r implied_growth
+        v-invest validate AAPL -r roe,pe_ratio
+    """
+    # Parse fields
+    fields = [f.strip() for f in requires.split(",") if f.strip()]
+    if not fields:
+        typer.echo("Error: --requires/-r must specify at least one field", err=True)
+        raise typer.Exit(code=1)
+
+    # Detect market
+    detected_market = _get_market(market, symbol)
+
+    # Validate
+    api = PipelineAPI()
+    report = api.validate(symbol, fields, detected_market)
+
+    # Output report
+    typer.echo(report.summary())
+
+    # Exit with error code if issues found
+    if not report.is_valid:
+        raise typer.Exit(code=1)
 
 
 @app.command()
@@ -22,11 +189,18 @@ def info(
     symbol: str = typer.Argument(..., help="Stock code (e.g., 600519)"),
     market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
     refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
+    format: str = typer.Option("markdown", "--format", "-f", help="Output format: markdown, json, plain"),
 ):
     """Query stock basic information"""
     vi = ValueInvestment(market=_get_market(market, symbol))
     df = vi.get_stock_info(symbol, force_refresh=refresh)
-    print(df.to_markdown(index=False))
+
+    if format == "json":
+        typer.echo(df.to_json(orient="records", indent=2, force_ascii=False))
+    elif format == "plain":
+        typer.echo(df.to_string(index=False))
+    else:
+        typer.echo(df.to_markdown(index=False))
 
 
 @app.command()
@@ -37,11 +211,18 @@ def hist(
     adjust: str = typer.Option("hfq", "--adjust", "-a", help="Adjustment: '', 'qfq', 'hfq' (default: hfq for backtesting)"),
     market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
     refresh: bool = typer.Option(False, "--refresh", "-r", help="Force refresh from data source"),
+    format: str = typer.Option("markdown", "--format", "-f", help="Output format: markdown, json, plain"),
 ):
     """Get historical price data"""
     vi = ValueInvestment(market=_get_market(market, symbol))
     df = vi.get_historical_data(symbol, end, start, adjust, force_refresh=refresh)
-    print(df.to_markdown(index=False))
+
+    if format == "json":
+        typer.echo(df.to_json(orient="records", indent=2, force_ascii=False))
+    elif format == "plain":
+        typer.echo(df.to_string(index=False))
+    else:
+        typer.echo(df.to_markdown(index=False))
 
 
 @app.command()
@@ -58,7 +239,7 @@ def balance(
         vi = ValueInvestment(market=_get_market(market, symbol))
         field_list = [f.strip() for f in fields.split(",")] if fields else None
         df = vi.get_balance_sheet(symbol, end_year, force_refresh=refresh, fields=field_list, years=years)
-        print(df.to_markdown(index=False))
+        typer.echo(df.to_markdown(index=False))
     except ValueError as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1)
@@ -78,7 +259,7 @@ def income(
         vi = ValueInvestment(market=_get_market(market, symbol))
         field_list = [f.strip() for f in fields.split(",")] if fields else None
         df = vi.get_profit_sheet(symbol, end_year, force_refresh=refresh, fields=field_list, years=years)
-        print(df.to_markdown(index=False))
+        typer.echo(df.to_markdown(index=False))
     except ValueError as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1)
@@ -98,7 +279,7 @@ def cashflow(
         vi = ValueInvestment(market=_get_market(market, symbol))
         field_list = [f.strip() for f in fields.split(",")] if fields else None
         df = vi.get_cashflow_sheet(symbol, end_year, force_refresh=refresh, fields=field_list, years=years)
-        print(df.to_markdown(index=False))
+        typer.echo(df.to_markdown(index=False))
     except ValueError as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1)
@@ -112,7 +293,7 @@ def indicator(
     market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
 ):
     """Get indicator values (unified interface for RAW and CALCULATED)
-    
+
     When years > 1, returns historical data as a DataFrame.
     """
     vi = ValueInvestment(market=_get_market(market, stock_code))
@@ -224,17 +405,178 @@ def list_indicators(
 
 @app.command()
 def fields(
-    market: str = typer.Argument(..., help="Market: A, HK, US"),
-    report: str = typer.Argument(..., help="Report type: balance, income, cashflow, finind, quarterly"),
+    prefix: str | None = typer.Option(None, "--prefix", "-p", help="Filter fields by prefix (e.g., 'ro', 'total')"),
 ):
-    """List available standard fields for a market and report type"""
-    try:
-        fields_list = DataMapper.get_standard_fields(report, market)
-        for field in fields_list:
-            print(field)
-    except ValueError as e:
-        typer.echo(f"Error: {e}", err=True)
+    """List all available standard fields
+
+    Examples:
+        v-invest fields
+        v-invest fields --prefix ro
+    """
+    all_fields = sorted(ALL_FIELDS)
+
+    if prefix:
+        all_fields = [f for f in all_fields if f.startswith(prefix)]
+
+    for field in all_fields:
+        print(field)
+
+
+# Agent 友好的字段信息字典
+FIELD_INFO = {
+    # === 盈利能力 ===
+    "roe": {
+        "name": "净资产收益率",
+        "formula": "净利润 / 平均净资产 × 100%",
+        "unit": "%",
+        "usage": "评估股东权益回报，>15% 为优质，>20% 为优秀",
+        "category": "盈利能力",
+    },
+    "roa": {
+        "name": "资产回报率",
+        "formula": "净利润 / 平均总资产 × 100%",
+        "unit": "%",
+        "usage": "评估资产赚钱效率，>5% 为良好",
+        "category": "盈利能力",
+    },
+    "roic": {
+        "name": "投资资本回报率",
+        "formula": "税后净营业利润 / 投资资本 × 100%",
+        "unit": "%",
+        "usage": "评估资本配置效率，>WACC(通常10%) 为创造价值，>15% 为优秀",
+        "category": "盈利能力",
+    },
+    "gross_margin": {
+        "name": "毛利率",
+        "formula": "(营业收入 - 营业成本) / 营业收入 × 100%",
+        "unit": "%",
+        "usage": "评估产品定价能力和成本控制，消费>50%、制造20-40%",
+        "category": "盈利能力",
+    },
+    "net_profit_margin": {
+        "name": "净利率",
+        "formula": "净利润 / 营业收入 × 100%",
+        "unit": "%",
+        "usage": "评估最终盈利能力，>10% 为良好",
+        "category": "盈利能力",
+    },
+    "operating_profit_margin": {
+        "name": "营业利润率",
+        "formula": "营业利润 / 营业收入 × 100%",
+        "unit": "%",
+        "usage": "评估主营业务盈利，剔除非经常性损益",
+        "category": "盈利能力",
+    },
+    # === 估值指标 ===
+    "pe_ratio": {
+        "name": "市盈率",
+        "formula": "股价 / 每股收益 (PE TTM)",
+        "unit": "倍",
+        "usage": "评估股价贵贱，<20 为合理，>30 偏高，需结合行业",
+        "category": "估值指标",
+    },
+    "pb_ratio": {
+        "name": "市净率",
+        "formula": "股价 / 每股净资产",
+        "unit": "倍",
+        "usage": "评估股价与净资产关系，<3 为合理，银行/保险需特殊解读",
+        "category": "估值指标",
+    },
+    "market_cap": {
+        "name": "总市值",
+        "formula": "股价 × 总股本",
+        "unit": "元",
+        "usage": "评估公司规模，用于市值分组对比",
+        "category": "估值指标",
+    },
+    # === 财务健康 ===
+    "debt_ratio": {
+        "name": "资产负债率",
+        "formula": "总负债 / 总资产 × 100%",
+        "unit": "%",
+        "usage": "评估财务杠杆，<50% 为稳健，>70% 风险较高",
+        "category": "财务健康",
+    },
+    "current_ratio": {
+        "name": "流动比率",
+        "formula": "流动资产 / 流动负债",
+        "unit": "倍",
+        "usage": "评估短期偿债能力，>1.5 为良好",
+        "category": "财务健康",
+    },
+    # === 成长性 ===
+    "implied_growth": {
+        "name": "隐含增长率",
+        "formula": "基于DCF模型反推的市场预期增长率",
+        "unit": "%",
+        "usage": "评估市场对公司的成长预期，与历史增速对比判断高低估",
+        "category": "成长性",
+        "requires": ["operating_cash_flow", "market_cap"],
+    },
+    # === 市场特有 ===
+    "circ_market_cap": {
+        "name": "流通市值",
+        "formula": "股价 × 流通股本",
+        "unit": "元",
+        "usage": "A 股特有，反映实际可交易股票价值",
+        "category": "市场特有(A股)",
+    },
+}
+
+
+@app.command()
+def field_info(
+    field: str = typer.Argument(..., help="Field name (e.g., roe, pe_ratio, roic)"),
+):
+    """Show detailed information about a field for Agent usage
+    
+    Examples:
+        v-invest query roe
+        v-invest query implied_growth
+        v-invest query gross_margin
+    """
+    if field not in FIELD_INFO:
+        typer.echo(f"Error: Unknown field '{field}'", err=True)
+        typer.echo(f"Use 'v-investment fields' to see all available fields")
         raise typer.Exit(code=1)
+    
+    info = FIELD_INFO[field]
+    
+    typer.echo(f"""
+╔══════════════════════════════════════════════════════════════════════╗
+║ {info['name']:^62} ║
+╠══════════════════════════════════════════════════════════════════════╣
+║ 字段名: {field:<57} ║
+║ 类别:   {info['category']:<57} ║
+║ 公式:   {info['formula']:<57} ║
+║ 单位:   {info['unit']:<57} ║
+╠══════════════════════════════════════════════════════════════════════╣
+║ 使用建议:                                                              ║
+║ {info['usage']:<62} ║""")
+    
+    if "requires" in info:
+        typer.echo(f"╠══════════════════════════════════════════════════════════════════════╣")
+        typer.echo(f"║ 依赖字段: {', '.join(info['requires']):<51} ║")
+    
+    typer.echo(f"╚══════════════════════════════════════════════════════════════════════╝")
+    
+    # 推荐组合
+    category_fields = {
+        "盈利能力": ["roe", "roa", "roic", "gross_margin", "net_profit_margin"],
+        "估值指标": ["pe_ratio", "pb_ratio", "market_cap"],
+        "财务健康": ["debt_ratio", "current_ratio"],
+        "成长性": ["implied_growth"],
+    }
+    
+    if info["category"] in category_fields:
+        related = [f for f in category_fields[info["category"]] if f != field]
+        if related:
+            typer.echo(f"""
+推荐组合 (同一类别):
+  v-invest query <symbol> -r {field},{related[0]}
+  
+其他可用字段:
+  {' '.join(related)}""")
 
 
 @app.command()
@@ -243,32 +585,56 @@ def cache_clear(
     market: str | None = typer.Option(None, "--market", "-m", help="Market: A, HK, US (auto-detect if omitted)"),
 ):
     """Clear cache"""
-    # Use symbol to detect market if not specified, default to A if no symbol
-    detected_market = _get_market(market, symbol) if symbol else (market or "A")
-    vi = ValueInvestment(market=detected_market)
-    vi.clear_cache(symbol)
+    cache = SmartCache()
+
     if symbol:
-        print(f"Cleared cache for {symbol}")
+        # Clear specific stock cache - need to find all keys with this symbol
+        keys = cache.list_keys()
+        cleared = 0
+        for key in keys:
+            if symbol in key:
+                cache.invalidate(key)
+                cleared += 1
+        print(f"Cleared {cleared} cache entries for {symbol}")
     else:
-        print("Cleared all cache")
+        # Clear all cache
+        keys = cache.list_keys()
+        for key in keys:
+            cache.invalidate(key)
+        print(f"Cleared {len(keys)} cache entries")
 
 
 @app.command()
 def cache_stats():
     """Show cache statistics."""
-    vi = ValueInvestment()
-    stats = vi.get_cache_stats()
-    print(f"Memory cache entries: {stats['memory_size']}")
-    print(f"Disk cache entries: {stats['disk_cache_size']}")
+    cache = SmartCache()
+    keys = cache.list_keys()
+
+    # Categorize keys
+    memory_keys = [k for k in keys if "memory" in k.lower() or "temp" in k.lower()]
+    disk_keys = [k for k in keys if k not in memory_keys]
+
+    print(f"Memory cache entries: {len(memory_keys)}")
+    print(f"Disk cache entries: {len(disk_keys)}")
+    print(f"Total cache entries: {len(keys)}")
 
 
 @app.command()
-def cache_list(symbol: str | None = typer.Argument(None, help="Filter by stock code")):
+def cache_list(
+    symbol: str | None = typer.Argument(None, help="Filter by stock code"),
+):
     """List cached items."""
-    vi = ValueInvestment()
-    keys = vi.list_cache_keys(symbol=symbol)
+    cache = SmartCache()
+    keys = cache.list_keys()
+
+    if symbol:
+        keys = [k for k in keys if symbol in k]
+
     for key in keys:
         print(key)
+
+    if not keys:
+        print("(no cached items)")
 
 
 @app.command()
@@ -306,7 +672,7 @@ def scan(
                 else:
                     result = cached_result
 
-                qualified_stocks = result['stock_code'].unique()
+                qualified_stocks = list(result["stock_code"].unique())  # type: ignore[union-attr]
                 print(f"✓ 从缓存读取，符合条件: {len(qualified_stocks)} 只股票")
 
                 if output:

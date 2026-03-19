@@ -1,4 +1,10 @@
-"""Dependency injection container using Pydantic configuration"""
+"""Dependency injection container using Pydantic configuration
+
+.. deprecated::
+    请使用 pipeline/container.py 中的 Container 替代。
+    此模块将在未来版本中移除。
+"""
+import warnings
 import importlib
 
 from dependency_injector import containers, providers  # type: ignore
@@ -13,12 +19,23 @@ from value_investment.indicators.factory import IndicatorFactory
 class Container(containers.DeclarativeContainer):
     """Dependency injection container with Pydantic configuration
     
+    .. deprecated::
+        请使用 pipeline/container.py 中的 Container 替代。
+    
     Features:
     - Loads configuration from Pydantic Settings
     - Supports dynamic provider creation from config
     - Market-specific provider routing
     - Singleton caching for providers
     """
+    
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "core.Container 已deprecated，请使用 pipeline.Container",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)
     
     # Application settings (from Pydantic) - use Factory since Settings() reads env on init
     app_settings = providers.Factory(Settings)

@@ -26,9 +26,9 @@ class ImpliedGrowth:
 
     name = "implied_growth"
 
+    # capital_expenditure 是可选的 - 如果没有，将使用 operating_cash_flow 作为 FCF 近似
     required_fields = {
         IFRSFields.OPERATING_CASH_FLOW,
-        IFRSFields.CAPITAL_EXPENDITURE,
         IFRSFields.MARKET_CAP,
     }
 
@@ -87,7 +87,8 @@ class ImpliedGrowth:
     def _get_fcf(self, results: dict[str, dict[int, Any]]) -> dict[int, float]:
         """获取自由现金流数据
 
-        优先使用 free_cash_flow，否则用 operating_cash_flow - capital_expenditure
+        优先使用 free_cash_flow，否则用 operating_cash_flow - capital_expenditure。
+        如果没有 capital_expenditure，则直接使用 operating_cash_flow（近似自由现金流）。
         """
         # 优先使用 free_cash_flow
         if "free_cash_flow" in results:
@@ -98,6 +99,10 @@ class ImpliedGrowth:
         # 使用 OCF - CAPEX
         ocf_data = results.get(IFRSFields.OPERATING_CASH_FLOW, {})
         capex_data = results.get(IFRSFields.CAPITAL_EXPENDITURE, {})
+
+        # 如果没有 capex 数据，直接使用 OCF 作为 FCF 的近似
+        if not capex_data:
+            return {year: val for year, val in ocf_data.items() if val > 0}
 
         fcf_data = {}
         for year in ocf_data:

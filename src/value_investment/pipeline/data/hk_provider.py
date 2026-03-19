@@ -420,6 +420,14 @@ class HKProvider(BaseProvider, DataProvider):
             market_mapping = FINANCIAL_INDICATOR_MAPPING.get("HK", {})
 
             for field in needed_fields:
+                # Special handling for market_cap: use 总市值(港元) directly
+                if field == "market_cap":
+                    if "总市值(港元)" in df.columns:
+                        value = df["总市值(港元)"].iloc[0]
+                        if pd.notna(value):
+                            results["market_cap"] = value
+                    continue
+
                 hk_field = self._find_hk_field(field, market_mapping)
                 if hk_field is None:
                     if field in df.columns:

@@ -1,7 +1,10 @@
 """Provider factory for creating market-specific providers
 
-注意: A股的 AShareProvider 已被废弃，请使用 TushareProvider。
+.. deprecated::
+    请使用 pipeline/container.py 中的 Container 替代。
+    此模块将在未来版本中移除。
 """
+import warnings
 from typing import TYPE_CHECKING
 
 from value_investment.data.providers.a_share_provider import AShareProvider
@@ -15,7 +18,8 @@ if TYPE_CHECKING:
 class ProviderFactory:
     """Factory for creating market-specific stock data providers
 
-    注意: A股的 AShareProvider 已被废弃，请使用 TushareProvider。
+    .. deprecated::
+        请使用 pipeline/container.py 中的 Container 替代。
     """
 
     _PROVIDER_MAP = {
@@ -26,6 +30,11 @@ class ProviderFactory:
 
     @classmethod
     def create_provider(cls, cache: "SmartCache", market: str = "A"):
+        warnings.warn(
+            "ProviderFactory 已deprecated，请使用 pipeline.Container",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         """
         Create a provider instance for the specified market
 

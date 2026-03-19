@@ -6,6 +6,7 @@ from value_investment.pipeline.bus.message import Message
 from value_investment.pipeline.container import Container
 from value_investment.pipeline.calculators import CALCULATOR_MAP
 from value_investment.pipeline.fields import ALL_FIELDS
+from value_investment.pipeline.validator import validate_pipeline, ValidationReport
 
 
 class PipelineAPI:
@@ -14,6 +15,11 @@ class PipelineAPI:
     Usage:
         api = PipelineAPI()
         result = await api.get_data("600519", ["roic", "roe"], end="2024", years=10)
+
+    Dry Run:
+        # Validate without fetching actual data
+        report = api.validate("600519", ["implied_growth"], market="港股")
+        print(report.summary())
     """
 
     def __init__(self, container: Container | None = None):
@@ -22,6 +28,33 @@ class PipelineAPI:
     @property
     def container(self) -> Container:
         return self._container
+
+    def validate(
+        self,
+        symbol: str,
+        fields: list[str],
+        market: str | None = None,
+    ) -> ValidationReport:
+        """
+        Validate pipeline configuration without fetching actual data.
+        
+        This is a "dry run" that checks:
+        1. All requested fields are registered
+        2. Calculator dependencies can be satisfied
+        3. Which Handlers will process the request
+        
+        Args:
+            symbol: Stock code
+            fields: List of field names to validate
+            market: Market (auto-detected if None)
+        
+        Returns:
+            ValidationReport with detailed status
+        """
+        if market is None:
+            market = self._detect_market(symbol)
+        
+        return validate_pipeline(fields, symbol, market, dry_run=True)
 
     async def get_data(
         self,
@@ -68,6 +101,9 @@ class PipelineAPI:
             require=set(fields),
         )
 
+        # 扩展 require 以包含计算器所需的字段
+        self._expand_required_fields(message)
+
         # 通过消息总线获取数据（Handler 自动路由）
         await self._container.bus().process(message)
 
@@ -80,6 +116,26 @@ class PipelineAPI:
             raise ValueError(f"Missing fields: {missing}")
 
         return message.results
+
+    def _expand_required_fields(self, message: Message) -> None:
+        """Expand require set to include calculator's required fields
+
+        This ensures that when a calculated field is requested, the
+        underlying data fields are also fetched.
+
+        Args:
+            message: Message with require set
+        """
+        # 首先收集所有需要扩展的字段
+        fields_to_expand = []
+        for field in message.require:
+            if field in CALCULATOR_MAP:
+                fields_to_expand.append(field)
+
+        # 然后扩展 require
+        for field in fields_to_expand:
+            calculator = CALCULATOR_MAP[field]
+            message.require.update(calculator.required_fields)
 
     def _apply_calculators(self, message: Message) -> None:
         """Apply calculators for derived fields

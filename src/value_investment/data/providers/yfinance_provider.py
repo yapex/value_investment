@@ -1,16 +1,21 @@
 """YFinance provider for港股/美股 market data
 
+.. deprecated::
+    请使用 pipeline/data/us_provider.py 替代。
+    此模块将在未来版本中移除。
+
 YFinance (Yahoo Finance) provides free market data for global stocks.
 
 GitHub: https://github.com/ranaroussi/yfinance
 
 Usage:
-    from value_investment.data.providers.yfinance_provider import YFinanceProvider
+    from value_investment.pipeline.data.us_provider import USProvider
 
-    provider = YFinanceProvider(cache=cache)
-    df = provider.get_historical_data("0005.HK", start_date="20230101", end_date="20231231")
+    provider = USProvider(cache=cache)
+    df = provider.get_historical_data("00700", start_date="20230101", end_date="20231231")
     df = provider.get_historical_data("AAPL", start_date="20230101", end_date="20231231")
 """
+import warnings
 import pandas as pd
 import yfinance as yf  # type: ignore
 
@@ -24,20 +29,19 @@ from value_investment.data.providers.base_provider import (
 class YFinanceProvider(BaseProvider):
     """YFinance provider for港股/美股 market data
 
-    Implements:
-    - get_historical_data() - 历史行情（日线）
-    - get_stock_info() - 股票基本信息
-
-    Note:
-    - No API token required
-    - Data quality may vary (free source)
-    - Rate limits may apply
+    .. deprecated::
+        请使用 pipeline/data/us_provider.py 替代。
     """
 
     # 缓存 TTL 常量
     HISTORICAL_DATA_TTL = HISTORICAL_DATA_TTL
 
     def __init__(self, cache, field_mappings=None, **kwargs):
+        warnings.warn(
+            "YFinanceProvider 已deprecated，请使用 pipeline/data/us_provider.py",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         """Initialize YFinance provider
 
         Args:

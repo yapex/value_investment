@@ -174,8 +174,9 @@ class TushareFieldMapper:
         indicator_fields = {
             IFRSFields.ROE: "roe",
             IFRSFields.ROA: "roa",
-            # 注意: gross_margin 是毛利率百分比，不是毛利润金额
-            IFRSFields.GROSS_MARGIN: "gross_margin",
+            # 注意: gross_margin 在 Tushare 是毛利润金额(元)，grossprofit_margin 才是毛利率(%)
+            # IFRSFields.GROSS_MARGIN 应该映射到 grossprofit_margin
+            IFRSFields.GROSS_MARGIN: "grossprofit_margin",
             IFRSFields.NET_PROFIT_MARGIN: "netprofit_margin",
             IFRSFields.CURRENT_RATIO: "current_ratio",
             IFRSFields.QUICK_RATIO: "quick_ratio",
@@ -192,13 +193,14 @@ class TushareFieldMapper:
 
         # Market data from daily_basic API
         # Tushare daily_basic returns: total_mv, circ_mv, total_share, circ_share, pe, pe_ttm, pb
+        # 注意: Tushare 没有 circ_share，有 float_share (流通股份)
         market_fields = {
             IFRSFields.MARKET_CAP: "total_mv",  # 总市值 (万元)
             IFRSFields.PE_RATIO: "pe_ttm",     # 市盈率 TTM
             IFRSFields.PB_RATIO: "pb",          # 市净率
             "total_shares": "total_share",      # 总股本 (万股)
             "circ_market_cap": "circ_mv",       # 流通市值 (万元)
-            "circ_shares": "circ_share",        # 流通股本 (万股)
+            "circ_shares": "float_share",       # 流通股本 (万股) - Tushare 用 float_share
         }
 
         # 注意: 以下字段需要特殊处理，不直接从 fina_indicator 获取

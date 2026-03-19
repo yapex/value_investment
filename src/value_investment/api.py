@@ -1,7 +1,12 @@
 """Python API for value investment analysis
 
-Refactored to use Container for dependency injection.
+.. deprecated::
+    旧架构已迁移到 pipeline/api.py 的 PipelineAPI。
+    请使用新的 PipelineAPI 获取金融数据。
+    本模块将在未来版本中移除。
 """
+
+import warnings
 
 from datetime import datetime
 
@@ -64,13 +69,20 @@ class ValueInvestment:
     """
     Python API for value investment analysis
 
+    .. deprecated::
+        请使用 pipeline/api.py 中的 PipelineAPI 替代。
+
     Example:
-        >>> vi = ValueInvestment()
-        >>> info = vi.get_stock_info("600519")
-        >>> print(info)
+        >>> vi = PipelineAPI()
+        >>> result = await vi.get_data("600519", ["roic", "roe"], end="2024", years=10)
     """
 
     def __init__(self, cache_dir: str | None = None, market: str = "A"):
+        warnings.warn(
+            "ValueInvestment 已deprecated，请使用 pipeline.PipelineAPI",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         """
         Initialize ValueInvestment API
 

@@ -1,16 +1,21 @@
 """Tushare data provider for A 股 market
 
+.. deprecated::
+    请使用 pipeline/data/tushare_provider.py 替代。
+    此模块将在未来版本中移除。
+
 Tushare API documentation: https://tushare.pro/document/2
 
 Required environment variable:
     TUSHARE_TOKEN: Your tushare API token
 
 Usage:
-    from value_investment.data.providers.tushare_provider import TushareProvider
+    from value_investment.pipeline.data.tushare_provider import TushareProvider
 
     provider = TushareProvider(cache=cache, token="your_token")
     df = provider.get_balance_sheet("000001.SZ", 2023)
 """
+import warnings
 from typing import cast
 
 import pandas as pd
@@ -32,12 +37,8 @@ from value_investment.data.providers.base_provider import (
 class TushareProvider(BaseProvider):
     """Tushare provider for A 股 financial and market data
 
-    Implements:
-    - get_balance_sheet() - 资产负债表
-    - get_income_statement() - 利润表
-    - get_cash_flow_statement() - 现金流量表
-    - get_historical_data() - 历史行情
-    - get_stock_info() - 股票基本信息
+    .. deprecated::
+        请使用 pipeline/data/tushare_provider.py 替代。
     """
 
     # 缓存默认年数
@@ -47,13 +48,11 @@ class TushareProvider(BaseProvider):
     HISTORICAL_DATA_TTL = HISTORICAL_DATA_TTL
 
     def __init__(self, cache, field_mappings=None, token=""):
-        """Initialize Tushare provider
-
-        Args:
-            cache: Cache instance
-            field_mappings: Field name mappings (from config)
-            token: Tushare API token (required)
-        """
+        warnings.warn(
+            "data/providers.TushareProvider 已deprecated，请使用 pipeline/data/tushare_provider.py",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__(cache, field_mappings, token=token)
 
         if not token:
@@ -131,9 +130,8 @@ class TushareProvider(BaseProvider):
 
             result = DataMapper.map_to_standard(
                 cast(pd.DataFrame | None, df),
-                source="tushare",
-                data_type="balance_sheet",
                 market="A",
+                data_type="balance_sheet",
             )
             result = self._filter_latest_by_update_flag(result, "report_date")
             return result if result is not None else pd.DataFrame()
@@ -196,9 +194,8 @@ class TushareProvider(BaseProvider):
 
             result = DataMapper.map_to_standard(
                 cast(pd.DataFrame | None, df),
-                source="tushare",
-                data_type="income_statement",
                 market="A",
+                data_type="income_statement",
             )
             result = self._filter_latest_by_update_flag(result, "report_date")
             return result if result is not None else pd.DataFrame()
@@ -261,9 +258,8 @@ class TushareProvider(BaseProvider):
 
             result = DataMapper.map_to_standard(
                 cast(pd.DataFrame | None, df),
-                source="tushare",
-                data_type="cash_flow",
                 market="A",
+                data_type="cash_flow",
             )
             result = self._filter_latest_by_update_flag(result, "report_date")
             return result if result is not None else pd.DataFrame()

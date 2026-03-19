@@ -378,6 +378,13 @@ class TushareProvider(DataProvider):
 
         df = self._extract_year(df)
 
+        # Fix: Tushare's fina_indicator returns both 'gross_margin' (毛利润金额)
+        # and 'grossprofit_margin' (毛利率). We want only 'gross_margin' (毛利率).
+        # Drop the original 'gross_margin' column before mapping so the rename
+        # from 'grossprofit_margin' -> 'gross_margin' won't conflict.
+        if "gross_margin" in df.columns and "grossprofit_margin" in df.columns:
+            df = df.drop(columns=["gross_margin"])
+
         # Map to standard field names using TushareFieldMapper
         df = self._mapper.map_dataframe(df, "indicators")
 
@@ -462,7 +469,7 @@ class TushareProvider(DataProvider):
             ts_code=ts_code,
             start_date=start_date,
             end_date=end_date,
-            fields="ts_code,trade_date,total_mv,circ_mv,total_share,circ_share,pe_ttm,pb",
+            fields="ts_code,trade_date,total_mv,circ_mv,total_share,float_share,pe_ttm,pb",
         )
 
         if df is None or df.empty:

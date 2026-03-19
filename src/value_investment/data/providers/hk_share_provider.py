@@ -1,5 +1,9 @@
 """港股 data provider
 
+.. deprecated::
+    请使用 pipeline/data/hk_provider.py 替代。
+    此模块将在未来版本中移除。
+
 注意: 历史交易数据建议使用 YFinanceProvider，AKShare 的港股历史数据接口不够稳定。
 """
 import warnings
@@ -21,10 +25,16 @@ if TYPE_CHECKING:
 class HKShareProvider(BaseProvider):
     """Akshare data provider for 港股 (Hong Kong stocks)
 
-    注意: 历史交易数据建议使用 YFinanceProvider，AKShare 的港股历史数据接口不够稳定。
+    .. deprecated::
+        请使用 pipeline/data/hk_provider.py 替代。
     """
 
     def __init__(self, cache, market: str = "HK", **kwargs):
+        warnings.warn(
+            "HKShareProvider 已deprecated，请使用 pipeline/data/hk_provider.py",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         """Initialize HKShareProvider
 
         Args:

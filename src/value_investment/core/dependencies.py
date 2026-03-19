@@ -1,3 +1,10 @@
+"""Dependency management for value investment indicators
+
+.. deprecated::
+    请使用 pipeline/handlers/ 中的 Handler 替代。
+    此模块将在未来版本中移除。
+"""
+import warnings
 from datetime import datetime
 from typing import Any
 
@@ -6,9 +13,18 @@ from value_investment.data.mapper import DataMapper
 
 
 class DataProvider:
-    """Lightweight dependency provider - fetches data by stock_code"""
+    """Lightweight dependency provider - fetches data by stock_code
+
+    .. deprecated::
+        请使用 pipeline/handlers/ 中的 Handler 替代。
+    """
 
     def __init__(self, stock_provider, market: str = 'A'):
+        warnings.warn(
+            "DataProvider 已deprecated，请使用 pipeline/handlers/ 中的 Handler",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._provider = stock_provider
         self._market = market
 
@@ -51,9 +67,18 @@ class DataProvider:
         return DataMapper.map_quarterly(df, market=self._market)
 
 class DependencyRegistry:
-    """Dependency registry - maps declarations to fetchers"""
+    """Dependency registry - maps declarations to fetchers
+
+    .. deprecated::
+        请使用 pipeline/handlers/ 中的 Handler 替代。
+    """
 
     def __init__(self, data_provider: DataProvider):
+        warnings.warn(
+            "DependencyRegistry 已deprecated，请使用 pipeline/handlers/ 中的 Handler",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._provider = data_provider
 
     def resolve(self, needs: list[str], stock_code: str, **kwargs) -> dict:

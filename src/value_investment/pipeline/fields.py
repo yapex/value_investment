@@ -109,17 +109,83 @@ class IFRSFields(metaclass=IFRSFieldsMeta):
 IFRSFields._frozen = True
 
 
+# =============================================================================
+# CustomFields - Agent 友好的字段定义
+# =============================================================================
+# 
+# 字段分类：
+# 1. 盈利能力 (Profitability) - 评估公司赚钱能力
+# 2. 估值指标 (Valuation) - 评估股价贵贱
+# 3. 成长性 (Growth) - 评估业绩增长
+# 4. 财务健康 (Financial Health) - 评估风险
+# 5. 市场特有 (Market Specific) - 各市场特有指标
+#
+# Agent 使用指南：
+# - 盈利能力分析：roe, roa, gross_margin, net_profit_margin, operating_profit_margin
+# - 估值分析：pe_ratio, pb_ratio, market_cap
+# - 成长性分析：implied_growth, revenue_growth
+# - 财务健康：debt_ratio, current_ratio
+#
+# =============================================================================
+
+
 class CustomFields:
     """自定义字段 (Custom Calculated Fields)
     
     这些字段通过 Calculator 计算得出，不是直接从数据源获取。
-    命名规范：使用 snake_case，清晰描述计算逻辑。
+    Agent 使用这些字段进行财务分析时，应参考【使用场景】和【组合建议】。
     """
     
-    # === 利润率指标 (Profit Margins) ===
-    OPERATING_PROFIT_MARGIN = "operating_profit_margin"  # 营业利润率 = 营业利润 / 营业收入
-    GROSS_PROFIT = "gross_profit"  # 毛利润 = 营业收入 - 营业成本
-    INVENTORY_TURNOVER = "inventory_turnover"  # 存货周转率 = 营业成本 / 平均存货
+    # =========================================================================
+    # 盈利能力指标 (Profitability)
+    # 使用场景：筛选高盈利企业，对比同行业盈利能力
+    # =========================================================================
+    
+    # 毛利率 = (营业收入 - 营业成本) / 营业收入 × 100%
+    # 单位：百分比 (%)
+    # 解读：茅台 90%+，制造业 20-40%，越高越强但需考虑行业差异
+    GROSS_MARGIN = "gross_margin"
+    
+    # 营业利润率 = 营业利润 / 营业收入 × 100%
+    # 单位：百分比 (%)
+    # 解读：反映主营业务盈利能力，剔除非经常性损益
+    OPERATING_PROFIT_MARGIN = "operating_profit_margin"
+    
+    # 毛利润 = 营业收入 - 营业成本
+    # 单位：元
+    # 解读：绝对值，适合比较同行业不同规模公司
+    GROSS_PROFIT = "gross_profit"
+    
+    # 存货周转率 = 营业成本 / 平均存货
+    # 单位：次/年
+    # 解读：越高表示存货变现越快，消费行业重要指标
+    INVENTORY_TURNOVER = "inventory_turnover"
+    
+    # =========================================================================
+    # 投资回报指标 (Investment Returns)
+    # 使用场景：评估资本配置效率，筛选高质量企业
+    # =========================================================================
+    
+    # ROIC = 税后净营业利润 / 投资资本 × 100%
+    # 单位：百分比 (%)
+    # 解读：>WACC(通常10%) 为创造价值，>15% 为优秀，<8% 需谨慎
+    # 组合：常与 roe、wacc 一起分析
+    ROIC = "roic"
+    
+    # =========================================================================
+    # 市场特有指标 (Market Specific)
+    # 使用场景：A 股特有，限售股导致市值计算差异
+    # =========================================================================
+    
+    # 流通市值 = 股价 × 流通股本
+    # 单位：元
+    # 解读：A 股部分股票有国家队/国有法人持股，流通市值更反映实际可交易价值
+    CIRC_MARKET_CAP = "circ_market_cap"
+    
+    # 流通股本 = 总股本 - 限售股
+    # 单位：股
+    # 解读：衡量可在二级市场交易的股份数量
+    CIRC_SHARES = "circ_shares"
     
     @classmethod
     def all(cls) -> frozenset:

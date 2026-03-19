@@ -1,4 +1,10 @@
-"""美股 data provider"""
+"""美股 data provider
+
+.. deprecated::
+    请使用 pipeline/data/us_provider.py 替代。
+    此模块将在未来版本中移除。
+"""
+import warnings
 from datetime import datetime
 from typing import TYPE_CHECKING, cast
 
@@ -15,9 +21,18 @@ if TYPE_CHECKING:
 
 
 class USShareProvider(BaseProvider):
-    """Akshare data provider for 美股 (US stocks)"""
+    """Akshare data provider for 美股 (US stocks)
+
+    .. deprecated::
+        请使用 pipeline/data/us_provider.py 替代。
+    """
 
     def __init__(self, cache, market: str = "US", **kwargs):
+        warnings.warn(
+            "USShareProvider 已deprecated，请使用 pipeline/data/us_provider.py",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         """Initialize USShareProvider
         
         Args:

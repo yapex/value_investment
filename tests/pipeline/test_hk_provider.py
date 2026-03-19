@@ -34,7 +34,7 @@ class TestHKProviderProtocol:
 
     def test_inherits_base_provider(self):
         """HKProvider 应继承 BaseProvider"""
-        from value_investment.data.providers.base_provider import BaseProvider
+        from value_investment.pipeline.data.base_provider import BaseProvider
         provider = HKProvider(cache=MagicMock())
         assert hasattr(provider, "_cache")
         assert hasattr(provider, "_get_from_cache")

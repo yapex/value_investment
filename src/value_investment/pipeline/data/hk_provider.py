@@ -21,7 +21,7 @@ from value_investment.data.mapper import (
     FINANCIAL_INDICATOR_MAPPING,
     DataMapper,
 )
-from value_investment.data.providers.base_provider import (
+from value_investment.pipeline.data.base_provider import (
     BaseProvider,
     get_ttl_until_june_next_year,
 )

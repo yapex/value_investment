@@ -18,7 +18,7 @@ class TestSmartCache:
 
     def test_cache_initialization(self, temp_cache_dir):
         """Cache should initialize with directory"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir, default_ttl=3600)
         assert str(cache.cache_dir) == temp_cache_dir
@@ -26,7 +26,7 @@ class TestSmartCache:
 
     def test_set_and_get_basic(self, temp_cache_dir):
         """Should set and get basic values"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
         cache.set("test_key", {"data": "value"})
@@ -35,7 +35,7 @@ class TestSmartCache:
 
     def test_get_nonexistent(self, temp_cache_dir):
         """Should return None for nonexistent keys"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
         result = cache.get("nonexistent")
@@ -43,7 +43,7 @@ class TestSmartCache:
 
     def test_invalidate(self, temp_cache_dir):
         """Should invalidate cache entry"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
         cache.set("test_key", {"data": "value"})
@@ -53,7 +53,7 @@ class TestSmartCache:
 
     def test_list_keys(self, temp_cache_dir):
         """Should list all cached keys"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
         cache.set("key1", "value1")
@@ -65,7 +65,7 @@ class TestSmartCache:
 
     def test_persistence_after_restart(self, temp_cache_dir):
         """Should persist data to disk and survive restart"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         # First instance: set value
         cache1 = SmartCache(cache_dir=temp_cache_dir)
@@ -78,7 +78,7 @@ class TestSmartCache:
 
     def test_ttl_expiration(self, temp_cache_dir):
         """Should expire after TTL"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir, default_ttl=1)
         cache.set("ttl_key", "value")
@@ -94,7 +94,7 @@ class TestSmartCache:
 
     def test_set_with_ttl(self, temp_cache_dir):
         """Should respect TTL passed to set()"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir, default_ttl=3600)
         cache.set("custom_ttl", "value", ttl=1)
@@ -110,7 +110,7 @@ class TestSmartCache:
 
     def test_cache_dataframe(self, temp_cache_dir):
         """Should cache pandas DataFrame"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
         df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
@@ -122,7 +122,7 @@ class TestSmartCache:
 
     def test_get_or_fetch_cache_hit(self, temp_cache_dir):
         """get_or_fetch应返回缓存数据，不调用fetch_func"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
 
@@ -144,7 +144,7 @@ class TestSmartCache:
 
     def test_get_or_fetch_cache_miss(self, temp_cache_dir):
         """get_or_fetch应调用fetch_func并缓存结果"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
 
@@ -163,7 +163,7 @@ class TestSmartCache:
 
     def test_get_or_fetch_second_call_uses_cache(self, temp_cache_dir):
         """get_or_fetch第二次调用应使用缓存"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
 
@@ -184,7 +184,7 @@ class TestSmartCache:
 
     def test_get_or_fetch_with_ttl(self, temp_cache_dir):
         """get_or_fetch应支持TTL参数"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
 
@@ -215,7 +215,7 @@ class TestSmartCacheRangeFilter:
 
     def test_filter_by_date_range_basic(self, temp_cache_dir):
         """测试基础日期过滤"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
         df = pd.DataFrame({
@@ -228,7 +228,7 @@ class TestSmartCacheRangeFilter:
 
     def test_filter_by_date_range_only_start(self, temp_cache_dir):
         """测试只有start_date"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
         df = pd.DataFrame({"日期": ["2024-01-01", "2024-06-15", "2025-01-01"]})
@@ -238,7 +238,7 @@ class TestSmartCacheRangeFilter:
 
     def test_filter_by_date_range_only_end(self, temp_cache_dir):
         """测试只有end_date"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
         df = pd.DataFrame({"日期": ["2024-01-01", "2024-06-15", "2025-01-01"]})
@@ -248,7 +248,7 @@ class TestSmartCacheRangeFilter:
 
     def test_get_or_fetch_with_range_cache_hit(self, temp_cache_dir):
         """测试缓存命中时过滤"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
 
@@ -271,7 +271,7 @@ class TestSmartCacheRangeFilter:
 
     def test_get_or_fetch_with_range_cache_miss(self, temp_cache_dir):
         """测试缓存未命中时获取并过滤"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
 
@@ -296,7 +296,7 @@ class TestSmartCacheRangeFilter:
 
     def test_get_or_fetch_without_range(self, temp_cache_dir):
         """测试 get_or_fetch 复用 get_or_fetch_with_range（无需过滤）"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
 
@@ -316,7 +316,7 @@ class TestSmartCacheRangeFilter:
 
     def test_smart_cache_subset_query_uses_cache(self, temp_cache_dir):
         """子集查询（end_date <= 缓存end_date）应使用缓存并过滤"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
 
@@ -353,7 +353,7 @@ class TestSmartCacheRangeFilter:
 
     def test_smart_cache_larger_range_triggers_refetch(self, temp_cache_dir):
         """更大范围查询（end_date > 缓存end_date）应重新获取并覆盖缓存"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
 
@@ -400,7 +400,7 @@ class TestSmartCacheRangeFilter:
 
     def test_smart_cache_stores_end_date_metadata(self, temp_cache_dir):
         """缓存应存储cached_end_date元数据"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
 
@@ -437,7 +437,7 @@ class TestSmartCacheForceRefresh:
 
     def test_get_or_fetch_force_refresh_invalidates_cache(self, temp_cache_dir):
         """force_refresh=True时应先删除缓存再获取"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
 
@@ -465,7 +465,7 @@ class TestSmartCacheForceRefresh:
 
     def test_get_or_fetch_force_refresh_cache_miss(self, temp_cache_dir):
         """force_refresh=True但缓存不存在时正常获取"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
 
@@ -483,7 +483,7 @@ class TestSmartCacheForceRefresh:
 
     def test_get_or_fetch_with_range_force_refresh(self, temp_cache_dir):
         """get_or_fetch_with_range 的 force_refresh 参数应正常工作"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
 
@@ -518,7 +518,7 @@ class TestSmartCacheForceRefresh:
 
     def test_force_refresh_updates_cache_with_new_data(self, temp_cache_dir):
         """force_refresh 应更新缓存为新数据"""
-        from value_investment.data.cache import SmartCache
+        from value_investment.core.cache import SmartCache
 
         cache = SmartCache(cache_dir=temp_cache_dir)
 

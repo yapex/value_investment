@@ -1,6 +1,6 @@
 """Tests for Message class"""
 import pytest
-from value_investment.pipeline.bus.message import Message
+from value_investment.core.types import Message
 
 
 def test_message_two_baskets():

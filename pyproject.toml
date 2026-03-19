@@ -1,6 +1,6 @@
 [project]
 name = "value-investment"
-version = "0.2.3"
+version = "0.3.0"
 description = "A value investment analysis tool for A股/港股/美股"
 readme = "README.md"
 requires-python = ">=3.11"

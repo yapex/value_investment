@@ -1,27 +1,25 @@
-"""Tests for InventoryTurnover"""
-import pytest
-from value_investment.pipeline.calculators.inventory_turnover import InventoryTurnover
-from value_investment.pipeline.fields import CustomFields, IFRSFields
+"""Tests for InventoryTurnover Calculator"""
+from value_investment.calculator_plugin import registry
 
 
 def test_inventory_turnover_required_fields():
     """Test InventoryTurnover declares required fields"""
-    calc = InventoryTurnover()
-    assert IFRSFields.OPERATING_COST in calc.required_fields
-    assert IFRSFields.INVENTORY in calc.required_fields
+    calc = registry.get_by_name("inventory_turnover")
+    assert "operating_cost" in calc.required_fields
+    assert "inventory" in calc.required_fields
 
 
 def test_inventory_turnover_name():
     """Test InventoryTurnover name"""
-    assert InventoryTurnover.name == CustomFields.INVENTORY_TURNOVER
+    assert registry.get_by_name("inventory_turnover").name == "inventory_turnover"
 
 
 def test_inventory_turnover_calculate():
     """Test inventory turnover calculation"""
-    calc = InventoryTurnover()
+    calc = registry.get_by_name("inventory_turnover")
     results = {
-        IFRSFields.OPERATING_COST: {2024: 1000, 2023: 900, 2022: 800},
-        IFRSFields.INVENTORY: {2024: 200, 2023: 180, 2022: 160},
+        "operating_cost": {2024: 1000, 2023: 900, 2022: 800},
+        "inventory": {2024: 200, 2023: 180, 2022: 160},
     }
     it = calc.calculate(results)
 
@@ -31,13 +29,12 @@ def test_inventory_turnover_calculate():
 
 def test_inventory_turnover_missing_data():
     """Test inventory turnover with missing data"""
-    calc = InventoryTurnover()
+    calc = registry.get_by_name("inventory_turnover")
     results = {
-        IFRSFields.OPERATING_COST: {2024: 1000},
+        "operating_cost": {2024: 1000},
         # inventory missing - can't calculate without inventory
     }
     it = calc.calculate(results)
 
     # Should handle missing data gracefully - returns empty dict when inventory missing
-    # because avg_inv = 0, division by zero is skipped
     assert it == {} or 2024 not in it

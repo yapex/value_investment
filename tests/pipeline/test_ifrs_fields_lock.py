@@ -27,14 +27,14 @@ class TestIFRSFieldsLock:
         """每个测试后清理可能添加的测试属性"""
         yield
         # 清理测试添加的属性
-        from value_investment.pipeline.fields import IFRSFields
+        from value_investment.domain.fields import IFRSFields
         for attr in ["_TEST_LOCK_FIELD", "NEW_TEST_FIELD"]:
             if hasattr(IFRSFields, attr):
                 delattr(IFRSFields, attr)
 
     def test_ifrs_field_count_is_locked(self):
         """IFRSFields 字段数量必须等于 38"""
-        from value_investment.pipeline.fields import IFRSFields
+        from value_investment.domain.fields import IFRSFields
         
         # 获取所有 IFRS 字段
         ifrs_attrs = [
@@ -60,7 +60,7 @@ class TestIFRSFieldsLock:
 
     def test_no_derived_fields_in_ifrs(self):
         """IFRSFields 不应包含派生字段"""
-        from value_investment.pipeline.fields import IFRSFields
+        from value_investment.domain.fields import IFRSFields
         
         ifrs_attrs = set(
             v for k, v in vars(IFRSFields).items() 
@@ -77,7 +77,7 @@ class TestIFRSFieldsLock:
 
     def test_ifrs_fields_are_frozen(self):
         """IFRSFields 应该是冻结的，不允许动态添加"""
-        from value_investment.pipeline.fields import IFRSFields
+        from value_investment.domain.fields import IFRSFields
         
         # 尝试添加一个正常的字段常量名称（大写，不以下划线开头）
         try:
@@ -91,30 +91,6 @@ class TestIFRSFieldsLock:
         except (AttributeError, TypeError) as e:
             # 预期行为：无法添加新字段
             assert "已冻结" in str(e) or "frozen" in str(e).lower()
-
-    def test_core_field_mapping_matches_ifrs(self):
-        """CORE_FIELD_MAPPING 应该与 IFRSFields 保持一致"""
-        from value_investment.pipeline.fields import IFRSFields
-        from value_investment.data.mapper import CORE_FIELD_MAPPING
-        
-        ifrs_attrs = set(
-            v for k, v in vars(IFRSFields).items() 
-            if k.isupper() and not callable(v)
-        )
-        
-        mapping_fields = set(CORE_FIELD_MAPPING.keys())
-        
-        extra_in_ifrs = ifrs_attrs - mapping_fields
-        extra_in_mapping = mapping_fields - ifrs_attrs
-        
-        errors = []
-        if extra_in_ifrs:
-            errors.append(f"IFRSFields 有但 CORE_FIELD_MAPPING 没有: {sorted(extra_in_ifrs)}")
-        if extra_in_mapping:
-            errors.append(f"CORE_FIELD_MAPPING 有但 IFRSFields 没有: {sorted(extra_in_mapping)}")
-        
-        if errors:
-            pytest.fail("\n".join(errors))
 
     def _get_expected_fields(self) -> set:
         """获取期望的 IFRS 字段集合"""

@@ -1,12 +1,12 @@
-"""Tests for AStockMarketHandler"""
+"""Tests for AShareMarketHandler"""
 import pytest
 from unittest.mock import MagicMock
 
-from value_investment.pipeline.handlers.a_market import AStockMarketHandler
-from value_investment.pipeline.bus.message import Message
+from value_investment.handlers.a_share import AShareMarketHandler
+from value_investment.core.types import Message
 
 
-class TestAStockMarketHandler:
+class TestAShareMarketHandler:
     @pytest.fixture
     def mock_provider(self):
         provider = MagicMock()
@@ -21,14 +21,14 @@ class TestAStockMarketHandler:
 
     def test_market_filter(self):
         """快速拒绝：港股请求应该被忽略"""
-        handler = AStockMarketHandler(None)
+        handler = AShareMarketHandler(None)
         message = Message(symbol="00700", market="港股", end="2024", years=5, require={"market_cap"})
 
         assert handler._can_handle_market(message) is False
 
     def test_fields_filter_no_provider(self):
         """无 provider 时无法处理字段"""
-        handler = AStockMarketHandler(None)
+        handler = AShareMarketHandler(None)
         message = Message(symbol="600519", market="A股", end="2024", years=5, require={"market_cap"})
 
         # 无 provider，can_handle 为空
@@ -37,7 +37,7 @@ class TestAStockMarketHandler:
     @pytest.mark.asyncio
     async def test_fetch_market_data(self, mock_provider):
         """正常流程：获取市值数据"""
-        handler = AStockMarketHandler(mock_provider)
+        handler = AShareMarketHandler(mock_provider)
         message = Message(symbol="600519", market="A股", end="2024", years=5, require={"market_cap", "pe_ratio"})
 
         await handler.handle(message)
@@ -55,7 +55,7 @@ class TestAStockMarketHandler:
     @pytest.mark.asyncio
     async def test_no_provider(self):
         """无 provider 时优雅返回"""
-        handler = AStockMarketHandler(None)
+        handler = AShareMarketHandler(None)
         message = Message(symbol="600519", market="A股", end="2024", years=5, require={"market_cap"})
 
         await handler.handle(message)

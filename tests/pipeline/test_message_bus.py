@@ -1,9 +1,9 @@
 """Tests for MessageBus"""
 import asyncio
 import pytest
-from value_investment.pipeline.bus.message import Message
-from value_investment.pipeline.bus.message_bus import MessageBus
-from value_investment.pipeline.handlers.base import Handler
+from value_investment.core.types import Message
+from value_investment.pipeline.bus import MessageBus
+from value_investment.handlers.base import Handler
 
 
 class MockHandler(Handler):

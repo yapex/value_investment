@@ -154,7 +154,7 @@ def mock_tushare_api():
 @pytest.fixture
 def mock_tushare_provider(mock_cache, mock_tushare_api):
     """Create TushareProvider with mocked API"""
-    from value_investment.data.providers.tushare_provider import TushareProvider
+    from value_investment.providers.a_share import TushareProvider
 
     mock_api, mock_ts = mock_tushare_api
     provider = TushareProvider(cache=mock_cache, token="mock_token_for_testing")

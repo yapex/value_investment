@@ -2,7 +2,7 @@
 import pytest
 
 from value_investment.pipeline.api import PipelineAPI
-from value_investment.pipeline.fields import IFRSFields, CustomFields
+from value_investment.domain.fields import IFRSFields, CustomFields
 
 
 def test_api_detect_market():

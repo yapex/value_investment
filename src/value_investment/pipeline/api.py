@@ -2,10 +2,13 @@
 import warnings
 from typing import Any
 
-from value_investment.pipeline.bus.message import Message
+from value_investment.core.types import Message
+from value_investment.pipeline.bus import MessageBus
 from value_investment.pipeline.container import Container
-from value_investment.pipeline.calculators import CALCULATOR_MAP
-from value_investment.pipeline.fields import ALL_FIELDS
+from value_investment.calculator_plugin import registry
+
+CALCULATOR_MAP = {calc.name: calc for calc in registry.get_all()}
+from value_investment.domain.fields import ALL_FIELDS
 from value_investment.pipeline.validator import validate_pipeline, ValidationReport
 
 

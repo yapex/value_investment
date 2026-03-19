@@ -3,7 +3,7 @@ import os
 import pytest
 
 from value_investment.pipeline.api import PipelineAPI
-from value_investment.pipeline.fields import IFRSFields, CustomFields
+from value_investment.domain.fields import IFRSFields, CustomFields
 
 
 @pytest.mark.skipif(not os.environ.get("TUSHARE_TOKEN"), reason="TUSHARE_TOKEN not set")

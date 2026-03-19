@@ -6,6 +6,8 @@ from value_investment.pipeline.validator import (
     assert_all_valid,
 )
 from value_investment.calculator_plugin import get_calculators
+from value_investment.domain.fields import ALL_FIELDS
+
 ALL_CALCULATORS = get_calculators()
 
 
@@ -15,6 +17,18 @@ class TestPipelineValidator:
     def test_all_calculators_have_valid_dependencies(self):
         """所有 Calculator 的依赖字段都必须有 Handler 支持"""
         assert_all_valid(ALL_CALCULATORS)
+
+    def test_all_calculators_registered_in_fields(self):
+        """所有 Calculator 的输出字段必须在 ALL_FIELDS 中注册"""
+        unregistered = []
+        for calc in ALL_CALCULATORS:
+            if calc.name not in ALL_FIELDS:
+                unregistered.append(calc.name)
+        
+        assert not unregistered, (
+            f"以下 Calculator 的输出字段未在 ALL_FIELDS 中注册: {unregistered}. "
+            f"需要添加到 CustomFields。"
+        )
 
     def test_validation_returns_results(self):
         """验证函数返回所有 Calculator 的结果"""

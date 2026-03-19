@@ -4,8 +4,8 @@ import warnings
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
-from value_investment.pipeline.data.hk_provider import HKProvider
-from value_investment.pipeline.data.provider import DataProvider
+from value_investment.providers.hk_share import HKProvider
+from value_investment.providers.data_provider import DataProvider
 
 
 class TestHKProviderProtocol:
@@ -34,7 +34,7 @@ class TestHKProviderProtocol:
 
     def test_inherits_base_provider(self):
         """HKProvider 应继承 BaseProvider"""
-        from value_investment.pipeline.data.base_provider import BaseProvider
+        from value_investment.providers.base import BaseProvider
         provider = HKProvider(cache=MagicMock())
         assert hasattr(provider, "_cache")
         assert hasattr(provider, "_get_from_cache")

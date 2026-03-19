@@ -383,6 +383,13 @@ class TushareProvider(BaseProvider):
 
         return df if isinstance(df, pd.DataFrame) else pd.DataFrame()
 
+    def _fetch_indicators(
+        self, stock_code: str, end_year: int, start_year: int
+    ) -> pd.DataFrame:
+        """Fetch financial indicators (implements abstract method from BaseProvider)"""
+        ts_code = self._to_ts_code(stock_code)
+        return self._fetch_financial_indicators(ts_code, start_year, end_year)
+
     def _fetch_financial_indicators(
         self, ts_code: str, start_year: int, end_year: int
     ) -> pd.DataFrame:

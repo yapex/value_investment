@@ -1,6 +1,6 @@
 """Tests for Handler base class"""
 import pytest
-from value_investment.pipeline.handlers.base import Handler
+from value_investment.handlers.base import Handler
 
 
 def test_handler_interface():

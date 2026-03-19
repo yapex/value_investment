@@ -12,7 +12,7 @@ The map_to_standard() method should:
 import pytest
 import pandas as pd
 
-from value_investment.data.mapper import DataMapper
+from value_investment.mapper import DataMapper
 
 
 class TestMapToStandardTushare:

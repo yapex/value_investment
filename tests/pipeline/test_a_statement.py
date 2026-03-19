@@ -1,12 +1,12 @@
-"""Tests for AStockStatementHandler"""
+"""Tests for AShareStatementHandler"""
 import pytest
 from unittest.mock import MagicMock
 
-from value_investment.pipeline.handlers.a_statement import AStockStatementHandler
-from value_investment.pipeline.bus.message import Message
+from value_investment.handlers.a_share import AShareStatementHandler
+from value_investment.core.types import Message
 
 
-class TestAStockStatementHandler:
+class TestAShareStatementHandler:
     @pytest.fixture
     def mock_provider(self):
         provider = MagicMock()
@@ -21,14 +21,14 @@ class TestAStockStatementHandler:
 
     def test_market_filter(self, mock_provider):
         """快速拒绝：港股请求应该被忽略"""
-        handler = AStockStatementHandler(mock_provider)
+        handler = AShareStatementHandler(mock_provider)
         message = Message(symbol="00700", market="港股", end="2024", years=5, require={"total_revenue"})
 
         assert handler._can_handle_market(message) is False
 
     def test_fields_filter(self, mock_provider):
         """快速拒绝：无支持字段应该被忽略"""
-        handler = AStockStatementHandler(mock_provider)
+        handler = AShareStatementHandler(mock_provider)
         message = Message(symbol="600519", market="A股", end="2024", years=5, require={"market_cap"})
 
         # market_cap 是 market data，不在 statement fields 中
@@ -37,7 +37,7 @@ class TestAStockStatementHandler:
     @pytest.mark.asyncio
     async def test_fetch_financial_data(self, mock_provider):
         """正常流程：获取财务报表数据"""
-        handler = AStockStatementHandler(mock_provider)
+        handler = AShareStatementHandler(mock_provider)
         message = Message(symbol="600519", market="A股", end="2024", years=5, require={"total_revenue", "net_profit"})
 
         await handler.handle(message)
@@ -56,7 +56,7 @@ class TestAStockStatementHandler:
     @pytest.mark.asyncio
     async def test_handle_mixed_fields(self, mock_provider):
         """混合字段：只处理 statement 字段，忽略 indicator/market 字段"""
-        handler = AStockStatementHandler(mock_provider)
+        handler = AShareStatementHandler(mock_provider)
         # roe 是 indicator，不是 statement 字段
         message = Message(
             symbol="600519", market="A股", end="2024", years=5,
@@ -73,7 +73,7 @@ class TestAStockStatementHandler:
     @pytest.mark.asyncio
     async def test_no_provider(self):
         """无 provider 时优雅返回"""
-        handler = AStockStatementHandler(None)
+        handler = AShareStatementHandler(None)
         message = Message(symbol="600519", market="A股", end="2024", years=5, require={"total_revenue"})
 
         await handler.handle(message)

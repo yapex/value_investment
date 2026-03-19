@@ -1,7 +1,7 @@
 """Tests for GrossProfit"""
 import pytest
-from value_investment.pipeline.calculators.gross_profit import GrossProfit
-from value_investment.pipeline.fields import CustomFields, IFRSFields
+from value_investment.domain.calculators.gross_profit import GrossProfit
+from value_investment.domain.fields import CustomFields, IFRSFields
 
 
 def test_gross_profit_required_fields():

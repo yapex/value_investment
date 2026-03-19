@@ -2,8 +2,8 @@
 import pandas as pd
 import pytest
 
-from value_investment.pipeline.data.tushare_mapper import TushareFieldMapper
-from value_investment.pipeline.fields import IFRSFields
+from value_investment.providers.tushare_mapper import TushareFieldMapper
+from value_investment.domain.fields import IFRSFields
 
 
 class TestTushareFieldMapper:

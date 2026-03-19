@@ -1,6 +1,6 @@
 """Tests for ImpliedGrowth"""
-from value_investment.pipeline.calculators.implied_growth import ImpliedGrowth
-from value_investment.pipeline.fields import IFRSFields
+from value_investment.domain.calculators.implied_growth import ImpliedGrowth
+from value_investment.domain.fields import IFRSFields
 
 
 class TestImpliedGrowth:

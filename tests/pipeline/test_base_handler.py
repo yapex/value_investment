@@ -1,8 +1,8 @@
 """Tests for BaseHandler"""
 import pytest
 
-from value_investment.pipeline.handlers.base_handler import BaseHandler
-from value_investment.pipeline.bus.message import Message
+from value_investment.handlers.base_handler import BaseHandler
+from value_investment.core.types import Message
 
 
 class MockProvider:

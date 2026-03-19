@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import MagicMock
 
 from value_investment.pipeline.container import Container
-from value_investment.pipeline.bus.message import Message
+from value_investment.core.types import Message
 
 
 class TestE2EHandlerSplit:
@@ -46,13 +46,13 @@ class TestE2EHandlerSplit:
 
     @pytest.mark.asyncio
     async def test_a_stock_statement_fields_routed(self, mock_tushare):
-        """A股 statement 字段只被 AStockStatementHandler 处理"""
+        """A股 statement 字段只被 AShareStatementHandler 处理"""
         Container._instance = None
         container = Container.create()
 
         # 替换 A 股 Statement Handler 的 provider
         for handler in container.bus().handlers:
-            if type(handler).__name__ == "AStockStatementHandler":
+            if type(handler).__name__ == "AShareStatementHandler":
                 handler._provider = mock_tushare
 
         message = Message(
@@ -71,12 +71,12 @@ class TestE2EHandlerSplit:
 
     @pytest.mark.asyncio
     async def test_a_stock_indicator_fields_routed(self, mock_tushare):
-        """A股 indicator 字段只被 AStockIndicatorHandler 处理"""
+        """A股 indicator 字段只被 AShareIndicatorHandler 处理"""
         Container._instance = None
         container = Container.create()
 
         for handler in container.bus().handlers:
-            if type(handler).__name__ == "AStockIndicatorHandler":
+            if type(handler).__name__ == "AShareIndicatorHandler":
                 handler._provider = mock_tushare
 
         message = Message(
@@ -94,15 +94,15 @@ class TestE2EHandlerSplit:
 
     @pytest.mark.asyncio
     async def test_hk_handler_ignores_a_stock_message(self, mock_tushare):
-        """HK Handler 拒绝 A 股消息（快速拒绝），AStockStatementHandler 处理 A 股"""
+        """HK Handler 拒绝 A 股消息（快速拒绝），AShareStatementHandler 处理 A 股"""
         Container._instance = None
         container = Container.create()
 
-        # Mock AStockStatementHandler provider
+        # Mock AShareStatementHandler provider
         for handler in container.bus().handlers:
-            if type(handler).__name__ == "AStockStatementHandler":
+            if type(handler).__name__ == "AShareStatementHandler":
                 handler._provider = mock_tushare
-            elif type(handler).__name__ in ("HKStockStatementHandler", "USStockStatementHandler"):
+            elif type(handler).__name__ in ("HKShareStatementHandler", "USShareStatementHandler"):
                 handler._provider = None  # 确保 HK/US 没有 provider
 
         message = Message(
@@ -115,7 +115,7 @@ class TestE2EHandlerSplit:
 
         await container.bus().process(message)
 
-        # AStockStatementHandler 应处理此消息
+        # AShareStatementHandler 应处理此消息
         assert "total_revenue" not in message.require
         assert 2024 in message.results.get("total_revenue", {})
 
@@ -127,7 +127,7 @@ class TestE2EHandlerSplit:
 
         # 注入 mock provider
         for handler in container.bus().handlers:
-            if type(handler).__name__ in ("AStockStatementHandler", "AStockIndicatorHandler", "AStockMarketHandler"):
+            if type(handler).__name__ in ("AShareStatementHandler", "AShareIndicatorHandler", "AShareMarketHandler"):
                 handler._provider = mock_tushare
 
         message = Message(
@@ -152,8 +152,8 @@ class TestE2EHandlerSplit:
 
         handler_names = [type(h).__name__ for h in container.bus().handlers]
         expected = [
-            "AStockStatementHandler", "AStockIndicatorHandler", "AStockMarketHandler",
-            "HKStockStatementHandler", "HKStockIndicatorHandler", "HKStockMarketHandler",
-            "USStockStatementHandler", "USStockIndicatorHandler", "USStockMarketHandler",
+            "AShareStatementHandler", "AShareIndicatorHandler", "AShareMarketHandler",
+            "HKShareStatementHandler", "HKShareIndicatorHandler", "HKShareMarketHandler",
+            "USShareStatementHandler", "USShareIndicatorHandler", "USShareMarketHandler",
         ]
         assert set(handler_names) == set(expected)

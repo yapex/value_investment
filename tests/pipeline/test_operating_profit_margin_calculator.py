@@ -1,6 +1,6 @@
 """Tests for OperatingProfitMargin"""
-from value_investment.pipeline.calculators.operating_profit_margin import OperatingProfitMargin
-from value_investment.pipeline.fields import CustomFields
+from value_investment.domain.calculators.operating_profit_margin import OperatingProfitMargin
+from value_investment.domain.fields import CustomFields
 
 
 class TestOperatingProfitMargin:

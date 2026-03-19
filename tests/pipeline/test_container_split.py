@@ -11,15 +11,15 @@ class TestContainerHandlerRegistration:
         container = Container.create()
 
         expected = [
-            "AStockStatementHandler",
-            "AStockIndicatorHandler",
-            "AStockMarketHandler",
-            "HKStockStatementHandler",
-            "HKStockIndicatorHandler",
-            "HKStockMarketHandler",
-            "USStockStatementHandler",
-            "USStockIndicatorHandler",
-            "USStockMarketHandler",
+            "AShareStatementHandler",
+            "AShareIndicatorHandler",
+            "AShareMarketHandler",
+            "HKShareStatementHandler",
+            "HKShareIndicatorHandler",
+            "HKShareMarketHandler",
+            "USShareStatementHandler",
+            "USShareIndicatorHandler",
+            "USShareMarketHandler",
         ]
         handler_names = [type(h).__name__ for h in container.bus().handlers]
 

@@ -30,7 +30,7 @@ class Container(containers.DeclarativeContainer):
 
     # Cache - 复用现有的 SmartCache
     cache = providers.Singleton(
-        lambda: __import__("value_investment.data.cache", fromlist=["SmartCache"]).SmartCache()
+        lambda: __import__("value_investment.core.cache", fromlist=["SmartCache"]).SmartCache()
     )
 
     # Tushare token from environment

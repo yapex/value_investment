@@ -5,7 +5,7 @@ from value_investment.pipeline.validator import (
     get_validation_summary,
     assert_all_valid,
 )
-from value_investment.pipeline.calculators import ALL_CALCULATORS
+from value_investment.domain.calculators import ALL_CALCULATORS
 
 
 class TestPipelineValidator:

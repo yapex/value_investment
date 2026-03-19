@@ -87,6 +87,7 @@ class TestMapToStandardTushare:
             df, market="A", data_type="balance_sheet"
         )
 
+        assert result is not None
         assert len(result) == 3
         assert list(result["stock_code"]) == ["600519.SH"] * 3
         assert list(result["report_date"]) == ["20231231", "20221231", "20211231"]
@@ -178,6 +179,7 @@ class TestMapToStandardIntegration:
         )
 
         # Verify source-specific mapping
+        assert result is not None
         assert "stock_code" in result.columns
         assert "report_date" in result.columns
 

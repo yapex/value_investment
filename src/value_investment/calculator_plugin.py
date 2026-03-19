@@ -289,10 +289,12 @@ def _load_calcs_from_package(
                 try:
                     calc_dict = load_func(tmp_path, validate=False)
                     # 显式设置 name 和 source
+                    file_name = py_file.name
+                    file_stem = file_name[:-3] if file_name.endswith(".py") else file_name
                     calc_dict["name"] = (
-                        py_file.stem[5:] if py_file.stem.startswith("calc_") else py_file.stem
+                        file_stem[5:] if file_stem.startswith("calc_") else file_stem
                     )
-                    calc_dict["_source"] = f"package://{py_file.name}"
+                    calc_dict["_source"] = f"package://{file_name}"
                     register_func(
                         name=calc_dict["name"],
                         required_fields=calc_dict["required_fields"],

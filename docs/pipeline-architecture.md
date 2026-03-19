@@ -1,4 +1,4 @@
-# Pipeline 新架构指南
+# Pipeline 架构指南
 
 > 本文档介绍 value_investment 项目的 Pipeline 架构设计和使用方法。
 
@@ -29,6 +29,7 @@ Pipeline 是一个基于消息总线模式的财务数据获取和处理框架�
 |-----|------|
 | **依赖注入** | 使用 Container 管理组件依赖 |
 | **消息总线** | Handler 通过 MessageBus 协作 |
+| **快速拒绝** | Handler 通过 `_can_handle_market()` 快速跳过不相关消息 |
 | **字段标准化** | 统一使用 IFRS 标准字段名 |
 | **计算解耦** | 派生字段通过 Calculator 计算 |
 
@@ -44,25 +45,46 @@ Pipeline 是一个基于消息总线模式的财务数据获取和处理框架�
 ┌─────────────────────────────────────────────────────────────────┐
 │                       MessageBus                                 │
 │                   (消息总线, 多轮处理)                            │
+│              9 个 Handler 注册到总线上                            │
 └─────────────────────────────────────────────────────────────────┘
-          │                    │                    │
-          ▼                    ▼                    ▼
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│  AStockHandler  │  │  HKStockHandler │  │  USStockHandler │
-│     (A股)       │  │     (港股)      │  │     (美股)      │
-└─────────────────┘  └─────────────────┘  └─────────────────┘
-          │                    │                    │
-          ▼                    ▼                    ▼
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│ TushareProvider │  │  AkshareProvider│  │  YFinanceProvider│
-│   (数据源)      │  │    (数据源)     │  │    (数据源)      │
-└─────────────────┘  └─────────────────┘  └─────────────────┘
+         │            │            │            │            │
+         ▼            ▼            ▼            ▼            ▼
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│ AStatement   │ │ AIndicator   │ │ AMarket      │  ← A 股 Handler 组
+└──────────────┘ └──────────────┘ └──────────────┘
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│ HKStatement  │ │ HKIndicator  │ │ HKMarket     │  ← 港股 Handler 组
+└──────────────┘ └──────────────┘ └──────────────┘
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│ USStatement  │ │ USIndicator  │ │ USMarket     │  ← 美股 Handler 组
+└──────────────┘ └──────────────┘ └──────────────┘
+         │            │            │            │            │
+         ▼            ▼            ▼            ▼            ▼
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│ TushareProvider│ AkshareProvider│  YFinanceProvider │  ← Data Provider 组
+└──────────────┘ └──────────────┘ └──────────────┘
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Calculator                                │
 │              (派生字段计算: gross_profit, inventory_turnover)     │
 └─────────────────────────────────────────────────────────────────┘
+```
+
+### 1.3 Handler 快速拒绝模式
+
+每个 Handler 实现快速拒绝，避免无效处理：
+
+```python
+async def handle(self, message: Message) -> None:
+    # 快速拒绝：市场不匹配
+    if not self._can_handle_market(message):
+        return
+    # 快速拒绝：无支持的字段
+    if not self._can_handle_fields(message):
+        return
+    # 真正处理...
+    await self._handle_impl(message)
 ```
 
 ---
@@ -79,11 +101,27 @@ container = Container.create()
 
 # 访问组件
 bus = container.bus()
-handler = container.a_stock_handler()
-calculator = container.calculators()
+# 访问 A 股 Handler 组
+a_handler = container.a_stock_statement_handler()
+# 访问港股 Handler 组
+hk_handler = container.hk_stock_indicator_handler()
 ```
 
-**职责**: 统一管理所有组件的创建和依赖关系。
+**职责**: 统一管理所有组件的创建和依赖关系。Container.create() 注册 9 个 Handler 到消息总线。
+
+**注册的 9 个 Handler**:
+
+| Handler | 市场 | 数据类型 | Provider |
+|---------|------|---------|----------|
+| AStockStatementHandler | A 股 | 财务报表 (BS/IS/CF) | Tushare |
+| AStockIndicatorHandler | A 股 | 财务指标 | Tushare |
+| AStockMarketHandler | A 股 | 市值/PE/PB | Tushare |
+| HKStockStatementHandler | 港股 | 财务报表 | Akshare |
+| HKStockIndicatorHandler | 港股 | 财务指标 | Akshare |
+| HKStockMarketHandler | 港股 | 市值/PE/PB | Akshare |
+| USStockStatementHandler | 美股 | 财务报表 | YFinance/Akshare |
+| USStockIndicatorHandler | 美股 | 财务指标 | YFinance/Akshare |
+| USStockMarketHandler | 美股 | 市值/PE/PB | YFinance/Akshare |
 
 ### 2.2 MessageBus (消息总线)
 
@@ -124,21 +162,50 @@ message = Message(
 
 ### 2.4 Handler (处理器)
 
-Handler 负责从数据源获取特定字段的数据。
+Handler 负责从数据源获取特定字段的数据。每个 Handler 继承自 `BaseHandler`，实现快速拒绝模式。
 
 ```python
+from value_investment.pipeline.handlers.base_handler import BaseHandler
+
 class BaseHandler(ABC):
-    @abstractmethod
-    async def handle(self, message: Message) -> None:
-        """处理消息, 从 message.require 中获取能处理的字段"""
-        pass
-    
     @property
+    def can_handle(self) -> set[str]:
+        """该 Handler 能处理的字段集合"""
+        return self._supported_fields & (
+            self._provider.supported_fields if self._provider else set()
+        )
+
+    def _can_handle_market(self, message: Message) -> bool:
+        """快速判断：是否处理该市场"""
+        return message.market == self.target_market
+
+    def _can_handle_fields(self, message: Message) -> bool:
+        """快速判断：是否有可处理的字段"""
+        return bool(message.require & self.can_handle)
+
+    async def handle(self, message: Message) -> None:
+        # 快速拒绝：市场不匹配
+        if not self._can_handle_market(message):
+            return
+        # 快速拒绝：无支持的字段
+        if not self._can_handle_fields(message):
+            return
+        # 交给子类处理
+        await self._handle_impl(message)
+
     @abstractmethod
-    def supported_fields(self) -> set[str]:
-        """返回该 Handler 支持的字段集合"""
+    async def _handle_impl(self, message: Message) -> None:
+        """子类实现具体处理逻辑"""
         pass
 ```
+
+**Handler 类型**:
+
+| Handler | 字段数量 | 数据来源 |
+|---------|---------|---------|
+| StatementHandler | ~26 | balance_sheet + income_statement + cash_flow |
+| IndicatorHandler | ~17 | fina_indicator API |
+| MarketHandler | ~6 | daily_basic API |
 
 ### 2.5 Calculator (计算器)
 
@@ -186,9 +253,10 @@ class GrossProfitCalculator:
 3. MessageBus 多轮处理
    ┌─────────────────────────────────────────────┐
    │ Round 1: Handler 能直接获取的字段            │
-   │   - AStockHandler: roe, roic               │
-   │   - message.require -= {"roe", "roic"}     │
-   │   - message.results["roe"] = {...}         │
+   │   - AStockStatementHandler: total_revenue │
+   │   - AStockIndicatorHandler: roe           │
+   │   - message.require -= {total_revenue, roe}│
+   │   - message.results[...] = {...}           │
    │                                           │
    │ Round 2: 检查是否有新字段可获取              │
    │   - message.require = {"gross_profit"}    │
@@ -314,74 +382,82 @@ class InventoryTurnoverCalculator:
 
 ### 5.1 创建新 Handler
 
+继承 `BaseHandler` 实现快速拒绝模式：
+
 ```python
 # src/value_investment/pipeline/handlers/my_handler.py
-from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from value_investment.pipeline.handlers.base_handler import BaseHandler
 
-if TYPE_CHECKING:
-    from value_investment.pipeline.bus.message import Message
+# 定义支持的字段
+MY_HANDLER_FIELDS: set[str] = {
+    "total_revenue",
+    "net_profit",
+}
 
-class BaseHandler(ABC):
-    @abstractmethod
-    async def handle(self, message: Message) -> None:
-        """处理消息
-        
-        职责:
-        1. 检查 message.require 中是否有自己能处理的字段
-        2. 从数据源获取数据
-        3. 调用 message.add_result(field, data) 添加结果
-        """
-        pass
-    
-    @property
-    @abstractmethod
-    def supported_fields(self) -> set[str]:
-        """返回支持的字段集合"""
-        pass
+class MyStockStatementHandler(BaseHandler):
+    """自定义股票数据处理器"""
+
+    def __init__(self, provider=None):
+        super().__init__(provider, "A股", MY_HANDLER_FIELDS)
+
+    async def _handle_impl(self, message: Message) -> None:
+        """处理消息"""
+        to_handle = message.require & self.can_handle
+        if not to_handle:
+            return
+
+        # 从数据源获取数据
+        data = self._provider.fetch_financial_data(
+            stock_code=message.symbol,
+            fields=to_handle,
+            end_year=int(message.end[:4]),
+            years=message.years,
+        )
+
+        # 添加结果
+        for field, values in data.items():
+            if values:
+                message.add_result(field, values)
 ```
 
-### 5.2 Handler 示例
+### 5.2 Handler 示例 (AStockStatementHandler)
 
 ```python
-from value_investment.pipeline.handlers.base import BaseHandler
-from value_investment.pipeline.bus.message import Message
-from value_investment.pipeline.fields import IFRSFields
-from value_investment.data.mapper import DataMapper
+from value_investment.pipeline.handlers.a_statement import AStockStatementHandler
 
-class MyStockHandler(BaseHandler):
-    """自定义股票数据处理器"""
-    
-    def __init__(self, provider):
-        self._provider = provider
-    
-    @property
-    def supported_fields(self) -> set[str]:
-        return {
-            IFRSFields.TOTAL_REVENUE,
-            IFRSFields.NET_PROFIT,
-            IFRSFields.ROE,
-        }
-    
-    async def handle(self, message: Message) -> None:
-        # 获取该 handler 能处理的字段
-        can_handle = message.require & self.supported_fields
-        if not can_handle:
+# 字段定义 (来自 CORE_FIELD_MAPPING)
+A_STOCK_STATEMENT_FIELDS: set[str] = {
+    # 资产负债表
+    "total_assets", "total_liabilities", "total_equity",
+    "current_assets", "current_liabilities",
+    "cash_and_equivalents", "inventory",
+    "accounts_receivable", "accounts_payable",
+    # 利润表
+    "total_revenue", "net_profit", "operating_profit",
+    # 现金流量表
+    "operating_cash_flow", "investing_cash_flow",
+    "financing_cash_flow",
+}
+
+class AStockStatementHandler(BaseHandler):
+    def __init__(self, provider=None):
+        super().__init__(provider, "A股", A_STOCK_STATEMENT_FIELDS)
+
+    async def _handle_impl(self, message: Message) -> None:
+        to_handle = message.require & self.can_handle
+        if not to_handle:
             return
-        
-        # 按数据类型分组获取数据
-        balance_fields = can_handle & self._get_balance_fields()
-        income_fields = can_handle & self._get_income_fields()
-        
-        # 获取数据并映射
-        if balance_fields:
-            data = await self._fetch_balance_sheet(message.symbol, message.market)
-            mapped = DataMapper.map_balance_sheet(data)
-            for field in balance_fields:
-                if field in mapped.columns:
-                    message.add_result(field, self._to_year_dict(mapped[field]))
-        
-        # ... 类似处理其他类型
+
+        data = self._provider.fetch_financial_data(
+            stock_code=message.symbol,
+            fields=to_handle,
+            end_year=int(message.end[:4]),
+            years=message.years,
+        )
+
+        for field, values in data.items():
+            if values:
+                message.add_result(field, values)
 ```
 
 ### 5.3 注册 Handler
@@ -617,7 +693,7 @@ uv run python -m pytest tests/pipeline/test_e2e_roic.py -v
 
 1. **字段定义**: `src/value_investment/pipeline/fields.py` → 添加 `IFRSFields.NEW_FIELD`
 2. **字段映射**: `src/value_investment/data/mapper.py` → `CORE_FIELD_MAPPING["new_field"]`
-3. **Handler 支持**: 在相应 Handler 的 `supported_fields` 中添加
+3. **Handler 支持**: 在相应 Handler 的 `_supported_fields` 中添加（如 A_STOCK_STATEMENT_FIELDS）
 4. **测试**: 添加单元测试和集成测试
 
 ### Q2: 如何添加新的派生字段计算器？
@@ -628,7 +704,14 @@ uv run python -m pytest tests/pipeline/test_e2e_roic.py -v
 4. **注册**: 在 `calculators/__init__.py` 中注册
 5. **测试**: 编写单元测试
 
-### Q3: Handler 和 Calculator 的区别？
+### Q3: 如何添加新的市场支持？
+
+1. **创建 Handler 组**: `handlers/hk_statement.py`, `handlers/hk_indicator.py`, `handlers/hk_market.py`
+2. **创建/配置 Provider**: `data/akshare_provider.py` 等
+3. **在 Container 中注册**: 在 `container.py` 的 `create()` 中添加
+4. **在 `CORE_FIELD_MAPPING` 中添加市场字段映射**
+
+### Q4: Handler 和 Calculator 的区别？
 
 | 特性 | Handler | Calculator |
 |-----|---------|------------|
@@ -637,32 +720,23 @@ uv run python -m pytest tests/pipeline/test_e2e_roic.py -v
 | 典型用途 | 获取原始财务数据 | 计算派生指标 |
 | 示例 | 获取 ROE、营收、净利润 | 计算毛利、存货周转率 |
 
-### Q4: 如何调试数据获取问题？
+### Q5: 如何调试数据获取问题？
 
-1. **查看详细日志**: MessageBus 和 API 都有 debug 输出
+1. **查看 Handler 支持的字段**: 
    ```python
-   # stderr 会输出处理过程
-   await api.get_data("600519", ["roe"])
+   handler.can_handle & message.require  # 查看交集
    ```
 
-2. **检查字段支持**: 确认 Handler 支持目标字段
+2. **检查市场匹配**: 
    ```python
-   handler.supported_fields & message.require
+   handler._can_handle_market(message)  # 快速拒绝检查
    ```
 
-3. **检查数据映射**: 确认字段映射正确
+3. **检查字段映射**: 确认字段映射正确
    ```python
    from value_investment.data.mapper import DataMapper
    DataMapper.get_market_field("roe", "A股")  # 返回 A 股字段名
    ```
-
-### Q5: 如何添加新的市场支持？
-
-1. 创建新的 Handler: `handlers/hk_stock.py` 或 `handlers/us_stock.py`
-2. 创建/配置 Provider: `data/tushare_provider.py` 等
-3. 在 `Container.create()` 中注册 Handler
-4. 在 `CORE_FIELD_MAPPING` 中添加市场字段映射
-5. 添加市场检测逻辑 (如果需要)
 
 ---
 
@@ -674,29 +748,55 @@ uv run python -m pytest tests/pipeline/test_e2e_roic.py -v
 src/value_investment/pipeline/
 ├── __init__.py
 ├── api.py              # 高层 API
-├── container.py        # 依赖注入容器
-├── fields.py           # 标准字段定义
+├── container.py        # 依赖注入容器 (注册 9 个 Handler)
+├── fields.py           # 标准字段定义 (IFRSFields)
 ├── bus/
 │   ├── __init__.py
 │   ├── message.py      # Message 数据类
 │   └── message_bus.py  # 消息总线
 ├── handlers/
 │   ├── __init__.py
-│   ├── base.py         # Handler 基类
-│   ├── a_stock.py      # A股处理器
-│   ├── hk_stock.py     # 港股处理器
-│   └── us_stock.py     # 美股处理器
+│   ├── base.py         # Handler Protocol (旧)
+│   ├── base_handler.py # BaseHandler 基类 (快速拒绝模式)
+│   ├── a_statement.py      # A 股财务报表 Handler
+│   ├── a_indicator.py       # A 股财务指标 Handler
+│   ├── a_market.py         # A 股市值数据 Handler
+│   ├── hk_statement.py     # 港股财务报表 Handler
+│   ├── hk_indicator.py      # 港股财务指标 Handler
+│   ├── hk_market.py        # 港股市值数据 Handler
+│   ├── us_statement.py     # 美股财务报表 Handler
+│   ├── us_indicator.py     # 美股财务指标 Handler
+│   └── us_market.py       # 美股市值数据 Handler
 ├── calculators/
 │   ├── __init__.py     # Calculator 注册
 │   ├── gross_profit.py
 │   └── inventory_turnover.py
 └── data/
-    ├── tushare_provider.py
-    └── mapper.py       # 字段映射
+    ├── tushare_provider.py  # Tushare Provider
+    ├── tushare_mapper.py    # Tushare 字段映射
+    ├── provider.py         # DataProvider Protocol
+    └── mapper.py           # 核心字段映射
+```
+
+**9 Handler 架构**:
+
+```
+Market ╲ Type │  Statement      Indicator     Market
+─────────────┼──────────────────────────────────────
+A股           │ AStatement      AIndicator     AMarket
+港股          │ HKStatement     HKIndicator    HKMarket
+美股          │ USStatement     USIndicator    USMarket
 ```
 
 ### B. 相关文档
 
 - [market_indicator_differences.md](market_indicator_differences.md) - 三市场指标差异
 - [ifrs_standard_fields.md](ifrs_standard_fields.md) - IFRS 标准字段
+- [plans/README.md](plans/README.md) - 实施计划索引
 - [CLAUDE.md](../CLAUDE.md) - 项目快速指南
+
+### C. Handler 拆分历史
+
+| 日期 | 变更 |
+|------|------|
+| 2026-03-19 | 拆分为 9 个 Handler（3 市场 × 3 数据类型），实现快速拒绝模式 |

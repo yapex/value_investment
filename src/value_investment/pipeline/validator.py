@@ -462,10 +462,21 @@ class ValidationResult:
 
 
 def validate_calculators(calculators: list) -> list[ValidationResult]:
-    """旧版: 验证计算器依赖"""
+    """验证所有 Calculator 的正确性
+    
+    验证项目：
+    1. Calculator 输出字段（name）是否在 ALL_FIELDS 中注册
+    2. Calculator 输入依赖（required_fields）是否能被 Handler 或其他 Calculator 提供
+    """
     from value_investment.pipeline.container import Container
     from value_investment.calculator_plugin import get_calculators
+    from value_investment.domain.fields import ALL_FIELDS
+    
     all_calcs = get_calculators()
+    
+    # Build Calculator name -> Calculator index
+    calc_map = {calc.name: calc for calc in all_calcs}
+    calc_outputs = set(calc_map.keys())
     
     Container._instance = None
     container = Container.create()
@@ -476,22 +487,68 @@ def validate_calculators(calculators: list) -> list[ValidationResult]:
         for field in handler.can_handle:
             field_sources.setdefault(field, []).append(type(handler).__name__)
     
+    def check_field_dependency(field: str, visited: set = None) -> tuple[bool, str]:
+        """检查字段依赖，返回 (是否可用, 来源信息)
+        
+        Args:
+            field: 字段名
+            visited: 已访问的 Calculator 集合（防止循环依赖）
+        """
+        if visited is None:
+            visited = set()
+        
+        # 检查是否是 Handler 提供的字段
+        if field in field_sources:
+            return True, ", ".join(field_sources[field])
+        
+        # 检查是否是其他 Calculator 提供的字段
+        if field in calc_outputs:
+            if field in visited:
+                return False, f"Circular dependency: {field}"
+            visited.add(field)
+            
+            calc = calc_map[field]
+            missing = []
+            for req_field in calc.required_fields:
+                avail, _ = check_field_dependency(req_field, visited.copy())
+                if not avail:
+                    missing.append(req_field)
+            
+            if missing:
+                return False, f"Calculator (missing: {', '.join(missing)})"
+            return True, f"Calculator ({field})"
+        
+        # 既不是 Handler 也不是 Calculator
+        return False, "MISSING"
+    
     results = []
     
     for calc in calculators:
         details = []
         all_available = True
         
+        # 验证 1: 检查 Calculator 输出是否在 ALL_FIELDS 中注册
+        if calc.name not in ALL_FIELDS:
+            details.append(
+                DependencyStatus(
+                    field="[OUTPUT]",
+                    available=False,
+                    source=f"NOT REGISTERED in ALL_FIELDS",
+                )
+            )
+            all_available = False
+        
+        # 验证 2: 检查输入依赖
         for field in calc.required_fields:
-            sources = field_sources.get(field, [])
+            available, source = check_field_dependency(field)
             details.append(
                 DependencyStatus(
                     field=field,
-                    available=len(sources) > 0,
-                    source=", ".join(sources) if sources else "MISSING",
+                    available=available,
+                    source=source,
                 )
             )
-            if not sources:
+            if not available:
                 all_available = False
         
         results.append(

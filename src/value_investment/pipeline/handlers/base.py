@@ -1,18 +1,33 @@
-"""Handler base class for message processing"""
-from abc import ABC, abstractmethod
-from typing import Any
+"""Handler protocol for message processing"""
+from typing import Any, Protocol
 
 
-class Handler(ABC):
-    """Handler base class for message processing"""
+class Handler(Protocol):
+    """Protocol for message handlers
+    
+    Any class implementing these methods can be used as a handler.
+    No inheritance required - structural subtyping.
+    
+    Usage:
+        class MyHandler:
+            @property
+            def can_handle(self) -> set[str]:
+                return {"field1", "field2"}
+            
+            async def handle(self, message) -> None:
+                # Process message
+                pass
+    """
 
     @property
-    @abstractmethod
     def can_handle(self) -> set[str]:
         """Fields this handler can provide"""
-        pass
+        ...
 
-    @abstractmethod
-    async def handle(self, message) -> None:
-        """Handle the message"""
-        pass
+    async def handle(self, message: Any) -> None:
+        """Handle the message
+        
+        Args:
+            message: Message instance with require and results baskets
+        """
+        ...

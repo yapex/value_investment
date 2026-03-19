@@ -14,7 +14,7 @@ class MessageBus:
 
     async def process(self, message) -> Any:
         """Process message through all handlers
-        
+
         Multi-round execution: continues until no more fields can be processed
         or requirements are met.
         """

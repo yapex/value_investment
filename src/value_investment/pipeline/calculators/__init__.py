@@ -23,6 +23,7 @@ from value_investment.pipeline.fields import ALL_FIELDS
 from value_investment.pipeline.calculators.gross_profit import GrossProfit
 from value_investment.pipeline.calculators.implied_growth import ImpliedGrowth
 from value_investment.pipeline.calculators.inventory_turnover import InventoryTurnover
+from value_investment.pipeline.calculators.operating_profit_margin import OperatingProfitMargin
 
 
 def _validate_fields(calc) -> None:
@@ -47,6 +48,7 @@ __all__ = [
     "GrossProfit",
     "ImpliedGrowth",
     "InventoryTurnover",
+    "OperatingProfitMargin",
     "ALL_CALCULATORS",
     "CALCULATOR_MAP",
     "validate_calculators",

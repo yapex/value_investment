@@ -1,24 +1,24 @@
-"""Tests for InventoryTurnoverCalculator"""
+"""Tests for InventoryTurnover"""
 import pytest
-from value_investment.pipeline.calculators.inventory_turnover import InventoryTurnoverCalculator
+from value_investment.pipeline.calculators.inventory_turnover import InventoryTurnover
 from value_investment.pipeline.fields import IFRSFields
 
 
 def test_inventory_turnover_required_fields():
-    """Test InventoryTurnoverCalculator declares required fields"""
-    calc = InventoryTurnoverCalculator()
+    """Test InventoryTurnover declares required fields"""
+    calc = InventoryTurnover()
     assert IFRSFields.OPERATING_COST in calc.required_fields
     assert IFRSFields.INVENTORY in calc.required_fields
 
 
 def test_inventory_turnover_name():
-    """Test InventoryTurnoverCalculator name"""
-    assert InventoryTurnoverCalculator.name == IFRSFields.INVENTORY_TURNOVER
+    """Test InventoryTurnover name"""
+    assert InventoryTurnover.name == IFRSFields.INVENTORY_TURNOVER
 
 
 def test_inventory_turnover_calculate():
     """Test inventory turnover calculation"""
-    calc = InventoryTurnoverCalculator()
+    calc = InventoryTurnover()
     results = {
         IFRSFields.OPERATING_COST: {2024: 1000, 2023: 900, 2022: 800},
         IFRSFields.INVENTORY: {2024: 200, 2023: 180, 2022: 160},
@@ -31,7 +31,7 @@ def test_inventory_turnover_calculate():
 
 def test_inventory_turnover_missing_data():
     """Test inventory turnover with missing data"""
-    calc = InventoryTurnoverCalculator()
+    calc = InventoryTurnover()
     results = {
         IFRSFields.OPERATING_COST: {2024: 1000},
         # inventory missing - can't calculate without inventory

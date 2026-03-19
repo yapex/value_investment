@@ -6,7 +6,7 @@ from value_investment.pipeline.fields import IFRSFields
 
 
 @calculator
-class OperatingProfitMarginCalculator:
+class OperatingProfitMargin:
     """Operating Profit Margin Calculator
     
     Operating Profit Margin = Operating Profit / Total Revenue * 100

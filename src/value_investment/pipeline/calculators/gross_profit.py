@@ -6,7 +6,7 @@ from value_investment.pipeline.fields import IFRSFields
 
 
 @calculator
-class GrossProfitCalculator:
+class GrossProfit:
     """Gross Profit Calculator
     
     Gross Profit = Total Revenue - Operating Cost

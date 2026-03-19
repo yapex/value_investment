@@ -6,7 +6,7 @@ from value_investment.pipeline.fields import IFRSFields
 
 
 @calculator
-class ImpliedGrowthCalculator:
+class ImpliedGrowth:
     """Implied Growth Rate Calculator
 
     基于 DCF 模型，用当前市值反推隐含的年增长率。

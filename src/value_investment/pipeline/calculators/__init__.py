@@ -20,9 +20,9 @@ from value_investment.pipeline.validator import validate_calculators, get_valida
 from value_investment.pipeline.fields import ALL_FIELDS
 
 # Explicit imports for IDE support
-from value_investment.pipeline.calculators.gross_profit import GrossProfitCalculator
-from value_investment.pipeline.calculators.implied_growth import ImpliedGrowthCalculator
-from value_investment.pipeline.calculators.inventory_turnover import InventoryTurnoverCalculator
+from value_investment.pipeline.calculators.gross_profit import GrossProfit
+from value_investment.pipeline.calculators.implied_growth import ImpliedGrowth
+from value_investment.pipeline.calculators.inventory_turnover import InventoryTurnover
 
 
 def _validate_fields(calc) -> None:
@@ -44,9 +44,9 @@ CALCULATOR_MAP = {calc.name: calc for calc in ALL_CALCULATORS}
 
 __all__ = [
     "calculator",  # Required decorator
-    "GrossProfitCalculator",
-    "ImpliedGrowthCalculator",
-    "InventoryTurnoverCalculator",
+    "GrossProfit",
+    "ImpliedGrowth",
+    "InventoryTurnover",
     "ALL_CALCULATORS",
     "CALCULATOR_MAP",
     "validate_calculators",

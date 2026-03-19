@@ -6,7 +6,7 @@ from value_investment.pipeline.fields import IFRSFields
 
 
 @calculator
-class InventoryTurnoverCalculator:
+class InventoryTurnover:
     """Inventory Turnover Calculator
     
     Inventory Turnover = Operating Cost / Average Inventory

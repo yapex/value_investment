@@ -13,6 +13,7 @@ from value_investment.pipeline.handlers.us_indicator import USStockIndicatorHand
 from value_investment.pipeline.handlers.us_market import USStockMarketHandler
 from value_investment.pipeline.data.tushare_provider import TushareProvider
 from value_investment.pipeline.data.hk_provider import HKProvider
+from value_investment.pipeline.data.us_provider import USProvider
 from value_investment.pipeline.calculators import ALL_CALCULATORS
 
 
@@ -75,10 +76,23 @@ class Container(containers.DeclarativeContainer):
     )
 
     # === 美股 Handlers ===
-    # TODO: 待 US Provider 实现后注入
-    us_stock_statement_handler = providers.Singleton(USStockStatementHandler)
-    us_stock_indicator_handler = providers.Singleton(USStockIndicatorHandler)
-    us_stock_market_handler = providers.Singleton(USStockMarketHandler)
+    # US Provider - 使用 AkShare 东财美股数据
+    us_provider = providers.Singleton(
+        USProvider,
+        cache=cache,
+    )
+    us_stock_statement_handler = providers.Singleton(
+        USStockStatementHandler,
+        provider=us_provider,
+    )
+    us_stock_indicator_handler = providers.Singleton(
+        USStockIndicatorHandler,
+        provider=us_provider,
+    )
+    us_stock_market_handler = providers.Singleton(
+        USStockMarketHandler,
+        provider=us_provider,
+    )
 
     # Calculators - 派生字段计算器
     calculators = providers.List(*ALL_CALCULATORS)

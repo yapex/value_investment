@@ -358,6 +358,38 @@ class BaseProvider(ABC):
     # 辅助方法
     # ========================================================================
 
+    def _apply_field_mapping(
+        self,
+        df: pd.DataFrame | None,
+        statement_type: str,
+    ) -> pd.DataFrame:
+        """应用字段映射（使用 FIELD_MAPPINGS）
+
+        三个 Provider 的 _fetch_* 方法调用此方法完成字段映射。
+
+        Args:
+            df: 原始数据 DataFrame
+            statement_type: statement 类型 (balance_sheet/income_statement/cash_flow)
+
+        Returns:
+            映射后的 DataFrame
+        """
+        if df is None or df.empty:
+            return pd.DataFrame()
+
+        # 优先使用类属性 FIELD_MAPPINGS（三个 Provider 使用）
+        if hasattr(self, "FIELD_MAPPINGS"):
+            mapping = self.FIELD_MAPPINGS.get(statement_type, {})
+        else:
+            mapping = self._field_mappings.get(statement_type, {})
+
+        rename_map = {
+            native: std for native, std in mapping.items() if native in df.columns
+        }
+        if rename_map:
+            df = df.rename(columns=rename_map)
+        return df
+
     def get_field_mapping(self, data_type: str) -> dict[str, str]:
         """Get field mapping for a specific data type"""
         return self._field_mappings.get(data_type, {})

@@ -244,16 +244,7 @@ class USProvider(BaseProvider):
     ) -> pd.DataFrame:
         """获取资产负债表（带映射）"""
         df = self.fetch_raw_balance_sheet(stock_code, end_year, start_year)
-        if df is None or df.empty:
-            return pd.DataFrame()
-
-        mapping = self.FIELD_MAPPINGS.get("balance_sheet", {})
-        rename_map = {
-            native: std for native, std in mapping.items() if native in df.columns
-        }
-        if rename_map:
-            df = df.rename(columns=rename_map)
-        return df
+        return self._apply_field_mapping(df, "balance_sheet")
 
     def _fetch_income_statement(
         self,
@@ -263,16 +254,7 @@ class USProvider(BaseProvider):
     ) -> pd.DataFrame:
         """获取利润表（带映射）"""
         df = self.fetch_raw_income_statement(stock_code, end_year, start_year)
-        if df is None or df.empty:
-            return pd.DataFrame()
-
-        mapping = self.FIELD_MAPPINGS.get("income_statement", {})
-        rename_map = {
-            native: std for native, std in mapping.items() if native in df.columns
-        }
-        if rename_map:
-            df = df.rename(columns=rename_map)
-        return df
+        return self._apply_field_mapping(df, "income_statement")
 
     def _fetch_cash_flow(
         self,
@@ -282,16 +264,7 @@ class USProvider(BaseProvider):
     ) -> pd.DataFrame:
         """获取现金流量表（带映射）"""
         df = self.fetch_raw_cash_flow(stock_code, end_year, start_year)
-        if df is None or df.empty:
-            return pd.DataFrame()
-
-        mapping = self.FIELD_MAPPINGS.get("cash_flow", {})
-        rename_map = {
-            native: std for native, std in mapping.items() if native in df.columns
-        }
-        if rename_map:
-            df = df.rename(columns=rename_map)
-        return df
+        return self._apply_field_mapping(df, "cash_flow")
 
     def _fetch_indicators(
         self,

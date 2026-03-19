@@ -614,30 +614,55 @@ FINANCIAL_INDICATOR_MAPPING = {
         '净利润': 'net_profit',
     },
     'US': {
+        # ===== AkShare 美股财务分析指标 (stock_financial_us_analysis_indicator_em) =====
+        # 营收指标
+        'OPERATE_INCOME': 'total_revenue',  # 主营业收入 -> total_revenue
+        'OPERATE_INCOME_YOY': 'total_revenue_yoy',
+        'GROSS_PROFIT': 'gross_profit',  # 毛利润
+        'GROSS_PROFIT_YOY': 'gross_profit_yoy',
+
+        # 净利润指标 (优先使用归母净利润)
+        'PARENT_HOLDER_NETPROFIT': 'net_profit',  # 归属母公司净利润
+        'PARENT_HOLDER_NETPROFIT_YOY': 'net_profit_yoy',
+
+        # 每股指标
+        'BASIC_EPS': 'basic_eps',  # 基本每股收益
+        'DILUTED_EPS': 'diluted_eps',  # 稀释每股收益
+        'BASIC_EPS_YOY': 'basic_eps_yoy',
+
+        # 盈利能力指标
+        'GROSS_PROFIT_RATIO': 'gross_margin',  # 毛利率 (%)
+        'GROSS_PROFIT_RATIO_YOY': 'gross_margin_yoy',
+        'NET_PROFIT_RATIO': 'net_profit_margin',  # 净利率 (%)
+        'NET_PROFIT_RATIO_YOY': 'net_profit_margin_yoy',
+
+        # ROE/ROA
+        'ROE_AVG': 'roe',  # 平均 ROE (年报)
+        'ROA': 'roa',  # 总资产收益率
+        'ROE_AVG_YOY': 'roe_yoy',
+        'ROA_YOY': 'roa_yoy',
+
+        # 偿债能力指标
+        'CURRENT_RATIO': 'current_ratio',  # 流动比率
+        'SPEED_RATIO': 'quick_ratio',  # 速动比率
+        'OCF_LIQDEBT': 'ocf_to_debt',  # 经营现金流/流动负债
+        'DEBT_ASSET_RATIO': 'debt_ratio',  # 资产负债率
+        'EQUITY_RATIO': 'equity_ratio',  # 股东权益比率
+        'DEBT_ASSET_RATIO_YOY': 'debt_ratio_yoy',
+        'CURRENT_RATIO_YOY': 'current_ratio_yoy',
+        'SPEED_RATIO_YOY': 'quick_ratio_yoy',
+
+        # 营运效率指标
+        'ACCOUNTS_RECE_TR': 'receivable_turnover',  # 应收账款周转率
+        'INVENTORY_TR': 'inventory_turnover',  # 存货周转率
+        'TOTAL_ASSETS_TR': 'asset_turnover',  # 总资产周转率
+        'ACCOUNTS_RECE_TDAYS': 'receivable_turnover_days',  # 应收账款周转天数
+        'INVENTORY_TDAYS': 'inventory_turnover_days',  # 存货周转天数
+        'TOTAL_ASSETS_TDAYS': 'total_assets_turnover_days',  # 总资产周转天数
+
+        # 市值字段
         '总市值(美元)': 'us_market_cap',
     },
-
-    # ----- 美股特有字段 -----
-    # 利润表字段 (stock_financial_us_analysis_indicator_em 返回)
-    'TOTAL_INCOME': 'total_revenue',
-    'PARENT_HOLDER_NETPROFIT': 'net_profit',
-    'PARENT_HOLDER_NETPROFIT_YOY': 'net_profit_yoy',
-    'BASIC_EPS_CS': 'basic_eps',
-    'BASIC_EPS_CS_YOY': 'basic_eps_yoy',
-    'DILUTED_EPS_CS': 'diluted_eps',
-
-    # 比率指标
-    'ROE': 'roe',
-    'ROE_AVG': 'roe',  # 美股年报使用 ROE_AVG 字段
-    'ROE_YOY': 'roe_yoy',
-    'ROA': 'roa',
-    'ROA_YOY': 'roa_yoy',
-    'DEBT_RATIO': 'debt_ratio',
-    'DEBT_RATIO_YOY': 'debt_ratio_yoy',
-    'EQUITY_RATIO': 'equity_ratio',
-
-    # 营收相关
-    'TOTAL_INCOME_YOY': 'total_revenue_yoy',
 }
 
 
@@ -827,6 +852,15 @@ class DataMapper:
         "归属于母公司股东权益": "parent_equity",
         "股东权益合计": "total_equity",
         "负债及股东权益合计": "total_liabilities_and_equity",
+        # 美股补充字段 (stock_financial_us_report_em 实际返回)
+        "短期投资": "short_term_investments",
+        "其他应收款": "other_receivables",
+        "长期投资": "long_term_investments",
+        "应付票据(流动)": "notes_payable_current",
+        "长期负债(本期部分)": "long_term_debt_current_portion",
+        "其他流动负债": "other_current_liabilities",
+        "非运算项目": "non_operating_items",
+        "归属于母公司股东权益其他项目": "parent_equity_other",
     }
 
     # 利润表映射 (A股字段 -> 标准字段, 港股字段 -> 标准字段)
@@ -874,19 +908,37 @@ class DataMapper:
         "折旧及摊销": "depreciation_amortization",
         # 美股字段 (stock_financial_us_report_em 综合损益表)
         "主营收入": "total_revenue",
+        "营业收入": "operating_income",
         "主营成本": "cost_of_revenue",
-        "毛利润": "gross_profit",
+        "营业成本": "operating_cost",
+        "毛利": "gross_profit",
+        "研发费用": "research_expense",
+        "营销费用": "marketing_expense",
+        "其他营业费用": "other_operating_expenses",
+        "重组费用": "restructuring_expense",
+        "营业费用": "operating_expenses",
+        "营业利润": "operating_profit",
+        "利息收入": "interest_income",
+        "权益性投资损益": "equity_investment_income_loss",
+        "其他收入(支出)": "other_income_expense",
+        "持续经营税前利润": "profit_before_tax",
+        "所得税": "income_tax",
+        "持续经营净利润": "net_profit_from_continuing_operations",
+        "税后利润其他项目": "profit_after_tax_other",
         "净利润": "net_profit",
         "归属于普通股股东净利润": "parent_net_profit",
-        "已终止或非持续经营净利润": "discontinued_operations_profit",
-        "利息收入": "interest_income",
-        "利息费用": "interest_expense",
-        "一般及行政费用": "general_administrative_expenses",
-        "其他收入(支出)": "other_income_expense",
-        "其他营业费用": "other_operating_expenses",
-        "全面收益总额": "total_comprehensive_income",
-        "其他全面收益合计项": "other_comprehensive_income_total",
+        "归属于母公司股东净利润": "net_profit",  # 归母净利润优先
+        "每股股息-普通股": "dividend_per_share",
+        "基本每股收益-普通股": "basic_eps",
+        "摊薄每股收益-普通股": "diluted_eps",
+        "基本加权平均股数-普通股": "weighted_avg_shares_basic",
+        "摊薄加权平均股数-普通股": "weighted_avg_shares_diluted",
+        "本公司拥有人占全面收益总额": "total_comprehensive_income_parent",
+        "非控股权益占全面收益总额": "total_comprehensive_income_non_controlling",
         "其他全面收益其他项目": "other_comprehensive_income_other",
+        "其他全面收益合计项": "other_comprehensive_income_total",
+        "全面收益总额": "total_comprehensive_income",
+        "非运算项目": "non_operating_items",
     }
 
     # 现金流量表映射 (A股字段 -> 标准字段, 港股字段 -> 标准字段)
@@ -930,27 +982,36 @@ class DataMapper:
         "净利润": "net_profit",
         "折旧及摊销": "depreciation_amortization",
         "基于股票的补偿费": "stock_based_compensation",
+        "减值及拨备": "impairment_provision",
         "递延所得税": "deferred_tax",
         "资产处置损益": "gain_loss_on_asset_disposal",
         "投资损益": "investment_income_loss",
-        "权益性投资损益": "equity_investment_income_loss",
+        "重估盈余": "revaluation_surplus",
+        "经营业务调整其他项目": "operating_adjustments_other",
         "应收账款及票据": "accounts_receivable_notes",
-        "待摊费用及其他资产": "prepaid_expenses_other_assets",
+        "存货": "inventory",
         "应付账款及票据": "accounts_payable_notes",
         "递延收入": "deferred_revenue",
-        "应付税项": "taxes_payable",
-        "预提费用及其他负债": "accrued_expenses_other_liabilities",
+        "经营业务其他项目": "operating_activities_other",
         "购买固定资产": "capital_expenditure",
         "处置固定资产": "disposal_of_fixed_assets",
         "购建无形资产及其他资产": "capital_expenditure_intangible",
         "投资支付现金": "cash_investments",
+        "收购附属公司": "acquisition_of_subsidiaries",
+        "其他投资活动产生的现金流量净额": "investing_activities_other",
+        "投资业务其他项目": "investing_activities_other",
         "发行股份": "stock_issuance",
         "回购股份": "stock_repurchase",
         "发行债券": "bond_issuance",
         "赎回债券": "bond_redemption",
         "股息支付": "dividend_paid",
-        "行使股票期权所得": "stock_option_exercise_proceeds",
-        "偿还借款": "debt_repayment",
+        "贷款收益": "loan_proceeds",
+        "超额税收优惠": "excess_tax_benefit",
+        "其他筹资活动产生的现金流量净额": "financing_activities_other",
+        "筹资业务其他项目": "financing_activities_other",
+        "现金及现金等价物增加(减少)额": "net_cash_change",
+        "现金及现金等价物期初余额": "cash_begin",
+        "现金及现金等价物期末余额": "cash_end",
     }
 
     # 基础字段（不映射）
@@ -1140,6 +1201,9 @@ class DataMapper:
         # 重命名字段
         result = result.rename(columns=rename_map)
 
+        # 合并重复列（多个原始列映射到同一个标准列时）
+        result = cls._merge_duplicate_columns(result)
+
         # 计算衍生字段
         result = cls._calculate_income_derived_fields(result)
 
@@ -1174,6 +1238,9 @@ class DataMapper:
 
         # 重命名字段
         result = result.rename(columns=rename_map)
+
+        # 合并重复列（多个原始列映射到同一个标准列时）
+        result = cls._merge_duplicate_columns(result)
 
         # 计算衍生字段
         result = cls._calculate_cashflow_derived_fields(result)
@@ -1244,6 +1311,11 @@ class DataMapper:
     @classmethod
     def _calculate_income_derived_fields(cls, df: pd.DataFrame) -> pd.DataFrame:
         """计算利润表衍生字段"""
+        if df is None or df.empty:
+            return df
+
+        df = df.copy()
+
         # 如果 operating_income 不存在但 total_revenue 存在，使用 total_revenue 作为 operating_income
         # 这对港股和美股特别重要，因为它们的利润表没有单独的 operating_income 字段
         if "operating_income" not in df.columns and "total_revenue" in df.columns:
@@ -1255,10 +1327,15 @@ class DataMapper:
 
         # EBIT = 净利润 + 所得税 + 财务费用
         if "net_profit" in df.columns:
-            net_profit = df["net_profit"].fillna(0)
-            income_tax = df["income_tax"].fillna(0) if "income_tax" in df.columns else 0
-            financial_expense = df["financial_expense"].fillna(0) if "financial_expense" in df.columns else 0
-            df["ebit"] = net_profit + income_tax + financial_expense
+            try:
+                net_profit = pd.to_numeric(df["net_profit"], errors="coerce").fillna(0)
+                income_tax = pd.to_numeric(df["income_tax"], errors="coerce").fillna(0) if "income_tax" in df.columns else 0
+                financial_expense = pd.to_numeric(df["financial_expense"], errors="coerce").fillna(0) if "financial_expense" in df.columns else 0
+                # Use .add() method for safe addition with scalar fallback
+                df["ebit"] = net_profit.add(income_tax, fill_value=0).add(financial_expense, fill_value=0)
+            except (TypeError, ValueError):
+                # 如果计算失败，跳过 EBIT 计算
+                pass
 
         return df
 

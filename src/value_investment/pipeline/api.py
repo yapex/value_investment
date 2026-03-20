@@ -145,8 +145,6 @@ class PipelineAPI:
         Args:
             message: Message with require set and results dict
         """
-        import warnings
-
         # 找出需要计算的字段
         fields_to_calculate = message.require & set(CALCULATOR_MAP.keys())
 
@@ -157,18 +155,11 @@ class PipelineAPI:
             if missing_required:
                 continue
 
-            # 执行计算，捕获错误保证不中断
-            try:
-                calculated = calculator.calculate(message.results)
-                if calculated:
-                    message.results[field] = calculated
-                    message.require.discard(field)
-            except Exception as e:
-                # 框架兜底：一个计算器出错不影响其他计算器
-                warnings.warn(
-                    f"[Calculator '{field}'] 计算错误: {e}，跳过此指标",
-                    RuntimeWarning
-                )
+            # 执行计算（CalculatorAdapter 已处理错误，返回 None）
+            calculated = calculator.calculate(message.results)
+            if calculated:
+                message.results[field] = calculated
+                message.require.discard(field)
 
     def _detect_market(self, symbol: str) -> str:
         """Detect market from symbol"""

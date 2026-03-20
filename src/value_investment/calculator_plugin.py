@@ -185,9 +185,19 @@ class CalculatorAdapter:
         self._calculate = calculate
         self._source = _source
 
-    def calculate(self, results) -> dict[int, float | None]:
-        """执行计算，原样抛出错误"""
-        return self._calculate(results)
+    def calculate(self, results) -> dict[int, float | None] | None:
+        """执行计算，错误处理分层"""
+        try:
+            return self._calculate(results)
+        except ZeroDivisionError:
+            # 零除错误，返回 None
+            return None
+        except TypeError:
+            # 类型错误（如 None 参与运算），返回 None
+            return None
+        except Exception:
+            # 最后兜底，返回 None
+            return None
 
 
 class CalculatorRegistry:

@@ -66,6 +66,15 @@ STANDARD_FIELDS: set[str] = {
     "asset_turnover",
     "receivable_turnover",
     "roic",
+    # --- Tushare fina_indicator 新增 (数据验证通过) ---
+    "cash_ratio",
+    "ocf_to_debt",
+    "interest_bearing_debt",
+    "ebitda",
+    "currentdebt_to_debt",
+    "operating_profit_margin",
+    "revenue_yoy",
+    "net_profit_yoy",
     # --- 市场数据 (Market Data) ---
     "market_cap",
     "pe_ratio",
@@ -251,7 +260,40 @@ class CustomFields:
     # 归属母公司净利润，合并报表中去除非控股子公司损益后的净利润
     # 单位：元
     PARENT_NET_PROFIT = "parent_net_profit"
-    
+
+    # ========== 财务指标类（来自 Tushare fina_indicator） ==========
+    # 现金比率 = 货币资金 / 流动负债 × 100%
+    # 单位：无（比例）
+    CASH_RATIO = "cash_ratio"
+
+    # 经营活动现金流/带息债务 = 经营活动现金流 / 带息债务
+    # 单位：无（比例）
+    OCF_TO_DEBT = "ocf_to_debt"
+
+    # 带息债务 = 短期借款 + 长期借款 + 应付债券
+    # 单位：元
+    INTEREST_BEARING_DEBT = "interest_bearing_debt"
+
+    # EBITDA = 息税折旧摊销前利润
+    # 单位：元
+    EBITDA = "ebitda"
+
+    # 流动负债/总负债 = 流动负债 / 负债合计 × 100%
+    # 单位：无（百分比）
+    CURRENTDEBT_TO_DEBT = "currentdebt_to_debt"
+
+    # 营业利润率 = 营业利润 / 营业收入 × 100%
+    # 单位：百分比 (%)
+    OPERATING_PROFIT_MARGIN_TS = "operating_profit_margin"
+
+    # 营业收入同比增长率 = (本期营业收入 - 上期营业收入) / |上期营业收入| × 100%
+    # 单位：百分比 (%)
+    REVENUE_YOY = "revenue_yoy"
+
+    # 净利润同比增长率 = (本期净利润 - 上期净利润) / |上期净利润| × 100%
+    # 单位：百分比 (%)
+    NET_PROFIT_YOY = "net_profit_yoy"
+
     @classmethod
     def all(cls) -> frozenset:
         """Get all custom fields as a set"""

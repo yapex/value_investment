@@ -69,6 +69,15 @@ class TushareProvider(BaseProvider):
         "basic_eps",
         "diluted_eps",
         "book_value_per_share",
+        # --- 财务指标 (fina_indicator) - 新增 ---
+        "cash_ratio",
+        "ocf_to_debt",
+        "interest_bearing_debt",
+        "ebitda",
+        "currentdebt_to_debt",
+        "operating_profit_margin",
+        "revenue_yoy",
+        "net_profit_yoy",
         # --- 市场数据 (daily_basic) ---
         "market_cap",
         "circ_market_cap",
@@ -112,6 +121,11 @@ class TushareProvider(BaseProvider):
             "intan_assets": "intangible_assets",
             "lt_eqt_invest": "long_term_investment",
             "cip": "construction_in_progress",
+            # Phase 1 资产负债表补充字段
+            "time_deposit": "time_deposits",
+            "bonds_payable": "bonds_payable",
+            "other_recv": "other_receivables",
+            "total_hldr_eqy_exc_min_int": "net_assets",
         },
         "income_statement": {
             # Tushare 列名与标准字段名相同
@@ -143,6 +157,15 @@ class TushareProvider(BaseProvider):
             "eps": "basic_eps",
             "dt_eps": "diluted_eps",
             "bps": "book_value_per_share",
+            # --- fina_indicator 新增字段 (数据验证通过) ---
+            "cash_ratio": "cash_ratio",
+            "ocf_to_debt": "ocf_to_debt",
+            "interestdebt": "interest_bearing_debt",
+            "ebitda": "ebitda",
+            "currentdebt_to_debt": "currentdebt_to_debt",
+            "op_of_gr": "operating_profit_margin",
+            "tr_yoy": "revenue_yoy",
+            "netprofit_yoy": "net_profit_yoy",
         },
         "market": {
             # Tushare daily_basic 列名 -> 标准字段名
@@ -325,6 +348,15 @@ class TushareProvider(BaseProvider):
             "basic_eps",
             "diluted_eps",
             "book_value_per_share",
+            # --- fina_indicator 新增字段 (数据验证通过) ---
+            "cash_ratio",
+            "ocf_to_debt",
+            "interest_bearing_debt",
+            "ebitda",
+            "currentdebt_to_debt",
+            "operating_profit_margin",
+            "revenue_yoy",
+            "net_profit_yoy",
         }
 
         if not indicator_fields:

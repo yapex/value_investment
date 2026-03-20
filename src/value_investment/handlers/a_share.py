@@ -80,6 +80,15 @@ A_SHARE_INDICATOR_FIELDS: set[str] = {
     "basic_eps",
     "diluted_eps",
     "book_value_per_share",
+    # --- Tushare fina_indicator 新增 (数据验证通过) ---
+    "cash_ratio",
+    "ocf_to_debt",
+    "interest_bearing_debt",
+    "ebitda",
+    "currentdebt_to_debt",
+    "operating_profit_margin",
+    "revenue_yoy",
+    "net_profit_yoy",
 }
 
 # A 股市值数据字段（来自 daily_basic API）

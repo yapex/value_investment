@@ -89,6 +89,21 @@ A_SHARE_INDICATOR_FIELDS: set[str] = {
     "operating_profit_margin",
     "revenue_yoy",
     "net_profit_yoy",
+    # --- Phase 2 额外有用字段 ---
+    "net_debt",
+    "ebit",
+    "free_cash_flow_to_firm",
+    "free_cash_flow_to_equity",
+    "ocf_to_short_debt",
+    "debt_to_equity",
+    "long_term_debt_ratio",
+    "current_assets_ratio",
+    "selling_expense_ratio",
+    "admin_expense_ratio",
+    "finance_expense_ratio",
+    "total_assets_yoy",
+    "equity_yoy",
+    "operating_cash_flow_yoy",
 }
 
 # A 股市值数据字段（来自 daily_basic API）

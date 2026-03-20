@@ -75,6 +75,21 @@ STANDARD_FIELDS: set[str] = {
     "operating_profit_margin",
     "revenue_yoy",
     "net_profit_yoy",
+    # --- Phase 2 额外有用字段 ---
+    "net_debt",
+    "ebit",
+    "free_cash_flow_to_firm",
+    "free_cash_flow_to_equity",
+    "ocf_to_short_debt",
+    "debt_to_equity",
+    "long_term_debt_ratio",
+    "current_assets_ratio",
+    "selling_expense_ratio",
+    "admin_expense_ratio",
+    "finance_expense_ratio",
+    "total_assets_yoy",
+    "equity_yoy",
+    "operating_cash_flow_yoy",
     # --- 市场数据 (Market Data) ---
     "market_cap",
     "pe_ratio",
@@ -260,6 +275,63 @@ class CustomFields:
     # 归属母公司净利润，合并报表中去除非控股子公司损益后的净利润
     # 单位：元
     PARENT_NET_PROFIT = "parent_net_profit"
+
+    # ========== Phase 2 财务指标（来自 Tushare fina_indicator） ==========
+    # 净债务 = 有息负债 - 货币资金
+    # 单位：元
+    NET_DEBT = "net_debt"
+
+    # EBIT = 息税前利润
+    # 单位：元
+    EBIT = "ebit"
+
+    # 企业自由现金流 = 息前税后利润 + 折旧摊销 - 资本开支 - 营运资本变动
+    # 单位：元
+    FREE_CASH_FLOW_TO_FIRM = "free_cash_flow_to_firm"
+
+    # 股权自由现金流 = 企业自由现金流 - 利息费用 × (1 - 税率)
+    # 单位：元
+    FREE_CASH_FLOW_TO_EQUITY = "free_cash_flow_to_equity"
+
+    # OCF/短期债务 = 经营活动现金流 / 短期借款
+    # 单位：无（比例）
+    OCF_TO_SHORT_DEBT = "ocf_to_short_debt"
+
+    # 产权比率 = 负债合计 / 所有者权益合计
+    # 单位：无（比例）
+    DEBT_TO_EQUITY = "debt_to_equity"
+
+    # 长期债务占比 = 长期借款 / 负债合计
+    # 单位：百分比 (%)
+    LONG_TERM_DEBT_RATIO = "long_term_debt_ratio"
+
+    # 流动资产占比 = 流动资产 / 总资产
+    # 单位：百分比 (%)
+    CURRENT_ASSETS_RATIO = "current_assets_ratio"
+
+    # 销售费用率 = 销售费用 / 营业收入
+    # 单位：百分比 (%)
+    SELLING_EXPENSE_RATIO = "selling_expense_ratio"
+
+    # 管理费用率 = 管理费用 / 营业收入
+    # 单位：百分比 (%)
+    ADMIN_EXPENSE_RATIO = "admin_expense_ratio"
+
+    # 财务费用率 = 财务费用 / 营业收入
+    # 单位：百分比 (%)
+    FINANCE_EXPENSE_RATIO = "finance_expense_ratio"
+
+    # 总资产同比增长率
+    # 单位：百分比 (%)
+    TOTAL_ASSETS_YOY = "total_assets_yoy"
+
+    # 净资产同比增长率
+    # 单位：百分比 (%)
+    EQUITY_YOY = "equity_yoy"
+
+    # 经营活动现金流同比增长率
+    # 单位：百分比 (%)
+    OPERATING_CASH_FLOW_YOY = "operating_cash_flow_yoy"
 
     # ========== 财务指标类（来自 Tushare fina_indicator） ==========
     # 现金比率 = 货币资金 / 流动负债 × 100%

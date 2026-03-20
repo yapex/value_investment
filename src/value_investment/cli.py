@@ -9,7 +9,7 @@ from rich.console import Console
 
 from value_investment.core.cache import SmartCache
 from value_investment.pipeline.api import PipelineAPI
-from value_investment.domain.fields import ALL_FIELDS
+from value_investment.domain.fields import get_source_fields
 from value_investment.calculator_plugin import (
     registry,
     load_calculator,
@@ -218,12 +218,71 @@ def validate(
 def fields(
     prefix: str | None = typer.Option(None, "--prefix", "-p", help="Filter by prefix"),
 ):
-    """List all available standard fields"""
-    all_fields = sorted(ALL_FIELDS)
+    """List all available source fields (raw data from data providers)"""
+    all_fields = sorted(get_source_fields())
     if prefix:
         all_fields = [f for f in all_fields if f.startswith(prefix)]
     for field in all_fields:
         print(field)
+
+
+@app.command()
+def indicators(
+    show_deps: bool = typer.Option(
+        False,
+        "--show-deps",
+        "-d",
+        help="Show required fields for each indicator",
+    ),
+    group: bool = typer.Option(
+        False,
+        "--group",
+        "-g",
+        help="Group indicators by category",
+    ),
+):
+    """List all available financial indicators (derived metrics)"""
+    from value_investment.calculator_plugin import registry as calc_registry
+
+    calcs = calc_registry.get_all()
+    if not calcs:
+        typer.echo("No indicators available")
+        return
+
+    if group:
+        # Group by first part of name
+        categories: dict[str, list] = {}
+        for calc in calcs:
+            parts = calc.name.split("_")
+            if len(parts) > 1 and parts[0] in (
+                "roe", "gross", "net", "operating", "revenue", "profit", "cash", "debt",
+                "inventory", "receivable", "capex", "interest", "goodwill", "long",
+                "other", "prepayment", "fair", "investment", "non", "free",
+            ):
+                cat = parts[0]
+            else:
+                cat = "other"
+            if cat not in categories:
+                categories[cat] = []
+            categories[cat].append(calc)
+
+        for cat in sorted(categories.keys()):
+            typer.echo(f"\n[bold]{cat.upper()}[/bold]")
+            for calc in sorted(categories[cat], key=lambda x: x.name):
+                if show_deps:
+                    typer.echo(f"  • {calc.name}")
+                    typer.echo(f"    依赖: {sorted(calc.required_fields)}")
+                else:
+                    typer.echo(f"  • {calc.name}")
+        typer.echo(f"\n[dim]共 {len(calcs)} 个指标[/dim]")
+    else:
+        for calc in sorted(calcs, key=lambda x: x.name):
+            if show_deps:
+                print(f"{calc.name}")
+                print(f"  依赖: {sorted(calc.required_fields)}")
+            else:
+                print(calc.name)
+        print(f"\n共 {len(calcs)} 个指标")
 
 
 @app.command()

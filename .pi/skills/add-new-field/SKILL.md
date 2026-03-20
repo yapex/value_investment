@@ -88,10 +88,15 @@ for code in stocks:
 
 | 文件 | 修改内容 |
 |------|---------|
-| `src/value_investment/domain/fields.py` | 添加到 `CustomFields`（**不是 IFRSFields**） |
+| `src/value_investment/domain/fields.py` | 添加到 `CustomFields` 类常量（**不是 IFRSFields**，已冻结） |
 | `src/value_investment/providers/a_share.py` | `SUPPORTED_FIELDS` + `FIELD_MAPPINGS` |
 | `src/value_investment/handlers/a_share.py` | `A_SHARE_STATEMENT_FIELDS` + `_get_balance_fields()` |
 | `tests/` | 添加字段相关测试 |
+
+> ⚠️ **IFRSFields 禁止修改**：此类已冻结，尝试添加字段会抛出 `AttributeError`。新字段只能添加到 `CustomFields`。可用以下命令验证：
+> ```bash
+> uv run python -c "from value_investment.domain.fields import IFRSFields; IFRSFields.TEST = 'x'"
+> ```
 
 ### Phase 4: 完整验证（修改完成后必须执行）
 
@@ -141,7 +146,7 @@ calc_files = glob.glob('calculators/*.py')
 
 **操作规则：**
 - 有 calculator 依赖 → 保留
-- 无 calculator 依赖 → 检查 handler 是否提供，若也无则**从 fields.py 移除**
+- 无 calculator 依赖 → 检查 handler 是否提供，若也无则**从 CustomFields 移除**
 
 #### 4.3 全量测试
 
@@ -167,7 +172,7 @@ uv run python -m pytest tests/ -q
 
 - [ ] **数据源验证** — 通过 Tushare API 多股票交叉验证，确认字段有数据
 - [ ] **Dry Run** — `validate_pipeline([field], '600519', 'A股', dry_run=True)` 通过，0 blocking errors
-- [ ] **字段注册** — 字段在 `ALL_FIELDS` 中，在 handler 常量或 calculator 的 `required_fields` 中
+- [ ] **字段注册** — 字段在 `ALL_FIELDS`（来自 `CustomFields.all()`）中，在 handler 常量或 calculator 的 `required_fields` 中
 - [ ] **无孤立字段** — `fields.py` 中每个 CustomFields 字段都有 calculator 依赖或 handler 提供
 - [ ] **映射正确** — `FIELD_MAPPINGS` 映射通过实际 API 验证
 - [ ] **全量测试** — `uv run python -m pytest tests/` 全部通过
@@ -179,6 +184,9 @@ uv run python -m pytest tests/ -q
 
 ❌ **Wrong**: 直接添加字段到 IFRSFields（已冻结）  
 ✅ **Right**: 添加到 CustomFields
+
+❌ **Wrong**: 添加字段到 `IFRSFields` 类（已冻结，会抛出 AttributeError）  
+✅ **Right**: 添加到 `CustomFields` 类常量（会生效）
 
 ❌ **Wrong**: 只跑单元测试，不验证数据可用性  
 ✅ **Right**: 单元测试 + 实际 API 调用验证

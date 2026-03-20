@@ -182,7 +182,12 @@ class CustomFields:
     # 短期借款，一年内到期的借款/债券
     # 单位：元
     SHORT_TERM_DEBT = "short_term_debt"
-    
+
+    # 短期借款（资产负债表科目），企业从银行或其他金融机构的短期借款
+    # 单位：元
+    # 注：Tushare st_borrow 字段映射到本字段
+    SHORT_TERM_BORROWINGS = "short_term_borrowings"
+
     # 归属母公司净利润，合并报表中去除非控股子公司损益后的净利润
     # 单位：元
     PARENT_NET_PROFIT = "parent_net_profit"
@@ -282,6 +287,261 @@ class CustomFields:
     # 单位：无（比例）
     # 净债务 = 有息负债 - 货币资金
     NET_DEBT_TO_EQUITY = "net_debt_to_equity"
+
+    # 利息保障倍数 = 营业利润 / 利息支出
+    # 单位：无（倍数）
+    INTEREST_COVERAGE_RATIO = "interest_coverage_ratio"
+
+    # ========== 利润表补充字段 ==========
+    # 利息支出 = 借款利息、债券利息等财务费用
+    # 单位：元
+    INTEREST_EXPENSE = "interest_expense"
+
+    # ========== Phase 3 偿债能力补充字段 ==========
+    # 总债务 = 有息负债（短期借款 + 长期借款 + 应付债券）
+    # 注意：在价值投资项目中，总债务 = interest_bearing_debt
+    # 单位：元
+    TOTAL_DEBT = "total_debt"
+
+    # 自由现金流/债务 = 企业自由现金流 / 总债务
+    # 单位：无（比例）
+    FREE_CASH_FLOW_TO_DEBT = "free_cash_flow_to_debt"
+
+    # ========== Phase 3.2 偿债能力补充指标（Calculator 计算） ==========
+    # 债务/EBITDA = 总债务 / EBITDA
+    # 单位：无（倍数）
+    # 行业标准: < 3x 可接受, > 4x 需警惕
+    DEBT_TO_EBITDA = "debt_to_ebitda"
+
+    # 融资成本 = 财务费用率 / 有息负债
+    # 单位：元（反映每元债务对应的财务费用）
+    FINANCING_COST_RATE = "financing_cost_rate"
+
+    # ========== Phase 3.4 组合信号指标（Calculator 计算） ==========
+    # 现金流/净利润比 = 经营活动现金流 / 净利润
+    # 单位：无（比例）
+    # 健康公司通常 > 1（现金流利润 > 会计利润）
+    # 排雷标准：应 > 0.8
+    CASH_TO_NET_PROFIT_RATIO = "cash_to_net_profit_ratio"
+
+    # ========== Phase 3.5 增长类指标（Calculator 计算） ==========
+    # 存货同比增长率 = (本期存货 - 上期存货) / 上期存货
+    # 单位：百分比（小数形式，如 0.2 表示 20%）
+    INVENTORY_GROWTH_RATE = "inventory_growth_rate"
+
+    # 应收账款同比增长率 = (本期应收 - 上期应收) / 上期应收
+    # 单位：百分比（小数形式）
+    ACCOUNTS_RECEIVABLE_GROWTH_RATE = "accounts_receivable_growth_rate"
+
+    # 存货营收增速差 = 存货增长率 - 营收同比增长率
+    # 单位：百分比（小数形式）
+    # 正值：存货增速 > 营收增速 -> 积压风险
+    # 负值：存货增速 < 营收增速 -> 健康信号
+    INVENTORY_REVENUE_GROWTH_GAP = "inventory_revenue_growth_gap"
+
+    # 应收营收增速差 = 应收增长率 - 营收同比增长率
+    # 单位：百分比（小数形式）
+    # 正值：应收增速 > 营收增速 -> 回款风险
+    # 负值：应收增速 < 营收增速 -> 健康信号
+    RECEIVABLE_REVENUE_GROWTH_GAP = "receivable_revenue_growth_gap"
+
+    # ========== 利润表补充字段（来自 Provider） ==========
+    # 主营业务收入 = 营业收入（区别于营业总收入）
+    # 单位：元
+    # 注：主营业务收入 + 其他业务收入 = 营业总收入
+    MAIN_BUSINESS_INCOME = "main_business_income"
+
+    # ========== Phase 3.6 业务结构类指标（Calculator 计算） ==========
+    # 主营业务占比 = 主营业务收入 / 营业总收入
+    # 单位：无（比例，0~1）
+    # 接近 1 表示公司业务高度聚焦
+    # 明显 < 1 表示存在较多非主营业务收入
+    CORE_BUSINESS_RATIO = "core_business_ratio"
+
+    # ========== Phase 4 盈利能力类指标（Calculator 计算） ==========
+    # 净利率 = 净利润 / 营业收入
+    # 单位：无（比例）
+    # P1优先级，优秀公司通常 > 15%
+    NET_MARGIN = "net_margin"
+
+    # ========== Phase 4 偿债能力类指标（Calculator 计算） ==========
+    # 现金短债比 = (货币资金) / 短期有息负债
+    # 单位：无（比例）
+    # P1优先级，>1 为安全
+    CASH_SHORT_DEBT_RATIO = "cash_short_debt_ratio"
+
+    # ========== Phase 4 营运能力类指标（Calculator 计算） ==========
+    # 应收账款周转率 = 营业收入 / 平均应收账款
+    # 单位：次/年
+    # P2优先级，反映收账速度
+    RECEIVABLES_TURNOVER = "receivables_turnover"
+
+    # 总资产周转率 = 营业收入 / 平均总资产
+    # 单位：次/年
+    # P2优先级，反映资产利用效率
+    TOTAL_ASSET_TURNOVER = "total_asset_turnover"
+
+    # ========== Phase 3.4 组合信号指标补充字段 ==========
+    # 利息收入 = 银行存款利息、债券利息等金融活动产生的收入
+    # 单位：元
+    # 注：来自 Tushare income 表的 int_income 字段
+    INTEREST_INCOME = "interest_income"
+
+    # ========== Phase 3.5 增长类补充指标（Calculator 计算） ==========
+    # 利息收入率 = 利息收入 / 货币资金
+    # 单位：无（比例）
+    # 反映货币资金的利息回报率
+    INTEREST_INCOME_RATE = "interest_income_rate"
+
+    # ========== Phase 3.5 结构占比类指标（Calculator 计算） ==========
+    # 预付款占比 = 预付款 / 总资产
+    # 单位：无（比例）
+    # 高预付款可能表示供应商议价能力强或存在资金占用
+    PREPAYMENT_RATIO = "prepayment_ratio"
+
+    # 资本开支营收比 = 资本开支 / 营业收入
+    # 单位：无（比例）
+    # 反映公司扩张程度，资本密集型公司通常 > 0.3
+    CAPEX_TO_REVENUE_RATIO = "capex_to_revenue_ratio"
+
+    # ========== Phase 3.7 偿债能力指标（Calculator 计算） ==========
+    # 一年内到期债务占比 = (短期借款 + 一年内到期的非流动负债 + 应付债券) / 总负债
+    # 单位：无（比例）
+    # 反映短期债务压力，高占比可能存在再融资风险
+    DEBT_DUE_WITHIN_1Y_RATIO = "debt_due_within_1y_ratio"
+
+    # ========== Phase 3.8 增长指标（Calculator 计算） ==========
+    # 营收复合增长率(5年) = (终值/初值)^(1/5) - 1
+    # 单位：无（比例）
+    # 衡量营业收入在5年期间的平均年增长率
+    REVENUE_CAGR_5Y = "revenue_cagr_5y"
+
+    # 净利润复合增长率(5年) = (终值/初值)^(1/5) - 1
+    # 单位：无（比例）
+    # 衡量净利润在5年期间的平均年增长率
+    NET_PROFIT_CAGR_5Y = "net_profit_cagr_5y"
+
+    # ========== Phase 3.9 稳定性/波动率指标（Calculator 计算） ==========
+    # ROE波动率 = 标准差 / 均值
+    # 单位：无（比例）
+    # 衡量ROE的稳定性，低波动率表示盈利稳定
+    ROE_VOLATILITY = "roe_volatility"
+
+    # ========== 资产负债表补充字段 ==========
+    # 一年内到期的非流动负债 = 长期负债中将在1年内到期部分
+    # 单位：元
+    # 注：来自 Tushare balance_sheet 表的 non_cur_liab_due_1y 字段
+    NON_CURRENT_LIABILITIES_DUE_1Y = "non_current_liabilities_due_1y"
+
+    # 应付债券 = 企业发行的债券
+    # 单位：元
+    BOND_PAYABLE = "bond_payable"
+
+    # ========== Phase 3.8 增长指标（10年 CAGR） ==========
+    # 营收复合增长率(10年) = (终值/初值)^(1/10) - 1
+    # 单位：无（比例）
+    # 衡量营业收入在10年期间的平均年增长率
+    REVENUE_CAGR_10Y = "revenue_cagr_10y"
+
+    # 净利润复合增长率(10年) = (终值/初值)^(1/10) - 1
+    # 单位：无（比例）
+    # 衡量净利润在10年期间的平均年增长率
+    NET_PROFIT_CAGR_10Y = "net_profit_cagr_10y"
+
+    # ========== Phase 3.4 组合信号指标（Calculator 计算） ==========
+    # 其他应收款占比 = 其他应收款 / 总资产
+    # 单位：无（比例）
+    # 高占比可能表示资金被关联方占用（排雷指标）
+    OTHER_RECEIVABLES_RATIO = "other_receivables_ratio"
+
+    # 商誉净资产比 = 商誉 / 净资产
+    # 单位：无（比例）
+    # 高商誉可能存在减值风险（排雷指标）
+    GOODWILL_TO_NET_ASSETS_RATIO = "goodwill_to_net_assets_ratio"
+
+    # ========== Phase 3.5 结构占比指标（Calculator 计算） ==========
+    # 长期投资占比 = 长期股权投资 / 总资产
+    # 单位：无（比例）
+    # 反映公司多元化程度和对外投资规模
+    LONG_TERM_INVESTMENT_RATIO = "long_term_investment_ratio"
+
+    # 营业外收入占比 = 营业外收入 / 利润总额
+    # 单位：无（比例）
+    # 高占比表示公司盈利质量不佳（排雷指标）
+    NON_OPERATING_INCOME_RATIO = "non_operating_income_ratio"
+
+    # ========== 资产负债表补充字段（来自 Provider） ==========
+    # 其他应收款 = 暂付、押金、备用金等
+    # 单位：元
+    # 注：来自 Tushare balance_sheet 表的 other_recv 字段
+    OTHER_RECEIVABLES = "other_receivables"
+
+    # ========== 利润表补充字段（来自 Provider） ==========
+    # 营业外收入 = 罚款收入、捐赠收入、无法支付的应付款等非主营业务收入
+    # 单位：元
+    # 注：来自 Tushare income 表的 non_op_income 字段
+    NON_OPERATING_INCOME = "non_operating_income"
+
+    # ========== 利润表补充字段（Phase 3 待确认） ==========
+    # 公允价值变动损益 = 以公允价值计量且其变动计入当期损益的金融资产/负债的公允价值变动
+    # 单位：元
+    # 注：Tushare 字段名待确认
+    FAIR_VALUE_CHANGE = "fair_value_change"
+
+    # 投资收益 = 股权投资、债权投资等投资收益
+    # 单位：元
+    # 注：Tushare 字段名待确认
+    INVESTMENT_INCOME = "investment_income"
+
+    # ========== Phase 3.4 组合信号指标补充（Calculator 计算） ==========
+    # 公允价值变动占比 = 公允价值变动损益 / 利润总额
+    # 单位：无（比例）
+    # 高占比可能表示非经常性损益较大
+    FAIR_VALUE_CHANGE_RATIO = "fair_value_change_ratio"
+
+    # 投资收益占比 = 投资收益 / 利润总额
+    # 单位：无（比例）
+    # 高占比表示公司盈利依赖投资活动
+    INVESTMENT_INCOME_RATIO = "investment_income_ratio"
+
+    # ========== Phase 3.5 结构占比指标（Calculator 计算） ==========
+    # 主营业务占比 = 主营业务收入 / 营业总收入
+    # 单位：无（比例）
+    # 接近 1 表示公司业务高度聚焦
+    # 明显 < 1 表示存在较多非主营业务收入
+    CORE_BUSINESS_RATIO = "core_business_ratio"
+
+    # ========== Phase 3.6 稳定性/波动率指标（Calculator 计算） ==========
+    # 增长一致性 = 正增长年数 / 总年数
+    # 单位：无（比例，0~1）
+    # 衡量营收/利润增长稳定性
+    GROWTH_CONSISTENCY = "growth_consistency"
+
+    # 毛利率波动率 = 毛利率的标准差 / 均值
+    # 单位：无（比例）
+    # 衡量毛利率的稳定性
+    GROSS_MARGIN_VOLATILITY = "gross_margin_volatility"
+
+    # 现金流净利润波动率 = 现金流净利润比的标准差 / 均值
+    # 单位：无（比例）
+    # 衡量现金流与利润匹配度的稳定性
+    CASH_TO_PROFIT_VOLATILITY = "cash_to_profit_volatility"
+
+    # 资本开支稳定性 = 资本开支营收比的变异系数
+    # 单位：无（比例）
+    # 衡量资本开支的稳定性
+    CAPEX_STABILITY = "capex_stability"
+
+    # ========== Phase 3.7 危机期指标（Calculator 计算） ==========
+    # 危机期CAGR = 危机期间的复合增长率
+    # 单位：无（比例）
+    # 衡量公司在危机期间的增长/衰退速度
+    CRISIS_PERIOD_CAGR = "crisis_period_cagr"
+
+    # 危机后恢复速度 = 危机后恢复到危机前水平所需的年数
+    # 单位：年
+    # 衡量公司从危机中恢复的能力
+    POST_CRISIS_RECOVERY = "post_crisis_recovery"
 
     @classmethod
     def all(cls) -> frozenset:

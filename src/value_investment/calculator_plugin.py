@@ -168,7 +168,12 @@ def load_calculators_from_dir(dir_path: str, validate: bool = True) -> list[dict
 
 
 class CalculatorAdapter:
-    """Calculator 适配器"""
+    """Calculator 适配器
+
+    零除处理策略:
+    - 捕获 ZeroDivisionError 和 TypeError，返回 None（而不是抛异常）
+    - Calculator 作者无需处理零除，框架统一兜底
+    """
 
     def __init__(
         self,
@@ -182,8 +187,13 @@ class CalculatorAdapter:
         self._calculate = calculate
         self._source = _source
 
-    def calculate(self, results) -> dict:
-        return self._calculate(results)
+    def calculate(self, results) -> dict[int, float | None] | None:
+        """执行计算，零除/类型错误时返回 None"""
+        try:
+            return self._calculate(results)
+        except (ZeroDivisionError, TypeError):
+            # 框架兜底：零除或 None 参与运算时返回 None
+            return None
 
 
 class CalculatorRegistry:
@@ -326,21 +336,21 @@ def load_builtin_calculators() -> None:
     """加载内置 calculators
 
     加载顺序（后者覆盖前者）:
-    1. 包内 calculators/ (package://calculators/)
-    2. 项目 calculators/ (项目根目录/calculators/)
-    3. 用户 calculators/ ({cwd}/calculators/)
+    1. 包内 calculators/ (package://value_investment.calculators/)
+    2. 项目 calculators/ (项目根目录/calculators/) [兼容旧位置]
+    3. 用户 calculators/ ({cwd}/calculators/) [兼容旧位置]
     """
     # 1. 包内 calculators
-    _load_calcs_from_package("calculators", load_calculator, registry.register)
+    _load_calcs_from_package("value_investment.calculators", load_calculator, registry.register)
 
-    # 2. 项目 calculators/
+    # 2. 项目 calculators/ (旧位置，兼容)
     project_root = _get_project_root()
     if project_root:
         project_calcs_dir = project_root / "calculators"
         if project_calcs_dir.is_dir():
             _load_calcs_from_fs(project_calcs_dir, load_calculator, registry.register)
 
-    # 3. 用户 calculators/
+    # 3. 用户 calculators/ (旧位置，兼容)
     cwd_calcs_dir = Path.cwd() / "calculators"
     if cwd_calcs_dir.is_dir():
         for py_file in cwd_calcs_dir.glob("calc_*.py"):

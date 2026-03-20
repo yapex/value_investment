@@ -1,6 +1,6 @@
 ---
 name: add-calculator
-description: Create new financial calculators for value_investment project. Use when implementing new financial indicators like ROE, gross margin, turnover ratios, or any calculated metrics.
+description: "⚠️ REQUIRED: Before creating ANY calculator in value_investment project, you MUST read this skill first. Applies when implementing financial indicators like ROE, gross margin, turnover ratios, or any calculated metrics. This is NOT optional."
 ---
 
 # Add Calculator

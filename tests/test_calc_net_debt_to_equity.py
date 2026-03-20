@@ -1,6 +1,6 @@
 """Tests for Net Debt to Equity Calculator"""
 import pytest
-from calculators.calc_net_debt_to_equity import (
+from value_investment.calculators.calc_net_debt_to_equity import (
     required_fields,
     calculate,
     OUTPUT_FIELD,

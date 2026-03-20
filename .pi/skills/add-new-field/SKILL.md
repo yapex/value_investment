@@ -1,6 +1,6 @@
 ---
 name: add-new-field
-description: Add new financial fields to value_investment project. Use when adding new fields to CustomFields, creating new Calculator, or mapping fields from data providers.
+description: "⚠️ REQUIRED: Before adding ANY field to value_investment project, you MUST read this skill first. Applies when adding new fields to CustomFields, creating new Calculator, or mapping fields from data providers. This is NOT optional."
 ---
 
 # Add New Field

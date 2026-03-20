@@ -44,12 +44,24 @@ class TushareProvider(BaseProvider):
         "intangible_assets",
         "long_term_investment",
         "construction_in_progress",
+        "short_term_borrowings",
+        # 一年内到期的非流动负债
+        "non_current_liabilities_due_1y",
+        # 应付债券
+        "bond_payable",
+        # 其他应收款
+        "other_receivables",
         # --- 利润表 ---
         "total_revenue",
+        "main_business_income",
         "net_profit",
         "operating_profit",
         "operating_cost",
         "parent_net_profit",
+        "interest_expense",
+        "interest_income",
+        # Phase 3 利润表补充字段
+        "non_operating_income",
         # --- 现金流量表 ---
         "operating_cash_flow",
         "investing_cash_flow",
@@ -93,6 +105,9 @@ class TushareProvider(BaseProvider):
         "total_assets_yoy",
         "equity_yoy",
         "operating_cash_flow_yoy",
+        # --- Phase 3 偿债能力补充字段 ---
+        # total_debt = 有息负债（interest_bearing_debt 的别名）
+        "total_debt",
         # --- 市场数据 (daily_basic) ---
         "market_cap",
         "circ_market_cap",
@@ -136,19 +151,31 @@ class TushareProvider(BaseProvider):
             "intan_assets": "intangible_assets",
             "lt_eqt_invest": "long_term_investment",
             "cip": "construction_in_progress",
+            # Phase 1 短期借款
+            "st_borrow": "short_term_borrowings",
+            # 一年内到期的非流动负债
+            "non_cur_liab_due_1y": "non_current_liabilities_due_1y",
+            # 应付债券
+            "bond_payable": "bond_payable",
             # Phase 1 资产负债表补充字段
             "time_deposit": "time_deposits",
-            "bonds_payable": "bonds_payable",
+            "other_recv": "other_receivables",
             "other_recv": "other_receivables",
             "total_hldr_eqy_exc_min_int": "net_assets",
         },
         "income_statement": {
             # Tushare 列名与标准字段名相同
             "total_revenue": "total_revenue",
+            # 营业收入/主营业务收入 (区别于营业总收入)
+            "revenue": "main_business_income",
             "n_income": "net_profit",
             "operate_profit": "operating_profit",
             "oper_cost": "operating_cost",
             "n_income_attr_p": "parent_net_profit",
+            "int_exp": "interest_expense",
+            "int_income": "interest_income",
+            # Phase 3 补充字段
+            "non_op_income": "non_operating_income",
         },
         "cash_flow": {
             "n_cashflow_act": "operating_cash_flow",
@@ -495,10 +522,13 @@ class TushareProvider(BaseProvider):
         """Get standard fields from income statement"""
         return {
             "total_revenue",
+            "main_business_income",
             "net_profit",
             "operating_profit",
             "operating_cost",
             "parent_net_profit",
+            "interest_expense",
+            "interest_income",
         }
 
     def _get_cash_flow_fields(self) -> set[str]:

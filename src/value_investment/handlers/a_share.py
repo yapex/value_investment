@@ -46,11 +46,23 @@ A_SHARE_STATEMENT_FIELDS: set[str] = {
     "intangible_assets",
     "long_term_investment",
     "construction_in_progress",
+    "short_term_borrowings",
+    # 一年内到期的非流动负债
+    "non_current_liabilities_due_1y",
+    # 应付债券
+    "bond_payable",
+    # 其他应收款
+    "other_receivables",
     # 利润表
     "total_revenue",
+    "main_business_income",
     "net_profit",
     "operating_profit",
     "operating_cost",
+    "interest_expense",
+    "interest_income",
+    # Phase 3 利润表补充字段
+    "non_operating_income",
     # 现金流量表
     "operating_cash_flow",
     "investing_cash_flow",
@@ -104,6 +116,9 @@ A_SHARE_INDICATOR_FIELDS: set[str] = {
     "total_assets_yoy",
     "equity_yoy",
     "operating_cash_flow_yoy",
+    # --- Phase 3 偿债能力补充字段 ---
+    # total_debt = 有息负债（interest_bearing_debt 的别名）
+    "total_debt",
 }
 
 # A 股市值数据字段（来自 daily_basic API）
@@ -211,7 +226,18 @@ class AShareStatementHandler(BaseHandler):
         }
 
     def _get_income_fields(self) -> set[str]:
-        return {"total_revenue", "net_profit", "operating_profit", "operating_cost"}
+        return {
+            "total_revenue",
+            "net_profit",
+            "operating_profit",
+            "operating_cost",
+            "interest_expense",
+            "interest_income",
+            "non_operating_income",
+            # Phase 3 利润表补充字段（待确认 Tushare 字段名）
+            # "fair_value_change",
+            # "investment_income",
+        }
 
     def _get_cashflow_fields(self) -> set[str]:
         return {

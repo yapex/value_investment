@@ -60,20 +60,47 @@ v-invest query 00700 -r "roe,revenue_cagr_10y" -m HK
 
 ## 自定义计算器
 
-**脚本（`calc_xxx.py`）：**
+### 加载方式
+
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| `-c / --calculator` | 单个计算器脚本 | `-c ./calc_xxx.py` |
+| `-d / --calculator-dir` | 计算器目录（批量） | `-d ./calculators/` |
+
+### 脚本规范
+
 ```python
-name = "xxx"
-required_fields = ["field_a", "field_b"]
+# calc_xxx.py
+name = "xxx"                    # 指标名称（必须）
+required_fields = ["field_a", "field_b"]  # 依赖字段（必须）
 
 def calculate(results):
+    """results: {年份: {字段: 值}}"""
     out = {}
     for year, data in results.items():
         a, b = data.get("field_a"), data.get("field_b")
-        out[year] = a / b if a and b else None
+        out[year] = a / b if a and b else None  # 零除返回 None
     return out
 ```
 
-**使用：** `v-invest query 600519 -r "xxx,roe" -c ./calc_xxx.py`
+### 使用
+
+```bash
+# 单个
+v-invest query 600519 -r "xxx,roe" -c ./calc_xxx.py
+
+# 目录（批量）
+v-invest query 600519 -r "custom1,custom2" -d ./calculators/
+
+# 组合内置 + 自定义
+v-invest query 600519 -r "roe,custom_metric" -c ./calc_custom.py
+```
+
+### 规则
+
+- 文件名以 `calc_` 开头，或定义 `name` 变量
+- 零除/类型错误自动返回 `None`（框架兜底）
+- 返回格式：`dict[int, float | None]`
 
 ## 常见错误
 

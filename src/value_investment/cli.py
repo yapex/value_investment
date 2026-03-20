@@ -218,8 +218,11 @@ def validate(
 def fields(
     prefix: str | None = typer.Option(None, "--prefix", "-p", help="Filter by prefix"),
 ):
-    """List all available source fields (raw data from data providers)"""
-    all_fields = sorted(get_source_fields())
+    """List all available fields (IFRS + Source fields, raw data from data providers)"""
+    from value_investment.domain.fields import IFRSFields
+
+    # IFRSFields + SourceFields = 所有原始数据字段
+    all_fields = sorted(IFRSFields.all() | get_source_fields())
     if prefix:
         all_fields = [f for f in all_fields if f.startswith(prefix)]
     for field in all_fields:

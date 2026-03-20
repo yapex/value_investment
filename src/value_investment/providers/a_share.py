@@ -45,6 +45,8 @@ class TushareProvider(BaseProvider):
         "long_term_investment",
         "construction_in_progress",
         "short_term_borrowings",
+        # 长期借款
+        "long_term_debt",
         # 一年内到期的非流动负债
         "non_current_liabilities_due_1y",
         # 应付债券
@@ -62,6 +64,8 @@ class TushareProvider(BaseProvider):
         "interest_income",
         # Phase 3 利润表补充字段
         "non_operating_income",
+        "investment_income",
+        "fair_value_change",
         # --- 现金流量表 ---
         "operating_cash_flow",
         "investing_cash_flow",
@@ -152,16 +156,18 @@ class TushareProvider(BaseProvider):
             "lt_eqt_invest": "long_term_investment",
             "cip": "construction_in_progress",
             # Phase 1 短期借款
-            "st_borrow": "short_term_borrowings",
+            "st_borr": "short_term_borrowings",
             # 一年内到期的非流动负债
             "non_cur_liab_due_1y": "non_current_liabilities_due_1y",
             # 应付债券
             "bond_payable": "bond_payable",
             # Phase 1 资产负债表补充字段
             "time_deposit": "time_deposits",
-            "other_recv": "other_receivables",
-            "other_recv": "other_receivables",
-            "total_hldr_eqy_exc_min_int": "net_assets",
+            # 其他应收款 (Tushare 原字段名: oth_receiv)
+            "oth_receiv": "other_receivables",
+            # 长期借款
+            "lt_borr": "long_term_debt",
+            "total_hldr_eqy_exc_min_int": "total_equity",
         },
         "income_statement": {
             # Tushare 列名与标准字段名相同
@@ -175,7 +181,10 @@ class TushareProvider(BaseProvider):
             "int_exp": "interest_expense",
             "int_income": "interest_income",
             # Phase 3 补充字段
-            "non_op_income": "non_operating_income",
+            "non_oper_income": "non_operating_income",
+            # 投资收益、公允价值变动收益
+            "invest_income": "investment_income",
+            "fv_value_chg_gain": "fair_value_change",
         },
         "cash_flow": {
             "n_cashflow_act": "operating_cash_flow",

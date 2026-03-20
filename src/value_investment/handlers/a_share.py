@@ -47,6 +47,8 @@ A_SHARE_STATEMENT_FIELDS: set[str] = {
     "long_term_investment",
     "construction_in_progress",
     "short_term_borrowings",
+    # 长期借款
+    "long_term_debt",
     # 一年内到期的非流动负债
     "non_current_liabilities_due_1y",
     # 应付债券
@@ -57,12 +59,15 @@ A_SHARE_STATEMENT_FIELDS: set[str] = {
     "total_revenue",
     "main_business_income",
     "net_profit",
+    "parent_net_profit",
     "operating_profit",
     "operating_cost",
     "interest_expense",
     "interest_income",
     # Phase 3 利润表补充字段
     "non_operating_income",
+    "investment_income",
+    "fair_value_change",
     # 现金流量表
     "operating_cash_flow",
     "investing_cash_flow",
@@ -180,7 +185,11 @@ class AShareStatementHandler(BaseHandler):
         message: Message,
         fields: set[str],
     ) -> None:
-        """从 DataFrame 提取结果到 Message"""
+        """从 DataFrame 提取结果到 Message
+
+        注意：对于财务数据，None/NaN 通常表示该科目不存在或为0（如茅台没有有息负债）。
+        我们将 None 视为 0 存储，以便正确分析。
+        """
         if df.empty or "year" not in df.columns:
             return
 
@@ -191,11 +200,14 @@ class AShareStatementHandler(BaseHandler):
             for field in fields:
                 if field in columns:
                     value = row.get(field)
-                    if value is not None and pd.notna(value):
+                    # 处理 None/NaN：视为 0（表示该科目不存在或余额为0）
+                    if value is None or pd.isna(value):
+                        accumulated.setdefault(field, {})[year] = 0.0
+                    else:
                         try:
                             accumulated.setdefault(field, {})[year] = float(value)
                         except (ValueError, TypeError):
-                            pass
+                            accumulated.setdefault(field, {})[year] = 0.0
 
         for field, values in accumulated.items():
             if values:
@@ -223,6 +235,16 @@ class AShareStatementHandler(BaseHandler):
             "intangible_assets",
             "long_term_investment",
             "construction_in_progress",
+            # 短期借款
+            "short_term_borrowings",
+            # 长期借款
+            "long_term_debt",
+            # 应付债券
+            "bond_payable",
+            # 其他应收款
+            "other_receivables",
+            # 一年内到期的非流动负债
+            "non_current_liabilities_due_1y",
         }
 
     def _get_income_fields(self) -> set[str]:
@@ -234,9 +256,11 @@ class AShareStatementHandler(BaseHandler):
             "interest_expense",
             "interest_income",
             "non_operating_income",
-            # Phase 3 利润表补充字段（待确认 Tushare 字段名）
-            # "fair_value_change",
-            # "investment_income",
+            # 归属母公司净利润
+            "parent_net_profit",
+            # 投资收益、公允价值变动收益
+            "investment_income",
+            "fair_value_change",
         }
 
     def _get_cashflow_fields(self) -> set[str]:

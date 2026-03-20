@@ -1,13 +1,11 @@
 """CLI for value investment analysis using PipelineAPI"""
 import asyncio
 import json
-from pathlib import Path
 from typing import Any
 
 import pandas as pd
 import typer
 from rich.console import Console
-from rich.table import Table
 
 from value_investment.core.cache import SmartCache
 from value_investment.pipeline.api import PipelineAPI

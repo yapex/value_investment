@@ -1,8 +1,8 @@
 """Pipeline validator - Full validation including dry run"""
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
-from value_investment.calculator_plugin import registry, get_calculators
+from value_investment.calculator_plugin import get_calculators
 from value_investment.domain.fields import ALL_FIELDS
 
 # 构建 calculator 映射
@@ -168,26 +168,26 @@ def validate_fields_registration(
     
     statuses = {}
     
-    for field in fields:
-        if field in ALL_FIELDS:
-            statuses[field] = FieldStatus(
-                name=field,
+    for f in fields:
+        if f in ALL_FIELDS:
+            statuses[f] = FieldStatus(
+                name=f,
                 category="registered",
                 available=True,
             )
-        elif field in _CALCULATOR_MAP:
-            statuses[field] = FieldStatus(
-                name=field,
+        elif f in _CALCULATOR_MAP:
+            statuses[f] = FieldStatus(
+                name=f,
                 category="calculator",
                 available=True,
                 issue="Calculator field not registered in ALL_FIELDS",
             )
         else:
-            statuses[field] = FieldStatus(
-                name=field,
+            statuses[f] = FieldStatus(
+                name=f,
                 category="unknown",
                 available=False,
-                issue=f"Unknown field: {field}",
+                issue=f"Unknown field: {f}",
             )
     
     return statuses
@@ -217,24 +217,24 @@ def check_field_consistency(
     
     # 检查 Handler 声明了但 ALL_FIELDS 没注册 (警告)
     handler_only = handler_fields - ALL_FIELDS
-    for field in sorted(handler_only):
+    for f in sorted(handler_only):
         # 排除 calculator 字段 (它们本来就不在 ALL_FIELDS 中)
-        if field not in _CALCULATOR_MAP:
+        if f not in _CALCULATOR_MAP:
             inconsistencies.append(FieldInconsistency(
-                field_name=field,
+                field_name=f,
                 severity="warning",
-                description=f"Handler declares '{field}' but not registered in ALL_FIELDS",
+                description=f"Handler declares '{f}' but not registered in ALL_FIELDS",
                 resolution="Add to ALL_FIELDS or remove from Handler",
             ))
     
     # 检查 ALL_FIELDS 注册了但 Handler 不能处理 (错误)
     # 只检查核心字段，不包括 calculator
     registered_but_no_handler = ALL_FIELDS - handler_fields - set(_CALCULATOR_MAP.keys())
-    for field in sorted(registered_but_no_handler):
+    for f in sorted(registered_but_no_handler):
         inconsistencies.append(FieldInconsistency(
-            field_name=field,
+            field_name=f,
             severity="error",
-            description=f"'{field}' registered in ALL_FIELDS but no Handler can provide it",
+            description=f"'{f}' registered in ALL_FIELDS but no Handler can provide it",
             resolution="Add field to a Handler or remove from ALL_FIELDS",
         ))
     
@@ -252,11 +252,11 @@ def expand_required_fields(
     expanded = set(fields)
     calculators_to_run = []
     
-    for field in fields:
-        if field in _CALCULATOR_MAP:
-            calc = _CALCULATOR_MAP[field]
+    for f in fields:
+        if f in _CALCULATOR_MAP:
+            calc = _CALCULATOR_MAP[f]
             expanded.update(calc.required_fields)
-            calculators_to_run.append(field)
+            calculators_to_run.append(f)
     
     return expanded, calculators_to_run
 
@@ -306,8 +306,8 @@ def validate_calculators_fields(
     
     statuses = {}
     
-    for field in calculator_fields:
-        calc = _CALCULATOR_MAP[field]
+    for f in calculator_fields:
+        calc = _CALCULATOR_MAP[f]
         required = calc.required_fields
         missing = required - handler_fields
         
@@ -317,8 +317,8 @@ def validate_calculators_fields(
         if missing:
             issue = f"Missing {len(missing)} required field(s)"
         
-        statuses[field] = CalculatorStatus(
-            name=field,
+        statuses[f] = CalculatorStatus(
+            name=f,
             will_run=will_run,
             required_fields=list(required),
             missing_fields=list(missing),
@@ -484,10 +484,10 @@ def validate_calculators(calculators: list) -> list[ValidationResult]:
     # Build field -> Handler index
     field_sources = {}
     for handler in container.bus().handlers:
-        for field in handler.can_handle:
-            field_sources.setdefault(field, []).append(type(handler).__name__)
+        for f in handler.can_handle:
+            field_sources.setdefault(f, []).append(type(handler).__name__)
     
-    def check_field_dependency(field: str, visited: Optional[set] = None) -> tuple[bool, str]:
+    def check_field_dependency(field: str, visited: set | None = None) -> tuple[bool, str]:
         """检查字段依赖，返回 (是否可用, 来源信息)
         
         Args:
@@ -533,17 +533,17 @@ def validate_calculators(calculators: list) -> list[ValidationResult]:
                 DependencyStatus(
                     field="[OUTPUT]",
                     available=False,
-                    source=f"NOT REGISTERED in ALL_FIELDS",
+                    source="NOT REGISTERED in ALL_FIELDS",
                 )
             )
             all_available = False
         
         # 验证 2: 检查输入依赖
-        for field in calc.required_fields:
-            available, source = check_field_dependency(field)
+        for req_field in calc.required_fields:
+            available, source = check_field_dependency(req_field)
             details.append(
                 DependencyStatus(
-                    field=field,
+                    field=req_field,
                     available=available,
                     source=source,
                 )

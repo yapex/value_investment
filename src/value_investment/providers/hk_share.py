@@ -188,7 +188,7 @@ class HKProvider(BaseProvider):
         "hk_net_profit_growth_qoq",
     }
 
-    def __init__(self, cache: "SmartCache") -> None:
+    def __init__(self, cache: SmartCache) -> None:
         """初始化 HK Provider
 
         Args:
@@ -464,8 +464,8 @@ class HKProvider(BaseProvider):
             {field: {year: value}}
         """
         warnings.warn(
-            f"AkShare 港股财务指标 API 只返回最新一年数据，"
-            f"多年历史指标请使用 Calculator 计算",
+            "AkShare 港股财务指标 API 只返回最新一年数据，"
+            "多年历史指标请使用 Calculator 计算",
             UserWarning,
             stacklevel=2,
         )

@@ -107,7 +107,7 @@ class AShareStatementHandler(BaseHandler):
     def __init__(self, provider=None):
         super().__init__(provider, "A股", A_SHARE_STATEMENT_FIELDS)
 
-    async def _handle_impl(self, message: "Message") -> None:
+    async def _handle_impl(self, message: Message) -> None:
         """处理 A 股财务报表请求"""
         if not self._provider:
             return
@@ -138,7 +138,7 @@ class AShareStatementHandler(BaseHandler):
     def _add_results_from_df(
         self,
         df: pd.DataFrame,
-        message: "Message",
+        message: Message,
         fields: set[str],
     ) -> None:
         """从 DataFrame 提取结果到 Message"""
@@ -204,7 +204,7 @@ class AShareIndicatorHandler(BaseHandler):
     def __init__(self, provider=None):
         super().__init__(provider, "A股", A_SHARE_INDICATOR_FIELDS)
 
-    async def _handle_impl(self, message: "Message") -> None:
+    async def _handle_impl(self, message: Message) -> None:
         """处理 A 股财务指标请求"""
         if not self._provider:
             return
@@ -231,7 +231,7 @@ class AShareMarketHandler(BaseHandler):
     def __init__(self, provider=None):
         super().__init__(provider, "A股", A_SHARE_MARKET_FIELDS)
 
-    async def _handle_impl(self, message: "Message") -> None:
+    async def _handle_impl(self, message: Message) -> None:
         """处理 A 股市值数据请求"""
         if not self._provider:
             return

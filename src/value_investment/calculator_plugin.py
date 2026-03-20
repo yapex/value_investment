@@ -22,7 +22,8 @@ import importlib.resources
 import inspect
 import sys
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 # ============================================================================
 # 核心：动态加载器
@@ -268,9 +269,6 @@ def _load_calcs_from_package(
     register_func,
 ) -> bool:
     """从包资源加载 calculators（打包状态）"""
-    if sys.version_info < (3, 9):
-        return False
-
     try:
         for py_file in importlib.resources.files(package_name).iterdir():
             if not py_file.name.endswith(".py") or not py_file.name.startswith("calc_"):

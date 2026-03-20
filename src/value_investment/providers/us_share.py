@@ -12,12 +12,11 @@ from __future__ import annotations
 
 import warnings
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import akshare as ak  # noqa: F401 - 模块级 import 以便测试 mock
 import pandas as pd
 
-from value_investment.core.constants import HISTORICAL_DATA_TTL
 from value_investment.providers.base import BaseProvider, get_ttl_until_june_next_year
 
 if TYPE_CHECKING:
@@ -167,7 +166,7 @@ class USProvider(BaseProvider):
         "total_shares",
     }
 
-    def __init__(self, cache: "SmartCache") -> None:
+    def __init__(self, cache: SmartCache) -> None:
         """初始化 US Provider"""
         super().__init__(cache)
         self._ak = ak

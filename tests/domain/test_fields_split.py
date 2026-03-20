@@ -45,12 +45,13 @@ def test_no_overlap_between_source_and_indicators():
 
 
 def test_all_fields_union():
-    """ALL_FIELDS = SourceFields | IndicatorFields"""
-    from value_investment.domain.fields import get_source_fields, get_indicator_fields, ALL_FIELDS
+    """ALL_FIELDS = IFRSFields | SourceFields | IndicatorFields"""
+    from value_investment.domain.fields import get_source_fields, get_indicator_fields, ALL_FIELDS, IFRSFields
 
+    ifrs = IFRSFields.all()
     source = get_source_fields()
     indicators = get_indicator_fields()
-    assert ALL_FIELDS == source | indicators
+    assert ALL_FIELDS == ifrs | source | indicators
 
 
 def test_custom_fields_is_alias_of_source_fields():

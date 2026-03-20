@@ -342,7 +342,7 @@ def get_indicator_fields() -> frozenset:
 
 
 # All valid fields
-ALL_FIELDS = SourceFields.all() | IndicatorFields.all()
+ALL_FIELDS = IFRSFields.all() | SourceFields.all() | IndicatorFields.all()
 
 # 向后兼容别名
 CustomFields = SourceFields

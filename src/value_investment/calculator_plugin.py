@@ -170,9 +170,10 @@ def load_calculators_from_dir(dir_path: str, validate: bool = True) -> list[dict
 class CalculatorAdapter:
     """Calculator 适配器
 
-    零除处理策略:
-    - 捕获 ZeroDivisionError 和 TypeError，返回 None（而不是抛异常）
-    - Calculator 作者无需处理零除，框架统一兜底
+    错误处理策略:
+    - 捕获所有 Exception，返回 None（而不是抛异常）
+    - 计算器出错不影响其他计算器，保证整体流程不中断
+    - Calculator 作者无需处理异常，框架统一兜底
     """
 
     def __init__(
@@ -188,11 +189,11 @@ class CalculatorAdapter:
         self._source = _source
 
     def calculate(self, results) -> dict[int, float | None] | None:
-        """执行计算，零除/类型错误时返回 None"""
+        """执行计算，捕获所有错误，返回 None"""
         try:
             return self._calculate(results)
-        except (ZeroDivisionError, TypeError):
-            # 框架兜底：零除或 None 参与运算时返回 None
+        except Exception:
+            # 框架兜底：任何计算错误都返回 None，不中断整个计算流程
             return None
 
 

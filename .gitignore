@@ -58,10 +58,9 @@ Thumbs.db
 .env
 
 # Pi agent config
-.pi/
+.pi/*
 # 但追踪 skills 目录
 !.pi/skills/
-!.pi/skills/**
 
 # Archived docs
 docs/_archived/

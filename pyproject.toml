@@ -1,6 +1,6 @@
 [project]
 name = "value-investment"
-version = "0.3.0"
+version = "0.3.1"
 description = "A value investment analysis tool for A股/港股/美股"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -39,7 +39,7 @@ dev = [
 
 [tool.poe.tasks.to_nanobot]
 help = "Copy skills to nanobot. Usage: poe to_nanobot"
-shell = "rm -rf /Users/yapex/bots/yapex-bot/workspace/skills/financial_data /Users/yapex/bots/yapex-bot/workspace/skills/roe_analysis /Users/yapex/bots/yapex-bot/workspace/skills/quantitative_analysis && cp -r skills/* /Users/yapex/bots/yapex-bot/workspace/skills/ && echo '✓ Synced skills/ -> nanobot'"
+shell = "rsync -av .pi/skills/ /Users/yapex/bots/yapex-bot/workspace/skills/ && echo '✓ Synced .pi/skills/ -> nanobot'"
 
 
 [tool.pytest.ini_options]

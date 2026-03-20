@@ -7,94 +7,72 @@ description: 财务分析技能生成器 - 读取分析师文档，自动创建�
 
 > Meta Skill: 技能生成器，用于将分析师文档转化为可执行的分析技能。
 
-## 快速开始
+## 架构说明
+
+| 文件 | 职责 |
+|------|------|
+| **SKILL.md** | 流程和要求（如何生成 skill） |
+| **SKILL_TEMPLATE.md** | 内容格式（生成的 SKILL.md 模板） |
+
+---
+
+## 流程（严格禁止跳过）
 
 ```
-用户: "帮我把 docs/企业财务排雷手册.md 创建为 skill"
+Step 1: 查看系统字段     → v-invest fields
+Step 2: 查看系统指标     → v-invest indicators
+Step 3: 阅读分析师文档   → 理解结构和需要的字段
+Step 4: 映射字段名       → 文档字段 → 系统字段
+Step 5: 生成 SKILL.md    → 基于 SKILL_TEMPLATE.md 填空
+Step 6: 验证字段         → v-invest query 测试（必须！）
+Step 7: 生成 REFERENCE.md
 ```
 
-## 工作流程
+**禁止**：在未执行 Step 1-2 的情况下，直接使用文档中的字段名。
+**禁止**：在未执行 Step 6 验证的情况下，完成 skill 生成。
 
-### Step 1: 阅读分析师文档
-读取用户提供的分析文档，理解其结构和需要的字段。
+---
 
-**重要**：不要用脚本解析字段，直接阅读文档，由agent提取需要的字段。
-
-### Step 2: 提取字段
-阅读文档后，手动识别每个分析段需要的字段，整理成字段清单。
-
-### Step 3: 创建新 Skill 目录
-默认在 `.pi/skills/` 下创建新 skill，也可以指定位置
+## Step 1-2: 查看系统可用字段和指标
 
 ```bash
-mkdir -p .pi/skills/{skill-name}
+v-invest fields
+v-invest indicators
 ```
 
-### Step 4: 生成 SKILL.md
-```markdown
----
-name: {skill-name}
-description: {从文档中提取的描述}
----
+## Step 3-4: 阅读分析师文档并映射字段
 
-# {文档标题}
+- 直接阅读文档，提取需要的字段
+- 将文档字段名映射到系统字段名
 
-## 使用方式
+## Step 5: 生成 SKILL.md
+
+**参考 [SKILL_TEMPLATE.md](./SKILL_TEMPLATE.md) 模板，按 `{}` 填空**
+
+## Step 6: 验证字段（必须！）
+
 ```bash
-# 数据获取 - 默认10年
-v-invest query {股票} -r "{字段}" -e {年份} -y 10
+v-invest query 600519 -r "{所有字段}" -y 1
 ```
 
-## 执行
-读取 REFERENCE.md，按文档格式输出分析报告。
-```
+如果出现 `Missing fields` 或 `Unknown fields`，必须修正。
 
-### Step 5: 生成 REFERENCE.md
-将原始分析师文档内容拷贝进去，直接拷贝，不做任何修改。
+## Step 7: 生成 REFERENCE.md
 
----
-
-## 字段提取指南
-
-### 人工提取原则
-
-1. **直接阅读文档**：不要用脚本，每个文档格式不同
-2. **关注表格列**：查找"使用字段"、"需要字段"等列
-3. **整理字段清单**：按数据类型分组（利润表、资产负债表、现金流量表、财务指标）
-
-### 字段分组示例
-
-```markdown
-### 利润表字段
-- total_revenue, operating_cost, operating_profit, net_profit
-- interest_expense, non_operating_income, investment_income
-
-### 资产负债表字段
-- total_assets, total_liabilities, total_equity
-- cash_and_equivalents, inventory, accounts_receivable
-
-### 现金流量表字段
-- operating_cash_flow, investing_cash_flow, financing_cash_flow
-
-### 财务指标
-- roe, gross_margin, debt_ratio, current_ratio
+```bash
+cp "docs/分析师文档.md" ".pi/skills/{skill-name}/REFERENCE.md"
 ```
 
 ---
 
-## 输出
+## 输出格式
 
-创建完成后，输出：
 ```
 ✅ Skill 已创建: .pi/skills/{skill-name}/
 
 包含：
-- SKILL.md      # 数据获取指令（默认10年）
+- SKILL.md      # 数据获取指令
 - REFERENCE.md  # 分析师文档
 
-使用方式：
-"""
-用户: "对贵州茅台进行风险扫描"
-Skill: 执行 SKILL.md 中的指令（默认10年数据），然后阅读 REFERENCE.md 输出报告
-"""
+验证：v-invest query 测试通过（10年/XX个字段）
 ```

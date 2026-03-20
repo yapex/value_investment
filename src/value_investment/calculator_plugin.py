@@ -170,10 +170,7 @@ def load_calculators_from_dir(dir_path: str, validate: bool = True) -> list[dict
 class CalculatorAdapter:
     """Calculator 适配器
 
-    错误处理策略:
-    - 捕获所有 Exception，返回 None（而不是抛异常）
-    - 计算器出错不影响其他计算器，保证整体流程不中断
-    - Calculator 作者无需处理异常，框架统一兜底
+    职责：转发计算请求，错误由 Pipeline 层统一处理
     """
 
     def __init__(
@@ -188,15 +185,9 @@ class CalculatorAdapter:
         self._calculate = calculate
         self._source = _source
 
-    def calculate(self, results) -> dict[int, float | None] | None:
-        """执行计算，捕获所有错误，返回 None"""
-        try:
-            return self._calculate(results)
-        except Exception as e:
-            # 框架兜底：任何计算错误都返回 None，不中断整个计算流程
-            import warnings
-            warnings.warn(f"[Calculator '{self.name}'] 计算错误: {e}", RuntimeWarning)
-            return None
+    def calculate(self, results) -> dict[int, float | None]:
+        """执行计算，原样抛出错误"""
+        return self._calculate(results)
 
 
 class CalculatorRegistry:

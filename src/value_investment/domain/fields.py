@@ -277,6 +277,12 @@ class CustomFields:
     # 单位：百分比 (%)
     NET_PROFIT_YOY = "net_profit_yoy"
 
+    # ========== Phase 3 财务指标（Calculator 计算） ==========
+    # 净负债率 = 净债务 / 所有者权益
+    # 单位：无（比例）
+    # 净债务 = 有息负债 - 货币资金
+    NET_DEBT_TO_EQUITY = "net_debt_to_equity"
+
     @classmethod
     def all(cls) -> frozenset:
         """Get all custom fields as a set"""

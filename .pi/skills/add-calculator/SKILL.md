@@ -5,185 +5,144 @@ description: Create new financial calculators for value_investment project. Use 
 
 # Add Calculator
 
-## Golden Rule
-
 > **先定义字段，再写 Calculator**  
-> 字段必须存在于 `CustomFields` 或 `IFRSFields`，否则需要先添加字段。
+> 字段必须存在于 `CustomFields` 或 `IFRSFields`
 
-## Workflow
+## 命名规范
 
-### Phase 1: 确定依赖字段
+| 原则 | 说明 |
+|------|------|
+| snake_case | 全小写，下划线分隔 |
+| 简短明确 | 方便阅读，不过度详细 |
+| 自主命名 | 以我们为主，不参考 provider |
+| **无重复** | 输出字段不能与现有字段同名 |
 
-- [ ] 确认输出指标名称（如 `gross_profit`, `roic`）
-- [ ] 确认依赖字段（如 `total_revenue`, `operating_cost`）
-- [ ] 确认字段已存在于 `ALL_FIELDS`
+**示例：** `net_debt_to_equity`, `gross_margin`, `inventory_turnover`
+
+## 流程
+
+### Phase 0: 检查重复（最先做）
+
+添加 Calculator 前，检查输出字段是否已存在：
 
 ```bash
-# 验证字段存在
 uv run python -c "
-from value_investment.domain.fields import ALL_FIELDS, IFRSFields, CustomFields
+from value_investment.domain.fields import ALL_FIELDS
+# 如：添加净负债率 Calculator，检查 net_debt_to_equity
+print('net_debt_to_equity' in ALL_FIELDS)
+"
+```
 
+### 1. 确认依赖字段
+
+```bash
+uv run python -c "
+from value_investment.domain.fields import ALL_FIELDS
 fields = ['total_revenue', 'operating_cost']
 for f in fields:
     print(f'{f}: {f in ALL_FIELDS}')
 "
 ```
 
-### Phase 2: 创建 Calculator 文件
+### 2. 创建 Calculator
 
-```bash
-# 创建文件 (calculators/ 目录下)
-# 文件名格式: calc_<name>.py
+**文件：** `calculators/calc_<name>.py`
 
-cat > calculators/calc_<name>.py << 'EOF'
-"""<Description>
-
-<Formula explanation>
-"""
+```python
+"""<Description>"""
 from typing import Any
 
-# 依赖字段（必须使用 ALL_FIELDS 中存在的字段）
-required_fields = ["field_a", "field_b"]
-
-# 可选配置参数（如果需要）
-optional_config = {
-    "param1": 0.1,
-}
+required_fields = ["field_a", "field_b"]  # 依赖字段
 
 def calculate(results: dict[str, dict[int, Any]], config: dict = None) -> dict[int, float]:
-    """Calculate <metric> from source fields
-
-    Args:
-        results: {field: {year: value}}
-        config: 可选配置参数
-
-    Returns:
-        {year: <metric>_value}
-    """
-    cfg = {**optional_config, **(config or {})}
-    
     field_a = results.get("field_a", {})
     field_b = results.get("field_b", {})
     
     return {
-        year: field_a.get(year, 0) * field_b.get(year, 0)
+        year: field_a.get(year, 0) / field_b.get(year, 1)
         for year in field_a
     }
-EOF
 ```
 
-### Phase 3: 验证
+### 3. TDD 测试
 
 ```bash
-# 运行测试
-uv run python -m pytest tests/ -v -k "calculator"
-
-# 验证加载
-uv run python -c "
-from value_investment.calculator_plugin import registry
-from value_investment.calculator_plugin import load_calculator
-
-calc = load_calculator('calculators/calc_<name>.py')
-print(f'Loaded: {calc[\"name\"]}')
-print(f'Required: {calc[\"required_fields\"]}')
-
-# 注册到 registry
-registry.register_from_dict(calc)
-print(f'Registered: {registry.get_by_name(\"<name>\")}')
-"
-```
-
-## Calculator 规范
-
-### 必需元素
-
-| 元素 | 说明 | 示例 |
-|------|------|------|
-| `required_fields` | 依赖字段列表 | `["total_revenue", "operating_cost"]` |
-| `calculate()` | 计算函数 | `def calculate(results, config=None)` |
-
-### 可选元素
-
-| 元素 | 说明 | 示例 |
-|------|------|------|
-| `name` | 计算器名称（默认从文件名推断） | `"gross_profit"` |
-| `optional_config` | 默认配置参数 | `{"wacc": 0.10}` |
-
-### calculate() 函数签名
-
-```python
-def calculate(results: dict[str, dict[int, Any]], config: dict = None) -> dict[int, float]:
-    """
-    Args:
-        results: {field: {year: value}}
-        config: 可选配置字典
-        
-    Returns:
-        {year: calculated_value}
-    """
+# 先写测试，再写实现
+uv run python -m pytest tests/ -v -k "<name>"
 ```
 
 ## 常见模式
 
-### 简单比率
-
+**简单比率：**
 ```python
 required_fields = ["net_profit", "total_equity"]
-
-def calculate(results):
-    net_profit = results.get("net_profit", {})
-    equity = results.get("total_equity", {})
-    return {
-        year: net_profit.get(year, 0) / equity.get(year, 1)
-        for year in net_profit
-    }
 ```
 
-### 平均值计算（如周转率）
-
+**平均值（周转率）：**
 ```python
 required_fields = ["operating_cost", "inventory"]
-
-def calculate(results):
-    cost = results.get("operating_cost", {})
-    inventory = results.get("inventory", {})
-    
-    turnover = {}
-    for year in cost:
-        curr = inventory.get(year, 0)
-        prev = inventory.get(year - 1, 0)  # 前一年
-        avg = (curr + prev) / 2
-        if avg != 0:
-            turnover[year] = cost.get(year, 0) / avg
-    return turnover
 ```
 
-### 带配置的 Calculator
-
+**带配置：**
 ```python
-required_fields = ["operating_cash_flow", "market_cap"]
-
-optional_config = {
-    "wacc": 0.10,
-    "g_terminal": 0.03,
-}
+optional_config = {"wacc": 0.10}
 
 def calculate(results, config=None):
     cfg = {**optional_config, **(config or {})}
-    # 使用 cfg["wacc"], cfg["g_terminal"]
 ```
 
-## 文件位置
+## 验证
 
-| 类型 | 位置 |
-|------|------|
-| 用户 calculators | `{cwd}/calculators/calc_*.py` |
-| 项目 calculators | `{project_root}/calculators/calc_*.py` |
-| 包内 calculators | `value_investment/calculators/calc_*.py` |
+### 1. 单元测试
 
-## Validation Checklist
+```bash
+uv run python -m pytest tests/ -v -k "calc_<name>"
+```
 
-- [ ] `required_fields` 中的字段都在 `ALL_FIELDS` 中
-- [ ] `calculate()` 返回 `{year: value}` 格式
-- [ ] 文件名格式为 `calc_<name>.py`
-- [ ] `uv run python -m pytest tests/ -v` 全部通过
+### 2. 字段注册验证
+
+```bash
+# Calculator 输出字段必须在 CustomFields 中
+uv run python -c "
+from value_investment.domain.fields import CustomFields
+print('calc_output' in CustomFields.all())
+"
+
+# 依赖字段必须存在
+uv run python -c "
+from value_investment.domain.fields import ALL_FIELDS
+fields = ['field_a', 'field_b']
+print(all(f in ALL_FIELDS for f in fields))
+"
+```
+
+### 3. Pipeline Dry Run
+
+```bash
+uv run python -c "
+from value_investment.pipeline.validator import validate_pipeline
+report = validate_pipeline(['calc_output'], '600519', 'A股', dry_run=True)
+print(f'Blocking errors: {len(report.inconsistencies)}')
+for i in report.inconsistencies:
+    print('  ', i)
+"
+```
+
+### 4. Calculator 注册验证
+
+```bash
+uv run python -c "
+from value_investment.calculator_plugin import get_calculators, load_calculator
+
+calc = load_calculator('calculators/calc_<name>.py')
+calcs = get_calculators()
+print(f'Loaded: {calc[\"name\"]}')
+print(f'In registry: {calc[\"name\"] in [c.name for c in calcs]}')
+"
+```
+
+### 5. 全量测试
+
+```bash
+uv run python -m pytest tests/ -q
+```

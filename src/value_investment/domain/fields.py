@@ -79,6 +79,8 @@ class IFRSFields(metaclass=IFRSFieldsMeta):
     CAPITAL_EXPENDITURE = "capital_expenditure"
 
     # --- 关键比率 (Key Ratios) ---
+    # 注：这些是数据源提供的预计算财务指标（来自 fina_indicator），不是 Calculator 输出
+    # 如需自定义计算，请创建 Calculator 并输出不同名称（如 roe_custom）
     ROE = "roe"
     ROA = "roa"
     GROSS_MARGIN = "gross_margin"

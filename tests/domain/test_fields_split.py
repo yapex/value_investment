@@ -20,9 +20,10 @@ def test_indicator_fields_contains_calculated_metrics():
     from value_investment.domain.fields import get_indicator_fields
 
     indicators = get_indicator_fields()
-    assert "roe" in indicators
+    # roe 由数据源提供（IFRSFields），不在 Calculator 输出中
     assert "net_margin" in indicators
     assert "revenue_cagr_5y" in indicators
+    assert "roe_volatility" in indicators
 
 
 def test_indicator_fields_count_matches_calculators():
@@ -42,6 +43,26 @@ def test_no_overlap_between_source_and_indicators():
     indicators = get_indicator_fields()
     overlap = source & indicators
     assert len(overlap) == 0, f"Overlap found: {overlap}"
+
+
+def test_no_overlap_between_ifrs_and_indicators():
+    """Calculator 输出不应与 IFRSFields 重复
+
+    IFRSFields 是数据源直接提供的预计算财务指标（来自 fina_indicator）。
+    Calculator 不应输出同名字段，如 roe、gross_margin 等。
+    """
+    from value_investment.domain.fields import IFRSFields, get_indicator_fields
+    from value_investment.calculator_plugin import registry
+
+    ifrs = IFRSFields.all()
+    indicators = get_indicator_fields()
+    overlap = ifrs & indicators
+    assert len(overlap) == 0, f"Calculator 输出与 IFRSFields 重复: {sorted(overlap)}"
+
+    # 同时验证 registry 中的 Calculator name
+    calc_names = {c.name for c in registry.get_all()}
+    name_overlap = ifrs & calc_names
+    assert len(name_overlap) == 0, f"Calculator name 与 IFRSFields 重复: {sorted(name_overlap)}"
 
 
 def test_all_fields_union():

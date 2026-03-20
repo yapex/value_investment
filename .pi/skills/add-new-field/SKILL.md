@@ -21,10 +21,43 @@ description: "⚠️ REQUIRED: Before adding ANY field to value_investment proje
 
 ### Phase 0: 检查重复
 
+**必须运行以下三个检查：**
+
 ```bash
+# 检查 1: ALL_FIELDS 中是否有重复
+uv run python -c "
+from value_investment.domain.fields import IFRSFields, get_source_fields, get_indicator_fields
+ifrs = IFRSFields.all()
+source = get_source_fields()
+indicators = get_indicator_fields()
+print(f'IFRSFields: {len(ifrs)}, SourceFields: {len(source)}, IndicatorFields: {len(indicators)}')
+overlap1 = ifrs & indicators
+overlap2 = source & indicators
+overlap3 = ifrs & source
+if overlap1: print(f'❌ IFRS & Indicators 重叠: {sorted(overlap1)}')
+if overlap2: print(f'❌ Source & Indicators 重叠: {sorted(overlap2)}')
+if overlap3: print(f'❌ IFRS & Source 重叠: {sorted(overlap3)}')
+if not (overlap1 or overlap2 or overlap3):
+    print('✓ 无重叠')
+"
+
+# 检查 2: Calculator 输出是否与 IFRSFields 重复
+uv run python -c "
+from value_investment.domain.fields import IFRSFields
+from value_investment.calculator_plugin import registry
+ifrs = IFRSFields.all()
+calc_names = {c.name for c in registry.get_all()}
+overlap = ifrs & calc_names
+if overlap:
+    print(f'❌ Calculator 输出与 IFRSFields 重复: {sorted(overlap)}')
+    print('   这些字段应由数据源提供（fina_indicator），不需要 Calculator 计算')
+else:
+    print('✓ Calculator 输出不与 IFRSFields 重复')
+"
+
+# 检查 3: 关键词搜索
 uv run python -c "
 from value_investment.domain.fields import ALL_FIELDS
-# 检查关键词
 keywords = ['net_debt', 'debt', 'equity']
 for f in sorted(ALL_FIELDS):
     if any(kw in f for kw in keywords):

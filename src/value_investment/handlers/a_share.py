@@ -250,6 +250,7 @@ class AShareStatementHandler(BaseHandler):
     def _get_income_fields(self) -> set[str]:
         return {
             "total_revenue",
+            "main_business_income",
             "net_profit",
             "operating_profit",
             "operating_cost",

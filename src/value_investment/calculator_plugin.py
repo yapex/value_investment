@@ -192,8 +192,10 @@ class CalculatorAdapter:
         """执行计算，捕获所有错误，返回 None"""
         try:
             return self._calculate(results)
-        except Exception:
+        except Exception as e:
             # 框架兜底：任何计算错误都返回 None，不中断整个计算流程
+            import warnings
+            warnings.warn(f"[Calculator '{self.name}'] 计算错误: {e}", RuntimeWarning)
             return None
 
 

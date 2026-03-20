@@ -253,3 +253,131 @@ v-invest query 600519 -r "new_field,roe" -y 1
 | `Unknown fields: xxx` | 字段名拼写错误 | `v-invest fields` 查看正确名称 |
 | `Missing fields: xxx` | 字段暂不支持该市场 | 换用其他字段或 `-y 1` 测试 |
 | 市场识别错误 | 代码同时满足多市场规则 | 显式指定 `-m A/HK/US` |
+
+---
+
+## 模块五：自定义计算器
+
+### 加载方式
+
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| `-c / --calculator` | 单个计算器脚本路径 | `-c ./calc_xxx.py` |
+| `-d / --calculator-dir` | 计算器目录路径（加载目录下所有 `calc_*.py`） | `-d ./calculators/` |
+
+### Calculator 脚本格式
+
+```python
+"""calc_xxx.py"""
+name = "xxx"  # 指标名称（必须，唯一）
+
+required_fields = ["field_a", "field_b"]  # 依赖字段（必须）
+
+def calculate(results: dict[int, dict[str, float]]) -> dict[int, float | None]:
+    """
+    计算函数
+    
+    Args:
+        results: {年份: {字段名: 值}}，例如：
+            {
+                2024: {"total_revenue": 1000, "net_profit": 200},
+                2023: {"total_revenue": 900, "net_profit": 180},
+            }
+    
+    Returns:
+        {年份: 计算结果}，例如：
+            {2024: 0.20, 2023: 0.20}
+        返回 None 表示无法计算（如除零）
+    """
+    out = {}
+    for year, data in results.items():
+        a = data.get("field_a")
+        b = data.get("field_b")
+        if a and b:
+            out[year] = a / b
+        else:
+            out[year] = None
+    return out
+```
+
+### 关键规则
+
+1. **文件名规范**：必须是 `calc_xxx.py`，指标名从文件名推断
+2. **name 变量**：可选，优先级高于文件名
+3. **required_fields**：必须指定依赖的字段
+4. **零除处理**：框架自动捕获 `ZeroDivisionError` 和 `TypeError`，返回 `None`
+5. **返回格式**：`dict[int, float | None]`，年份 → 值
+
+### 示例：自定义 ROIC 计算器
+
+```python
+# calc_roic.py
+name = "roic"
+required_fields = ["net_profit", "interest_expense", "total_equity", "short_term_borrowings", "long_term_debt"]
+
+def calculate(results):
+    out = {}
+    for year, data in results.items():
+        ni = data.get("net_profit", 0)
+        ie = data.get("interest_expense", 0)
+        te = data.get("total_equity", 0)
+        stb = data.get("short_term_borrowings", 0)
+        ltd = data.get("long_term_debt", 0)
+        
+        ic = ni + ie  # 投入资本 = 净利润 + 利息
+        ic_used = te + stb + ltd
+        if ic_used != 0:
+            out[year] = ic / ic_used
+        else:
+            out[year] = None
+    return out
+```
+
+### 使用自定义计算器
+
+```bash
+# 加载单个计算器
+v-invest query 600519 -r "roic,roe" -c ./calc_roic.py -y 5
+
+# 加载目录（批量）
+v-invest query 600519 -r "custom_metric" -d ./my_calculators/ -y 5
+
+# 组合内置 + 自定义
+v-invest query 600519 -r "roe,gross_margin,custom_metric" -c ./calc_custom.py -y 10
+```
+
+### 批量创建计算器目录
+
+```bash
+# 创建目录
+mkdir -p calculators
+
+# 编写计算器脚本
+cat > calculators/calc_roe_excluding_minority.py << 'EOF'
+name = "roe_excluding_minority"
+required_fields = ["parent_net_profit", "total_equity"]
+
+def calculate(results):
+    out = {}
+    for year, data in results.items():
+        pnp = data.get("parent_net_profit")
+        te = data.get("total_equity")
+        if pnp is not None and te and te != 0:
+            out[year] = pnp / te
+        else:
+            out[year] = None
+    return out
+EOF
+
+# 使用
+v-invest query 600519 -r "roe_excluding_minority" -d ./calculators/ -y 5
+```
+
+### 校验清单（自定义计算器）
+
+- [ ] 文件名以 `calc_` 开头
+- [ ] 定义了 `name` 或文件名符合规范
+- [ ] 定义了 `required_fields`（非空列表/集合）
+- [ ] 定义了 `calculate(results)` 函数
+- [ ] 返回值类型正确：`dict[int, float | None]`
+- [ ] 先用 `-y 1` 测试，确认能返回结果
